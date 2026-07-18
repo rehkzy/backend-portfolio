@@ -340,6 +340,26 @@ function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
     };
 }
 
+// ---- Alerte Analytics ----
+const GOAL_METRIC_LABELS = { activeUsers: 'visiteurs', sessions: 'sessions', pageViews: 'pages vues' };
+function analyticsAlertEmail(alert, value) {
+    const metricLabel = GOAL_METRIC_LABELS[alert.metric] || alert.metric;
+    const conditionLabel = alert.condition === 'above' ? 'dépassé' : 'passé en dessous de';
+    return {
+        to: alert.notifyEmail || process.env.NOTIFY_EMAIL || process.env.SMTP_USER,
+        subject: `🔔 Alerte Analytics — ${metricLabel} ${conditionLabel} ${alert.threshold}`,
+        html: brandEmailWrapper(`
+            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Alerte déclenchée</p>
+            <p style="margin:0 0 16px;">Le nombre de <strong style="color:#fff;">${metricLabel}</strong> aujourd'hui a ${conditionLabel} ton seuil de <strong style="color:#fff;">${alert.threshold}</strong>.</p>
+            <div style="margin:20px 0; padding:16px; background:#1c1c1c; border-radius:8px; text-align:center;">
+                <span style="font-size:32px; font-weight:800; color:#da2c48;">${value}</span><br>
+                <span style="color:#888; font-size:13px;">${metricLabel} aujourd'hui</span>
+            </div>
+            ${brandButton('Voir le dashboard', 'https://florian-b.fr')}
+        `, { preheader: `${metricLabel} : ${value}` }),
+    };
+}
+
 module.exports = {
     sendMail,
     leadConfirmationEmail,
@@ -351,5 +371,6 @@ module.exports = {
     quoteHtmlPage,
     invoiceHtmlPage,
     invoiceEmail,
+    analyticsAlertEmail,
     monthlyReportEmail,
 };

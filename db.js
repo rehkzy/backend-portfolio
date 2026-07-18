@@ -85,6 +85,8 @@ const DEFAULTS = {
     "title": "Florian B. | Graphiste & Directeur Artistique freelance à Paris",
     "description": "Branding, UI/UX Design, communication digitale et print. Découvrez les projets de Florian Bonnet, graphiste et DA basé à Paris."
 },
+    "analyticsGoals": [],
+    "analyticsAlerts": [],
     "businessSettings": {
         "legalName": "Florian Bonnet",
         "address": "",

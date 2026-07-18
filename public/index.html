@@ -9,8 +9,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
     :root {
-        --accent: #b8253e;
-        --accent-2: #b8253e;
+        --accent: #da2c48;
+        --accent-2: #da2c48;
         --bg: #f7f7f6;
         --surface: #ffffff;
         --border: #e4e4e2;
@@ -51,7 +51,7 @@
     input, textarea, select { font-family: inherit; }
 
     /* ============ LOGIN ============ */
-    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, rgba(184,37,62,0.08), transparent 60%), var(--bg); }
+    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, rgba(218,44,72,0.08), transparent 60%), var(--bg); }
     .login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; box-shadow: var(--shadow); }
     .login-logo { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; margin-bottom: 1.2rem; }
     .login-card h1 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; margin-bottom: 0.3rem; }
@@ -115,7 +115,7 @@
     .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; }
     .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
     .kpi-delta.up { color: var(--success); }
-    .kpi-card.hero { grid-column: span 2; background: rgba(184,37,62,0.045); border-color: rgba(184,37,62,0.18); }
+    .kpi-card.hero { grid-column: span 2; background: rgba(218,44,72,0.045); border-color: rgba(218,44,72,0.18); }
 
     /* ============ PANELS / CHARTS ============ */
     .panel-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; margin-bottom: 1.6rem; }
@@ -151,7 +151,7 @@
     .kanban-card.dragging { opacity: 0.4; }
     .kanban-card-title { font-weight: 700; margin-bottom: 0.2rem; }
     .kanban-card-meta { color: var(--text-muted); font-size: 0.72rem; }
-    .kanban-col.drag-over { background: rgba(184,37,62,0.06); border-color: var(--accent); }
+    .kanban-col.drag-over { background: rgba(218,44,72,0.06); border-color: var(--accent); }
     @media (max-width: 900px) { .kanban-board { grid-template-columns: minmax(240px, 1fr); grid-auto-flow: column; } }
 
     /* ============ AUTOCOMPLETE CLIENT ============ */
@@ -170,7 +170,7 @@
     .project-picker { position: relative; }
     .project-picker-trigger { display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; transition: 0.15s; }
     .project-picker-trigger:hover { border-color: var(--accent); }
-    .project-picker-trigger.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(184,37,62,0.12); }
+    .project-picker-trigger.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(218,44,72,0.12); }
     .project-picker-thumb { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: var(--bg); flex-shrink: 0; border: 1px solid var(--border); }
     .project-picker-label { flex: 1; font-size: 0.86rem; font-weight: 600; text-align: left; }
     .project-picker-chevron { width: 16px; height: 16px; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
@@ -179,7 +179,7 @@
     .project-picker-panel.active { display: block; }
     .project-picker-option { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.6rem; border-radius: 8px; cursor: pointer; transition: 0.12s; }
     .project-picker-option:hover { background: var(--bg); }
-    .project-picker-option.selected { background: rgba(184,37,62,0.08); }
+    .project-picker-option.selected { background: rgba(218,44,72,0.08); }
     .project-picker-option img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--bg); border: 1px solid var(--border); flex-shrink: 0; }
     .project-picker-option-name { font-size: 0.85rem; font-weight: 600; }
     .project-picker-option-count { font-size: 0.7rem; color: var(--text-muted); }
@@ -200,7 +200,26 @@
     .badge.won, .badge.done { background: var(--success-bg); color: var(--success); }
     .badge.lost, .badge.cancelled { background: var(--danger-bg); color: var(--danger); }
 
+    .status-quick-select { border: none; border-radius: 100px; padding: 0.3rem 1.6rem 0.3rem 0.7rem; font-size: 0.72rem; font-weight: 700; cursor: pointer; appearance: none; background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 10px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); }
+    .status-quick-select.new { background-color: var(--info-bg); color: var(--info); }
+    .status-quick-select.contacted { background-color: var(--warning-bg); color: var(--warning); }
+    .status-quick-select.won { background-color: var(--success-bg); color: var(--success); }
+    .row-actions { display: flex; gap: 0.3rem; justify-content: flex-end; }
+    .row-actions .icon-btn { width: 30px; height: 30px; }
+    .row-actions .icon-btn svg { width: 14px; height: 14px; }
+    .row-actions .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+
     .empty-state { text-align: center; padding: 3.5rem 1rem; color: var(--text-muted); }
+
+    .kpi-trend { font-size: 0.72rem; font-weight: 700; margin-top: 0.3rem; }
+    .kpi-trend.up { color: var(--success); }
+    .kpi-trend.down { color: var(--danger); }
+    .kpi-trend.flat { color: var(--text-muted); }
+
+    .goal-card, .alert-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.3rem; margin-bottom: 0.8rem; }
+    .goal-progress-bar { width: 100%; height: 8px; border-radius: 100px; background: var(--bg); overflow: hidden; margin: 0.6rem 0; }
+    .goal-progress-fill { height: 100%; background: var(--accent); border-radius: 100px; transition: width 0.4s var(--ease); }
+    .goal-progress-fill.complete { background: var(--success); }
 
     /* ============ ÉDITEURS DE CONTENU ============ */
     .edit-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.2rem; margin-bottom: 0.8rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: var(--shadow); }
@@ -539,56 +558,138 @@
             </div>
 
             <div id="analyticsContent" style="display:none;">
-                <div class="kpi-grid">
-                    <div class="kpi-card hero" style="position:relative;">
-                        <div class="kpi-label">
-                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:6px; animation:pulseDot 1.6s infinite;"></span>
-                            Visiteurs actifs maintenant
+                <div class="toolbar">
+                    <button class="filter-chip active" data-atab="overview">Vue d'ensemble</button>
+                    <button class="filter-chip" data-atab="audience">Audience</button>
+                    <button class="filter-chip" data-atab="pages">Pages & trafic</button>
+                    <button class="filter-chip" data-atab="goals">🎯 Objectifs</button>
+                    <button class="filter-chip" data-atab="alerts">🔔 Alertes</button>
+                </div>
+
+                <!-- ONGLET : VUE D'ENSEMBLE -->
+                <div class="analytics-tab" id="atab-overview">
+                    <div class="kpi-grid">
+                        <div class="kpi-card hero" style="position:relative;">
+                            <div class="kpi-label">
+                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:6px; animation:pulseDot 1.6s infinite;"></span>
+                                Visiteurs actifs maintenant
+                            </div>
+                            <div class="kpi-value" id="gaRealtimeUsers">—</div>
                         </div>
-                        <div class="kpi-value" id="gaRealtimeUsers">—</div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Visiteurs</div>
+                            <div class="kpi-value" id="gaUsers">—</div>
+                            <div class="kpi-trend" id="gaUsersTrend"></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Sessions</div>
+                            <div class="kpi-value" id="gaSessions">—</div>
+                            <div class="kpi-trend" id="gaSessionsTrend"></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Pages vues</div>
+                            <div class="kpi-value" id="gaPageviews">—</div>
+                            <div class="kpi-trend" id="gaPageviewsTrend"></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Durée moy. session</div>
+                            <div class="kpi-value" id="gaAvgDuration">—</div>
+                            <div class="kpi-trend" id="gaAvgDurationTrend"></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Taux de rebond</div>
+                            <div class="kpi-value" id="gaBounce">—</div>
+                            <div class="kpi-trend" id="gaBounceTrend"></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Taux d'engagement</div>
+                            <div class="kpi-value" id="gaEngagement">—</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Pages / session</div>
+                            <div class="kpi-value" id="gaPagesPerSession">—</div>
+                        </div>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Visiteurs (période)</div>
-                        <div class="kpi-value" id="gaUsers">—</div>
+
+                    <div class="panel" style="margin-bottom:1.2rem;">
+                        <h3>Visiteurs, sessions & pages vues</h3>
+                        <canvas id="gaChart" height="80"></canvas>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Sessions</div>
-                        <div class="kpi-value" id="gaSessions">—</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Pages vues</div>
-                        <div class="kpi-value" id="gaPageviews">—</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Durée moy. session</div>
-                        <div class="kpi-value" id="gaAvgDuration">—</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Taux de rebond</div>
-                        <div class="kpi-value" id="gaBounce">—</div>
+
+                    <div class="panel">
+                        <h3>Trafic par heure de la journée</h3>
+                        <canvas id="gaHourlyChart" height="60"></canvas>
                     </div>
                 </div>
 
-                <div class="panel-grid">
-                    <div class="panel">
-                        <h3>Visiteurs & sessions</h3>
-                        <canvas id="gaChart" height="90"></canvas>
+                <!-- ONGLET : AUDIENCE -->
+                <div class="analytics-tab" id="atab-audience" style="display:none;">
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Nouveaux vs récurrents</h3>
+                            <div id="gaNewVsReturning"></div>
+                        </div>
+                        <div class="panel">
+                            <h3>Appareils</h3>
+                            <div id="gaDevices"></div>
+                        </div>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Navigateurs</h3>
+                            <div id="gaBrowsers"></div>
+                        </div>
+                        <div class="panel">
+                            <h3>Pays</h3>
+                            <div id="gaGeo"></div>
+                        </div>
                     </div>
                     <div class="panel">
-                        <h3>Sources de trafic</h3>
-                        <div id="gaSources"></div>
+                        <h3>Villes</h3>
+                        <div id="gaCities"></div>
                     </div>
                 </div>
 
-                <div class="panel-grid">
-                    <div class="panel">
-                        <h3>Pages les plus vues</h3>
-                        <div id="gaTopPages"></div>
+                <!-- ONGLET : PAGES & TRAFIC -->
+                <div class="analytics-tab" id="atab-pages" style="display:none;">
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Pages les plus vues</h3>
+                            <div id="gaTopPages"></div>
+                        </div>
+                        <div class="panel">
+                            <h3>Pages d'entrée (landing pages)</h3>
+                            <div id="gaLandingPages"></div>
+                        </div>
                     </div>
-                    <div class="panel">
-                        <h3>Appareils</h3>
-                        <div id="gaDevices"></div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Sources de trafic (canal)</h3>
+                            <div id="gaSources"></div>
+                        </div>
+                        <div class="panel">
+                            <h3>Provenance détaillée</h3>
+                            <div id="gaReferrers"></div>
+                        </div>
                     </div>
+                </div>
+
+                <!-- ONGLET : OBJECTIFS -->
+                <div class="analytics-tab" id="atab-goals" style="display:none;">
+                    <div class="topbar" style="padding:0; margin-bottom:1rem;">
+                        <p class="cell-muted">Fixe-toi un nombre de visiteurs/sessions/pages vues à atteindre, la progression se calcule automatiquement.</p>
+                        <button class="btn-primary" id="addGoalBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouvel objectif</button>
+                    </div>
+                    <div id="goalsListWrap"></div>
+                </div>
+
+                <!-- ONGLET : ALERTES -->
+                <div class="analytics-tab" id="atab-alerts" style="display:none;">
+                    <div class="topbar" style="padding:0; margin-bottom:1rem;">
+                        <p class="cell-muted">Reçois un email automatique si une métrique du jour dépasse (ou descend sous) un seuil. Vérifié toutes les heures.</p>
+                        <button class="btn-primary" id="addAlertBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouvelle alerte</button>
+                    </div>
+                    <div id="alertsListWrap"></div>
                 </div>
             </div>
         </section>
@@ -1049,8 +1150,21 @@ function updateLastRefreshLabel() {
 }
 
 /* ---------------- OVERVIEW ---------------- */
-/* ---------------- ANALYTICS (Google Analytics en direct) ---------------- */
+/* ---------------- ANALYTICS (Google Analytics en direct, détaillé) ---------------- */
 document.getElementById('analyticsDaysSelect').addEventListener('change', () => loadAnalytics());
+
+document.querySelectorAll('#view-analytics .toolbar .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        document.querySelectorAll('#view-analytics .toolbar .filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        document.querySelectorAll('.analytics-tab').forEach(t => t.style.display = 'none');
+        document.getElementById('atab-' + chip.dataset.atab).style.display = 'block';
+        if (chip.dataset.atab === 'goals') loadGoals();
+        if (chip.dataset.atab === 'alerts') loadAlerts();
+    });
+});
+
+let lastOverview = null;
 
 async function loadAnalytics() {
     const days = document.getElementById('analyticsDaysSelect').value;
@@ -1061,6 +1175,7 @@ async function loadAnalytics() {
             document.getElementById('analyticsContent').style.display = 'none';
             return;
         }
+        lastOverview = overview;
         document.getElementById('analyticsNotConfigured').style.display = 'none';
         document.getElementById('analyticsContent').style.display = 'block';
 
@@ -1069,16 +1184,42 @@ async function loadAnalytics() {
         document.getElementById('gaPageviews').textContent = overview.totals.pageViews.toLocaleString('fr-FR');
         document.getElementById('gaAvgDuration').textContent = formatDuration(overview.totals.avgSessionDuration);
         document.getElementById('gaBounce').textContent = Math.round(overview.totals.bounceRate * 100) + '%';
+        document.getElementById('gaEngagement').textContent = Math.round((overview.totals.engagementRate || 0) * 100) + '%';
+        document.getElementById('gaPagesPerSession').textContent = (overview.totals.pagesPerSession || 0).toFixed(1);
+
+        renderTrend('gaUsersTrend', overview.trends.activeUsers);
+        renderTrend('gaSessionsTrend', overview.trends.sessions);
+        renderTrend('gaPageviewsTrend', overview.trends.pageViews);
+        renderTrend('gaAvgDurationTrend', overview.trends.avgSessionDuration);
+        renderTrend('gaBounceTrend', overview.trends.bounceRate, true); // rebond : baisse = bon signe
 
         renderGaChart(overview.byDay);
+        renderHourlyChart(overview.hourly);
+
         renderGaList('gaSources', overview.sources.map(s => ({ label: channelLabel(s.channel), value: s.sessions })));
-        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views })));
+        renderGaList('gaReferrers', overview.referrers.map(r => ({ label: r.source, value: r.sessions })));
+        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views, sub: formatDuration(p.avgDuration) })));
+        renderGaList('gaLandingPages', overview.landingPages.map(p => ({ label: p.path, value: p.sessions, sub: Math.round(p.bounceRate * 100) + '% rebond' })));
         renderGaList('gaDevices', overview.devices.map(d => ({ label: deviceLabel(d.device), value: d.users })));
+        renderGaList('gaBrowsers', overview.browsers.map(b => ({ label: b.browser, value: b.users })));
+        renderGaList('gaGeo', overview.geo.map(g => ({ label: g.country, value: g.users })));
+        renderGaList('gaCities', overview.cities.map(c => ({ label: c.city, value: c.users })));
+        renderGaList('gaNewVsReturning', overview.newVsReturning.map(n => ({ label: n.type === 'new' ? 'Nouveaux visiteurs' : 'Visiteurs récurrents', value: n.users })));
 
         refreshRealtime();
         if (gaRealtimeInterval) clearInterval(gaRealtimeInterval);
         gaRealtimeInterval = setInterval(refreshRealtime, 15000); // toutes les 15s
     } catch (e) { toast(e.message); }
+}
+
+function renderTrend(elId, value, invert = false) {
+    const el = document.getElementById(elId);
+    if (value === undefined || value === null || !isFinite(value)) { el.textContent = ''; return; }
+    const good = invert ? value < 0 : value > 0;
+    const flat = Math.abs(value) < 0.5;
+    el.className = 'kpi-trend ' + (flat ? 'flat' : good ? 'up' : 'down');
+    const arrow = flat ? '→' : value > 0 ? '▲' : '▼';
+    el.textContent = `${arrow} ${Math.abs(value)}% vs période précédente`;
 }
 
 async function refreshRealtime() {
@@ -1111,8 +1252,9 @@ function renderGaChart(byDay) {
         data: {
             labels: byDay.map(r => `${r.date.slice(6, 8)}/${r.date.slice(4, 6)}`),
             datasets: [
-                { label: 'Visiteurs', data: byDay.map(r => r.users), borderColor: '#b8253e', backgroundColor: 'rgba(184,37,62,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+                { label: 'Visiteurs', data: byDay.map(r => r.users), borderColor: '#da2c48', backgroundColor: 'rgba(218,44,72,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
                 { label: 'Sessions', data: byDay.map(r => r.sessions), borderColor: '#8b8b93', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [4, 4] },
+                { label: 'Pages vues', data: byDay.map(r => r.pageViews), borderColor: '#35548f', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [1, 3] },
             ],
         },
         options: {
@@ -1125,11 +1267,35 @@ function renderGaChart(byDay) {
     });
 }
 
+let gaHourlyChartInstance = null;
+function renderHourlyChart(hourly) {
+    const ctx = document.getElementById('gaHourlyChart').getContext('2d');
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const textColor = isDark ? '#96969e' : '#6b6b74';
+    const byHour = Array.from({ length: 24 }, (_, h) => hourly.find(r => r.hour === h)?.sessions || 0);
+    if (gaHourlyChartInstance) gaHourlyChartInstance.destroy();
+    gaHourlyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: byHour.map((_, h) => h + 'h'), datasets: [{ label: 'Sessions', data: byHour, backgroundColor: 'rgba(218,44,72,0.55)', borderRadius: 4 }] },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: textColor, font: { size: 9 } } },
+                y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true },
+            },
+        },
+    });
+}
+
 function renderGaList(elId, items) {
     const wrap = document.getElementById(elId);
     if (!items.length) { wrap.innerHTML = '<p class="cell-muted">Pas encore de données.</p>'; return; }
-    wrap.innerHTML = items.map(i => `
-        <div class="ga-list-row"><span class="label">${escapeHtml(i.label)}</span><span class="value">${i.value.toLocaleString('fr-FR')}</span></div>
+    wrap.innerHTML = items.slice(0, 10).map(i => `
+        <div class="ga-list-row">
+            <span class="label">${escapeHtml(i.label)}</span>
+            <span class="value">${i.value.toLocaleString('fr-FR')}${i.sub ? ` <span class="cell-muted" style="font-weight:400;">· ${i.sub}</span>` : ''}</span>
+        </div>
     `).join('');
 }
 
@@ -1146,6 +1312,165 @@ function channelLabel(channel) {
 function deviceLabel(device) {
     const map = { mobile: '📱 Mobile', desktop: '💻 Ordinateur', tablet: '📱 Tablette' };
     return map[device] || device;
+}
+
+/* ---- OBJECTIFS ---- */
+const GOAL_METRIC_LABELS_UI = { activeUsers: 'Visiteurs', sessions: 'Sessions', pageViews: 'Pages vues' };
+const GOAL_PERIOD_LABELS_UI = { daily: "Aujourd'hui", weekly: 'Cette semaine', monthly: 'Ce mois-ci' };
+
+async function loadGoals() {
+    try {
+        const data = await api('/api/analytics/goals-progress');
+        renderGoals(data.goals || []);
+    } catch (e) { toast(e.message); }
+}
+
+function renderGoals(goals) {
+    const wrap = document.getElementById('goalsListWrap');
+    if (!goals.length) { wrap.innerHTML = emptyStateHTML('Aucun objectif défini. Clique sur "+ Nouvel objectif".'); return; }
+    wrap.innerHTML = goals.map(g => `
+        <div class="goal-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong>${GOAL_METRIC_LABELS_UI[g.metric]}</strong>
+                    <span class="cell-muted"> — ${GOAL_PERIOD_LABELS_UI[g.period]}</span>
+                </div>
+                <button class="icon-btn danger" onclick="deleteGoal(${g.id})" title="Supprimer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+            </div>
+            <div class="goal-progress-bar"><div class="goal-progress-fill ${g.progress >= 100 ? 'complete' : ''}" style="width:${Math.min(100, g.progress)}%;"></div></div>
+            <div class="cell-muted" style="font-size:0.8rem;">${g.current.toLocaleString('fr-FR')} / ${g.target.toLocaleString('fr-FR')} (${g.progress}%)${g.progress >= 100 ? ' 🎉' : ''}</div>
+        </div>
+    `).join('');
+}
+
+document.getElementById('addGoalBtn').addEventListener('click', () => {
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header"><h3>Nouvel objectif</h3><button class="drawer-close" onclick="closeDrawer()">✕</button></div>
+        <div class="drawer-field">
+            <label>Métrique</label>
+            <select id="goalMetric">
+                <option value="activeUsers">Visiteurs</option>
+                <option value="sessions">Sessions</option>
+                <option value="pageViews">Pages vues</option>
+            </select>
+        </div>
+        <div class="drawer-field">
+            <label>Période</label>
+            <select id="goalPeriod">
+                <option value="daily">Aujourd'hui</option>
+                <option value="weekly" selected>Cette semaine</option>
+                <option value="monthly">Ce mois-ci</option>
+            </select>
+        </div>
+        <div class="drawer-field"><label>Cible</label><input type="number" id="goalTarget" placeholder="Ex : 500" min="1"></div>
+        <div class="drawer-actions"><button class="btn-primary" onclick="createGoal()">Créer l'objectif</button></div>
+    `;
+    openDrawer();
+});
+
+async function createGoal() {
+    const target = Number(document.getElementById('goalTarget').value);
+    if (!target || target <= 0) { toast('Entre une cible valide.'); return; }
+    try {
+        await api('/api/analytics/goals', { method: 'POST', body: JSON.stringify({
+            metric: document.getElementById('goalMetric').value,
+            period: document.getElementById('goalPeriod').value,
+            target,
+        }) });
+        toast('Objectif créé ✅');
+        closeDrawer();
+        loadGoals();
+    } catch (e) { toast(e.message); }
+}
+
+async function deleteGoal(id) {
+    if (!confirm('Supprimer cet objectif ?')) return;
+    try { await api('/api/analytics/goals/' + id, { method: 'DELETE' }); loadGoals(); }
+    catch (e) { toast(e.message); }
+}
+
+/* ---- ALERTES ---- */
+async function loadAlerts() {
+    try {
+        const alerts = await api('/api/analytics/alerts');
+        renderAlerts(alerts);
+    } catch (e) { toast(e.message); }
+}
+
+function renderAlerts(alerts) {
+    const wrap = document.getElementById('alertsListWrap');
+    if (!alerts.length) { wrap.innerHTML = emptyStateHTML('Aucune alerte configurée. Clique sur "+ Nouvelle alerte".'); return; }
+    wrap.innerHTML = alerts.map(a => `
+        <div class="alert-card" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong>${GOAL_METRIC_LABELS_UI[a.metric] || a.metric}</strong>
+                <span class="cell-muted"> ${a.condition === 'above' ? 'au-dessus de' : 'en dessous de'} ${a.threshold.toLocaleString('fr-FR')} aujourd'hui</span><br>
+                <span class="cell-muted" style="font-size:0.75rem;">Notifie : ${escapeHtml(a.notifyEmail || 'email par défaut')}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+                <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; cursor:pointer;">
+                    <input type="checkbox" ${a.active ? 'checked' : ''} onchange="toggleAlert(${a.id}, this.checked)"> Active
+                </label>
+                <button class="icon-btn danger" onclick="deleteAlert(${a.id})" title="Supprimer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+document.getElementById('addAlertBtn').addEventListener('click', () => {
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header"><h3>Nouvelle alerte</h3><button class="drawer-close" onclick="closeDrawer()">✕</button></div>
+        <div class="drawer-field">
+            <label>Métrique (mesurée sur la journée en cours)</label>
+            <select id="alertMetric">
+                <option value="activeUsers">Visiteurs</option>
+                <option value="sessions">Sessions</option>
+                <option value="pageViews">Pages vues</option>
+            </select>
+        </div>
+        <div class="drawer-field">
+            <label>Condition</label>
+            <select id="alertCondition">
+                <option value="above">Dépasse</option>
+                <option value="below">Descend sous</option>
+            </select>
+        </div>
+        <div class="drawer-field"><label>Seuil</label><input type="number" id="alertThreshold" placeholder="Ex : 200" min="0"></div>
+        <div class="drawer-field"><label>Email de notification (optionnel)</label><input type="email" id="alertEmail" placeholder="Laisse vide pour l'email par défaut"></div>
+        <div class="drawer-actions"><button class="btn-primary" onclick="createAlert()">Créer l'alerte</button></div>
+    `;
+    openDrawer();
+});
+
+async function createAlert() {
+    const threshold = document.getElementById('alertThreshold').value;
+    if (threshold === '') { toast('Entre un seuil.'); return; }
+    try {
+        await api('/api/analytics/alerts', { method: 'POST', body: JSON.stringify({
+            metric: document.getElementById('alertMetric').value,
+            condition: document.getElementById('alertCondition').value,
+            threshold: Number(threshold),
+            notifyEmail: document.getElementById('alertEmail').value.trim() || null,
+        }) });
+        toast('Alerte créée ✅');
+        closeDrawer();
+        loadAlerts();
+    } catch (e) { toast(e.message); }
+}
+
+async function toggleAlert(id, active) {
+    try { await api('/api/analytics/alerts/' + id, { method: 'PATCH', body: JSON.stringify({ active }) }); }
+    catch (e) { toast(e.message); }
+}
+
+async function deleteAlert(id) {
+    if (!confirm('Supprimer cette alerte ?')) return;
+    try { await api('/api/analytics/alerts/' + id, { method: 'DELETE' }); loadAlerts(); }
+    catch (e) { toast(e.message); }
 }
 
 async function loadOverview() {
@@ -1193,8 +1518,8 @@ function renderLeadsChart(byDay) {
             labels: byDay.map(r => r.d.slice(5)),
             datasets: [{
                 data: byDay.map(r => r.c),
-                borderColor: '#b8253e',
-                backgroundColor: 'rgba(184,37,62,0.08)',
+                borderColor: '#da2c48',
+                backgroundColor: 'rgba(218,44,72,0.08)',
                 fill: true,
                 tension: 0.35,
                 pointRadius: 0,
@@ -1982,19 +2307,50 @@ function renderQuotesTable() {
     if (!list.length) { wrap.innerHTML = emptyStateHTML('Aucun devis pour le moment.'); return; }
     wrap.innerHTML = `
         <table class="data-table">
-            <thead><tr><th>Client</th><th>Montant</th><th>Statut</th><th>Créé le</th></tr></thead>
+            <thead><tr><th>Client</th><th>Montant</th><th>Statut</th><th>Créé le</th><th></th></tr></thead>
             <tbody>
                 ${list.map(q => `
                     <tr onclick="openQuoteDrawer(${q.id})">
                         <td>${escapeHtml(q.clientName || q.clientEmail)}</td>
                         <td class="cell-muted">${(q.total || 0).toFixed(2)} €</td>
-                        <td><span class="badge ${q.status === 'paid' ? 'won' : q.status === 'sent' ? 'contacted' : 'new'}">${q.status === 'paid' ? 'Payé' : q.status === 'sent' ? 'Envoyé' : 'Brouillon'}</span></td>
+                        <td onclick="event.stopPropagation()">
+                            <select class="status-quick-select ${q.status === 'paid' ? 'won' : q.status === 'sent' ? 'contacted' : 'new'}" onchange="quickSetQuoteStatus(${q.id}, this.value)">
+                                <option value="draft" ${q.status === 'draft' ? 'selected' : ''}>Brouillon</option>
+                                <option value="sent" ${q.status === 'sent' ? 'selected' : ''}>Envoyé</option>
+                                <option value="paid" ${q.status === 'paid' ? 'selected' : ''}>Payé</option>
+                            </select>
+                        </td>
                         <td class="cell-muted">${formatDate(q.created_at)}</td>
+                        <td class="row-actions" onclick="event.stopPropagation()">
+                            <button class="icon-btn" title="Dupliquer" onclick="duplicateQuote(${q.id})">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                            <button class="icon-btn danger" title="Supprimer" onclick="deleteQuote(${q.id})">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
     `;
+}
+
+async function quickSetQuoteStatus(id, status) {
+    try { await api('/api/quotes/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }); loadQuotes(); }
+    catch (e) { toast(e.message); }
+}
+
+async function duplicateQuote(id) {
+    const q = quotesCache.find(x => x.id === id);
+    if (!q) return;
+    try {
+        await api('/api/quotes', { method: 'POST', body: JSON.stringify({
+            clientName: q.clientName, clientEmail: q.clientEmail, items: q.items, notes: q.notes,
+        }) });
+        toast('Devis dupliqué en nouveau brouillon ✅');
+        loadQuotes();
+    } catch (e) { toast(e.message); }
 }
 
 function quoteItemRowHTML(item = {}) {
@@ -2042,7 +2398,7 @@ function openQuoteDrawer(id) {
         ${q ? `
         <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border); flex-wrap:wrap;">
             <button class="btn-primary" onclick="sendQuote(${q.id})">✉️ Envoyer au client</button>
-            <button class="btn-secondary" onclick="window.open(API_BASE + '/api/quotes/${q.id}/view?print=1', '_blank')">🖨️ Voir / Imprimer</button>
+            <button class="btn-secondary" onclick="window.open(API_BASE + '/api/quotes/${q.id}/view?print=1&token=' + encodeURIComponent(TOKEN), '_blank')">🖨️ Voir / Imprimer</button>
             ${q.status !== 'paid' ? `<button class="btn-secondary" onclick="markQuotePaid(${q.id})">✓ Marquer payé</button>` : ''}
             <button class="btn-secondary" onclick="convertQuoteToInvoice(${q.id})">📄 Convertir en facture</button>
         </div>` : ''}
@@ -2415,20 +2771,52 @@ function renderInvoicesTable() {
     if (!list.length) { wrap.innerHTML = emptyStateHTML('Aucune facture pour le moment.'); return; }
     wrap.innerHTML = `
         <table class="data-table">
-            <thead><tr><th>N°</th><th>Client</th><th>Montant</th><th>Statut</th><th>Émise le</th></tr></thead>
+            <thead><tr><th>N°</th><th>Client</th><th>Montant</th><th>Statut</th><th>Émise le</th><th></th></tr></thead>
             <tbody>
                 ${list.map(i => `
                     <tr onclick="openInvoiceDrawer(${i.id})">
                         <td class="cell-muted">${i.invoiceNumber}</td>
                         <td>${escapeHtml(i.clientName || i.clientEmail)}</td>
                         <td class="cell-muted">${(i.total || 0).toFixed(2)} €</td>
-                        <td><span class="badge ${i.status === 'paid' ? 'won' : i.status === 'sent' ? 'contacted' : 'new'}">${i.status === 'paid' ? 'Payée' : i.status === 'sent' ? 'Envoyée' : 'Brouillon'}</span></td>
+                        <td onclick="event.stopPropagation()">
+                            <select class="status-quick-select ${i.status === 'paid' ? 'won' : i.status === 'sent' ? 'contacted' : 'new'}" onchange="quickSetInvoiceStatus(${i.id}, this.value)">
+                                <option value="draft" ${i.status === 'draft' ? 'selected' : ''}>Brouillon</option>
+                                <option value="sent" ${i.status === 'sent' ? 'selected' : ''}>Envoyée</option>
+                                <option value="paid" ${i.status === 'paid' ? 'selected' : ''}>Payée</option>
+                            </select>
+                        </td>
                         <td class="cell-muted">${formatDate(i.issue_date)}</td>
+                        <td class="row-actions" onclick="event.stopPropagation()">
+                            <button class="icon-btn" title="Dupliquer (nouveau numéro)" onclick="duplicateInvoice(${i.id})">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                            <button class="icon-btn danger" title="Supprimer" onclick="deleteInvoice(${i.id})">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
     `;
+}
+
+async function quickSetInvoiceStatus(id, status) {
+    try { await api('/api/invoices/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }); loadInvoices(); }
+    catch (e) { toast(e.message); }
+}
+
+async function duplicateInvoice(id) {
+    const inv = invoicesCache.find(x => x.id === id);
+    if (!inv) return;
+    try {
+        const newInv = await api('/api/invoices', { method: 'POST', body: JSON.stringify({
+            clientName: inv.clientName, clientEmail: inv.clientEmail, clientAddress: inv.clientAddress,
+            items: inv.items, notes: inv.notes,
+        }) });
+        toast(`Facture ${newInv.invoiceNumber} créée ✅`);
+        loadInvoices();
+    } catch (e) { toast(e.message); }
 }
 
 function openInvoiceDrawer(id) {
@@ -2462,7 +2850,7 @@ function openInvoiceDrawer(id) {
         ${inv ? `
         <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border); flex-wrap:wrap;">
             <button class="btn-primary" onclick="sendInvoice(${inv.id})">✉️ Envoyer au client</button>
-            <button class="btn-secondary" onclick="window.open(API_BASE + '/api/invoices/${inv.id}/view?print=1', '_blank')">🖨️ Voir / Imprimer</button>
+            <button class="btn-secondary" onclick="window.open(API_BASE + '/api/invoices/${inv.id}/view?print=1&token=' + encodeURIComponent(TOKEN), '_blank')">🖨️ Voir / Imprimer</button>
             ${inv.status !== 'paid' ? `<button class="btn-secondary" onclick="markInvoicePaid(${inv.id})">✓ Marquer payée</button>` : ''}
         </div>` : ''}
     `;

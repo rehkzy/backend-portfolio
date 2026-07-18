@@ -42,7 +42,7 @@ function now() { return new Date().toISOString(); }
    ============================================================ */
 function auth(req, res, next) {
     const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const token = (header.startsWith('Bearer ') ? header.slice(7) : null) || req.query.token || null;
     if (!token) return res.status(401).json({ error: 'Non authentifié' });
     try { req.user = jwt.verify(token, JWT_SECRET); next(); }
     catch { return res.status(401).json({ error: 'Session invalide ou expirée' }); }
@@ -261,6 +261,102 @@ app.get('/api/analytics/overview', auth, async (req, res) => {
         res.status(500).json({ error: 'Erreur Google Analytics : ' + err.message });
     }
 });
+
+/* ============================================================
+   OBJECTIFS DE VUES/VISITEURS
+   ============================================================ */
+const GOAL_METRICS = {
+    activeUsers: 'Visiteurs', sessions: 'Sessions', pageViews: 'Pages vues',
+};
+const GOAL_PERIODS = { daily: "Aujourd'hui", weekly: 'Cette semaine', monthly: 'Ce mois-ci' };
+
+app.get('/api/analytics/goals', auth, (req, res) => {
+    res.json(db.get('analyticsGoals').value());
+});
+
+app.post('/api/analytics/goals', auth, (req, res) => {
+    const { metric, target, period } = req.body || {};
+    if (!metric || !target || !period) return res.status(400).json({ error: 'metric, target et period requis' });
+    const goal = { id: nextId('analyticsGoals'), created_at: now(), metric, target: Number(target), period };
+    db.get('analyticsGoals').push(goal).write();
+    res.status(201).json(goal);
+});
+
+app.delete('/api/analytics/goals/:id', auth, (req, res) => {
+    db.get('analyticsGoals').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+// Progression de chaque objectif par rapport aux vraies données GA du moment
+app.get('/api/analytics/goals-progress', auth, async (req, res) => {
+    if (!analytics.isConfigured()) return res.json({ configured: false, goals: [] });
+    try {
+        const goals = db.get('analyticsGoals').value();
+        const daysByPeriod = { daily: 1, weekly: 7, monthly: 30 };
+        const results = [];
+        for (const goal of goals) {
+            const overview = await analytics.getOverview(daysByPeriod[goal.period] || 7);
+            const current = overview.configured ? (overview.totals[goal.metric] || 0) : 0;
+            results.push({ ...goal, current, progress: goal.target > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0 });
+        }
+        res.json({ configured: true, goals: results });
+    } catch (err) {
+        res.status(500).json({ error: 'Erreur calcul objectifs : ' + err.message });
+    }
+});
+
+/* ============================================================
+   ALERTES ANALYTICS — vérifiées automatiquement chaque heure
+   ============================================================ */
+app.get('/api/analytics/alerts', auth, (req, res) => {
+    res.json(db.get('analyticsAlerts').value());
+});
+
+app.post('/api/analytics/alerts', auth, (req, res) => {
+    const { metric, condition, threshold, notifyEmail } = req.body || {};
+    if (!metric || !condition || threshold === undefined) return res.status(400).json({ error: 'metric, condition et threshold requis' });
+    const alert = {
+        id: nextId('analyticsAlerts'), created_at: now(), metric, condition,
+        threshold: Number(threshold), notifyEmail: notifyEmail || null,
+        active: true, last_triggered_at: null,
+    };
+    db.get('analyticsAlerts').push(alert).write();
+    res.status(201).json(alert);
+});
+
+app.patch('/api/analytics/alerts/:id', auth, (req, res) => {
+    const id = Number(req.params.id);
+    const alert = db.get('analyticsAlerts').find({ id });
+    if (!alert.value()) return res.status(404).json({ error: 'Alerte introuvable' });
+    const { active } = req.body || {};
+    if (active !== undefined) alert.assign({ active }).write();
+    res.json({ ok: true });
+});
+
+app.delete('/api/analytics/alerts/:id', auth, (req, res) => {
+    db.get('analyticsAlerts').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+async function checkAnalyticsAlerts() {
+    if (!analytics.isConfigured()) return;
+    const alerts = db.get('analyticsAlerts').value().filter(a => a.active);
+    const today = new Date().toISOString().slice(0, 10);
+    for (const alert of alerts) {
+        if (alert.last_triggered_at && alert.last_triggered_at.slice(0, 10) === today) continue; // déjà notifié aujourd'hui
+        try {
+            const value = await analytics.getTodayMetric(alert.metric === 'pageViews' ? 'screenPageViews' : alert.metric);
+            if (value === null) continue;
+            const triggered = alert.condition === 'above' ? value > alert.threshold : value < alert.threshold;
+            if (triggered) {
+                await mailer.sendMail(mailer.analyticsAlertEmail(alert, value));
+                db.get('analyticsAlerts').find({ id: alert.id }).assign({ last_triggered_at: now() }).write();
+            }
+        } catch (err) {
+            console.error('Erreur vérification alerte analytics:', err.message);
+        }
+    }
+}
 
 /* ============================================================
    DEVIS & FACTURES
@@ -548,6 +644,11 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 cron.schedule('0 8 1 * *', () => {
     console.log('📊 Envoi du rapport mensuel automatique...');
     buildAndSendMonthlyReport().catch(err => console.error('Erreur rapport mensuel:', err.message));
+}, { timezone: 'Europe/Paris' });
+
+// Vérification des alertes analytics — toutes les heures
+cron.schedule('0 * * * *', () => {
+    checkAnalyticsAlerts().catch(err => console.error('Erreur vérification alertes:', err.message));
 }, { timezone: 'Europe/Paris' });
 
 app.listen(PORT, () => console.log(`✅ Backend Florian B. sur http://localhost:${PORT}`));
