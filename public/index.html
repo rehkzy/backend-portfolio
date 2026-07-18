@@ -1,1119 +1,2081 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — Florian B.</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<style>
-    :root {
-        --accent: #da2c48;
-        --accent-2: #ff7a3d;
-        --bg: #f6f6f7;
-        --surface: #ffffff;
-        --border: #e3e3e5;
-        --text: #1a1a1e;
-        --text-muted: #6b6b74;
-        --radius: 12px;
-        --radius-lg: 16px;
-        --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
-        --font-display: 'Syne', sans-serif;
-        --font-body: 'Inter', sans-serif;
-        --ease: cubic-bezier(0.16, 1, 0.3, 1);
-        --success: #12805c;
-        --success-bg: #e3f6ed;
-        --warning: #92650a;
-        --warning-bg: #fdf3d8;
-        --danger: #d0261e;
-        --danger-bg: #fde9e8;
-        --info: #2a5ab0;
-        --info-bg: #e8eefb;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Florian B. | Graphiste & Directeur Artistique freelance à Paris</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <meta name="description" content="Florian Bonnet est graphiste et directeur artistique freelance basé à Paris. Branding, UI/UX Design, communication digitale et print pour des marques comme BNP Paribas, Courtepaille, BasicFit, Augmantor et Trustify.">
+    <meta name="author" content="Florian Bonnet">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://florian-b.fr/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Florian B. | Graphiste & Directeur Artistique freelance à Paris">
+    <meta property="og:description" content="Branding, UI/UX Design, communication digitale et print. Découvrez les projets de Florian Bonnet, graphiste et DA basé à Paris.">
+    <meta property="og:url" content="https://florian-b.fr/">
+    <meta property="og:image" content="https://florian-b.fr/hero-photo-flo.webp">
+    <meta property="og:image:width" content="2400">
+    <meta property="og:image:height" content="1129">
+    <meta property="og:image:alt" content="Florian B. — Graphiste & Directeur Artistique">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:site_name" content="Florian B.">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Florian B. | Graphiste & Directeur Artistique freelance à Paris">
+    <meta name="twitter:description" content="Branding, UI/UX Design, communication digitale et print. Découvrez les projets de Florian Bonnet, graphiste et DA basé à Paris.">
+    <meta name="twitter:image" content="https://florian-b.fr/hero-photo-flo.webp">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Syne:wght@200;400;800&display=swap" rel="stylesheet">
+
+    <!-- ============================================================
+         DONNÉES STRUCTUREES (Schema.org / JSON-LD) — GEO
+         Remplacez https://florian-b.fr par le vrai nom de domaine du site.
+         ============================================================ -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Person",
+                "@id": "https://florian-b.fr/#person",
+                "name": "Florian Bonnet",
+                "alternateName": "Florian B.",
+                "jobTitle": "Graphiste & Directeur Artistique",
+                "url": "https://florian-b.fr/",
+                "image": "https://florian-b.fr/photo%20flo%20site.png",
+                "email": "mailto:contact@florian-b.fr",
+                "telephone": "+33646207825",
+                "address": { "@type": "PostalAddress", "addressLocality": "Paris", "addressCountry": "FR" },
+                "worksFor": { "@id": "https://florian-b.fr/#organization" },
+                "sameAs": [
+                    "https://www.instagram.com/florian.b93tsz",
+                    "https://www.linkedin.com/in/florian-bonnet-b82018198/"
+                ],
+                "knowsAbout": ["Branding", "UI/UX Design", "Direction Artistique", "Communication Digitale", "Communication Print", "Motion Design", "Photographie"],
+                "knowsLanguage": ["fr", "en", "es"],
+                "alumniOf": [
+                    { "@type": "EducationalOrganization", "name": "MJM Graphic Design" },
+                    { "@type": "EducationalOrganization", "name": "Claude Nicolas Ledoux (EBTP)" }
+                ]
+            },
+            {
+                "@type": "ProfessionalService",
+                "@id": "https://florian-b.fr/#organization",
+                "name": "Florian B. — Graphiste & Directeur Artistique",
+                "url": "https://florian-b.fr/",
+                "founder": { "@id": "https://florian-b.fr/#person" },
+                "areaServed": { "@type": "City", "name": "Paris" },
+                "address": { "@type": "PostalAddress", "addressLocality": "Paris", "addressCountry": "FR" },
+                "sameAs": [
+                    "https://www.instagram.com/florian.b93tsz",
+                    "https://www.linkedin.com/in/florian-bonnet-b82018198/"
+                ],
+                "makesOffer": [
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Branding & Identité visuelle" } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "UI/UX Design" } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Communication Digitale & Print" } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Motion Design" } }
+                ]
+            },
+            {
+                "@type": "WebSite",
+                "@id": "https://florian-b.fr/#website",
+                "url": "https://florian-b.fr/",
+                "name": "Florian B. — Portfolio",
+                "publisher": { "@id": "https://florian-b.fr/#person" },
+                "inLanguage": "fr-FR"
+            },
+            {
+                "@type": "ItemList",
+                "name": "Projets de Florian B.",
+                "itemListElement": [
+                    { "@type": "CreativeWork", "position": 1, "name": "Courtepaille", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Branding & Design" },
+                    { "@type": "CreativeWork", "position": 2, "name": "BNP Paribas", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Branding" },
+                    { "@type": "CreativeWork", "position": 3, "name": "oofti.fr", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Branding" },
+                    { "@type": "CreativeWork", "position": 4, "name": "BasicFit", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Branding" },
+                    { "@type": "CreativeWork", "position": 5, "name": "Finish", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Packaging Design" },
+                    { "@type": "CreativeWork", "position": 6, "name": "MllePitch", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Campagne" },
+                    { "@type": "CreativeWork", "position": 7, "name": "Evidentall Patient", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "UI/UX Design — App Web", "url": "https://evidentall.vercel.app" },
+                    { "@type": "CreativeWork", "position": 8, "name": "Augmantor", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Branding & UI/UX — Mentorat Chirurgiens-Dentistes", "url": "https://augmantor.com" },
+                    { "@type": "CreativeWork", "position": 9, "name": "Trustify", "creator": { "@id": "https://florian-b.fr/#person" }, "about": "Branding & UI/UX — Plateforme d'Avis Vérifiés", "url": "https://trustify.best" }
+                ]
+            },
+            {
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "Qui est Florian B. ?",
+                        "acceptedAnswer": { "@type": "Answer", "text": "Florian Bonnet est un graphiste et directeur artistique freelance basé à Paris, spécialisé en branding, UI/UX Design, communication digitale et print. Il a travaillé pour des marques comme BNP Paribas, Courtepaille, BasicFit et des startups comme Augmantor et Trustify." }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Quels services propose Florian B. ?",
+                        "acceptedAnswer": { "@type": "Answer", "text": "Florian B. propose du branding et identité visuelle, du UI/UX Design pour applications et sites web, de la communication digitale et print, du motion design et de la photographie." }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Comment contacter Florian B. pour un projet de graphisme ?",
+                        "acceptedAnswer": { "@type": "Answer", "text": "Florian B. est joignable via le formulaire de contact et l'assistant conversationnel de son site florian-b.fr, par email, ou via LinkedIn et Instagram (@florian.b93tsz). Un système de prise de rendez-vous automatisé est disponible directement sur le site." }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Où trouver un graphiste freelance à Paris ?",
+                        "acceptedAnswer": { "@type": "Answer", "text": "Florian Bonnet est un graphiste et directeur artistique freelance basé à Paris, disponible pour des missions de branding, UI/UX Design et communication visuelle auprès d'entreprises et de startups." }
+                    }
+                ]
+            }
+        ]
     }
-    [data-theme="dark"] {
-        --bg: #0e0e10;
-        --surface: #17171a;
-        --border: #2a2a2e;
-        --text: #f4f4f5;
-        --text-muted: #96969e;
-        --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
-        --success-bg: rgba(18,128,92,0.15);
-        --warning-bg: rgba(146,101,10,0.18);
-        --danger-bg: rgba(208,38,30,0.18);
-        --info-bg: rgba(42,90,176,0.18);
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: var(--font-body); background: var(--bg); color: var(--text); transition: background 0.3s var(--ease), color 0.3s var(--ease); }
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-    button { font-family: inherit; cursor: pointer; }
-    input, textarea, select { font-family: inherit; }
+    </script>
 
-    /* ============ LOGIN ============ */
-    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, rgba(218,44,72,0.08), transparent 60%), var(--bg); }
-    .login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; box-shadow: var(--shadow); }
-    .login-logo { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; margin-bottom: 1.2rem; }
-    .login-card h1 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; margin-bottom: 0.3rem; }
-    .login-card p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.6rem; }
-    .field { margin-bottom: 1rem; }
-    .field label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.4px; }
-    .field input { width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-    .field input:focus { border-color: var(--accent); }
-    .btn-primary { width: 100%; padding: 0.75rem; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 700; font-size: 0.88rem; transition: transform 0.2s, box-shadow 0.2s; }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(218,44,72,0.3); }
-    .login-error { background: var(--danger-bg); color: var(--danger); padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #da2c48;
+            --border: rgba(255, 255, 255, 0.1);
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            --max-width: 1400px;
 
-    /* ============ SHELL ============ */
-    #app { display: none; min-height: 100vh; grid-template-columns: 240px 1fr; }
-    #app.active { display: grid; }
-
-    .sidebar { border-right: 1px solid var(--border); background: var(--surface); padding: 1.3rem 1rem; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-    .brand { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.5rem 1.4rem; }
-    .brand-mark { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); flex-shrink: 0; }
-    .brand-text { font-family: var(--font-display); font-weight: 800; font-size: 0.95rem; }
-    .brand-text span { display: block; font-family: var(--font-body); font-weight: 500; font-size: 0.68rem; color: var(--text-muted); }
-
-    .nav-group { margin-bottom: 1.4rem; }
-    .nav-group-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; padding: 0 0.6rem 0.5rem; }
-    .nav-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.6rem; border-radius: 8px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.15s; margin-bottom: 2px; }
-    .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; }
-    .nav-item:hover { background: var(--bg); color: var(--text); }
-    .nav-item.active { background: var(--bg); color: var(--text); }
-    .nav-item.active svg { color: var(--accent); }
-    .nav-item .badge { margin-left: auto; background: var(--accent); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 100px; }
-
-    .sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 0.4rem; }
-    .cmdk-hint { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; }
-    .cmdk-hint kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.65rem; }
-
-    .main { padding: 1.6rem 2rem 4rem; overflow-y: auto; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.6rem; gap: 1rem; }
-    .topbar h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; }
-    .topbar-actions { display: flex; align-items: center; gap: 0.6rem; }
-    .icon-btn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: 0.2s; }
-    .icon-btn:hover { color: var(--text); border-color: var(--accent); }
-    .icon-btn svg { width: 16px; height: 16px; }
-
-    .view { display: none; }
-    .view.active { display: block; animation: fadein 0.35s var(--ease); }
-    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* ============ KPI CARDS ============ */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
-    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem 1.3rem; box-shadow: var(--shadow); }
-    .kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
-    .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; }
-    .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
-    .kpi-delta.up { color: var(--success); }
-    .kpi-card.hero { grid-column: span 2; background: linear-gradient(135deg, rgba(218,44,72,0.06), rgba(255,122,61,0.03)); border-color: rgba(218,44,72,0.2); }
-
-    /* ============ PANELS / CHARTS ============ */
-    .panel-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; margin-bottom: 1.6rem; }
-    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.3rem; box-shadow: var(--shadow); }
-    .panel h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; }
-    .status-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
-    .status-row:last-child { border-bottom: none; }
-    .status-row .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.5rem; }
-
-    /* ============ TABLE ============ */
-    .toolbar { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-    .search-box { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.8rem; }
-    .search-box svg { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
-    .search-box input { border: none; background: none; outline: none; color: var(--text); font-size: 0.85rem; width: 100%; }
-    .filter-chip { padding: 0.5rem 0.9rem; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); font-size: 0.78rem; font-weight: 600; color: var(--text-muted); transition: 0.2s; }
-    .filter-chip.active { background: var(--text); color: var(--surface); border-color: var(--text); }
-
-    .data-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-    .data-table thead th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); background: var(--bg); }
-    .data-table tbody td { padding: 0.85rem 1rem; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
-    .data-table tbody tr:last-child td { border-bottom: none; }
-    .data-table tbody tr { cursor: pointer; transition: background 0.15s; }
-    .data-table tbody tr:hover { background: var(--bg); }
-    .cell-muted { color: var(--text-muted); font-size: 0.78rem; }
-    .badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem; border-radius: 100px; font-size: 0.72rem; font-weight: 700; }
-    .badge.new, .badge.pending { background: var(--info-bg); color: var(--info); }
-    .badge.contacted, .badge.confirmed { background: var(--warning-bg); color: var(--warning); }
-    .badge.won, .badge.done { background: var(--success-bg); color: var(--success); }
-    .badge.lost, .badge.cancelled { background: var(--danger-bg); color: var(--danger); }
-
-    .empty-state { text-align: center; padding: 3.5rem 1rem; color: var(--text-muted); }
-
-    /* ============ ÉDITEURS DE CONTENU ============ */
-    .edit-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.2rem; margin-bottom: 0.8rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: var(--shadow); }
-    .edit-card-thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--bg); flex-shrink: 0; border: 1px solid var(--border); }
-    .edit-card-fields { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
-    .edit-card-fields input, .edit-card-fields textarea { width: 100%; padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); font-size: 0.83rem; font-family: inherit; }
-    .edit-card-fields textarea { resize: vertical; min-height: 50px; }
-    .edit-card-actions { display: flex; flex-direction: column; gap: 0.4rem; flex-shrink: 0; }
-    .edit-card-actions button { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.15s; }
-    .edit-card-actions button:hover { color: var(--text); border-color: var(--accent); }
-    .edit-card-actions button.danger:hover { color: var(--danger); border-color: var(--danger); }
-    .edit-card-actions svg { width: 14px; height: 14px; }
-    .edit-card-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; }
-    .thumb-upload-wrap { position: relative; flex-shrink: 0; }
-    .thumb-upload-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-
-    .gallery-item { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 1/1; background: var(--bg); }
-    .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
-    .gallery-item .gallery-item-remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.65); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; line-height: 1; }
-    .gallery-item .gallery-item-order { position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 100px; }
-    .empty-state svg { width: 40px; height: 40px; margin-bottom: 0.8rem; opacity: 0.4; }
-    .empty-state p { font-size: 0.85rem; }
-
-    /* ============ DRAWER ============ */
-    .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 999; opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(2px); }
-    .drawer-overlay.active { opacity: 1; visibility: visible; }
-    .drawer { position: fixed; top: 0; right: 0; width: min(420px, 92vw); height: 100vh; background: var(--surface); border-left: 1px solid var(--border); z-index: 1000; transform: translateX(100%); transition: transform 0.4s var(--ease); padding: 1.6rem; overflow-y: auto; }
-    .drawer.active { transform: translateX(0); }
-    .drawer-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.4rem; }
-    .drawer-header h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; }
-    .drawer-close { background: var(--bg); border: 1px solid var(--border); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
-    .drawer-field { margin-bottom: 1.1rem; }
-    .drawer-field label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem; }
-    .drawer-field .value { font-size: 0.9rem; padding: 0.6rem 0.8rem; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); word-break: break-word; }
-    .drawer-field select, .drawer-field textarea { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.85rem; outline: none; }
-    .drawer-field textarea { resize: vertical; min-height: 80px; }
-    .drawer-actions { display: flex; gap: 0.6rem; margin-top: 1.4rem; }
-    .btn-secondary { flex: 1; padding: 0.65rem; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 600; font-size: 0.82rem; }
-    .btn-danger { padding: 0.65rem 1rem; border-radius: 9px; border: 1px solid var(--danger); background: var(--danger-bg); color: var(--danger); font-weight: 600; font-size: 0.82rem; }
-
-    /* ============ COMMAND PALETTE ============ */
-    .cmdk-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1100; display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; opacity: 0; visibility: hidden; transition: 0.2s; }
-    .cmdk-overlay.active { opacity: 1; visibility: visible; }
-    .cmdk-box { width: min(560px, 92vw); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 30px 60px rgba(0,0,0,0.3); overflow: hidden; }
-    .cmdk-input { width: 100%; border: none; outline: none; padding: 1.1rem 1.3rem; font-size: 0.95rem; background: transparent; color: var(--text); border-bottom: 1px solid var(--border); }
-    .cmdk-results { max-height: 320px; overflow-y: auto; padding: 0.5rem; }
-    .cmdk-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.8rem; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
-    .cmdk-item:hover, .cmdk-item.selected { background: var(--bg); }
-    .cmdk-item svg { width: 15px; height: 15px; color: var(--text-muted); }
-
-    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1200; display: flex; flex-direction: column; gap: 0.6rem; }
-    .toast { background: var(--text); color: var(--bg); padding: 0.8rem 1.1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.25); animation: toastin 0.3s var(--ease); }
-    @keyframes toastin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    @media (max-width: 900px) {
-        #app.active { grid-template-columns: 1fr; }
-        .sidebar { display: none; }
-        .panel-grid { grid-template-columns: 1fr; }
-        .kpi-card.hero { grid-column: span 1; }
-        .main { padding: 1.2rem; }
-    }
-</style>
-</head>
-<body data-theme="light">
-
-<div id="loginScreen">
-    <div class="login-card">
-        <div class="login-logo">FB</div>
-        <h1>Dashboard Florian B.</h1>
-        <p>Connectez-vous pour accéder à vos leads, RDV et statistiques.</p>
-        <div class="login-error" id="loginError"></div>
-        <div class="field">
-            <label>Mot de passe admin</label>
-            <input type="password" id="loginPassword" placeholder="••••••••">
-        </div>
-        <button class="btn-primary" id="loginBtn">Se connecter</button>
-    </div>
-</div>
-
-<div id="app">
-    <aside class="sidebar">
-        <div class="brand">
-            <div class="brand-mark"></div>
-            <div class="brand-text">Florian B.<span>Dashboard</span></div>
-        </div>
-
-        <div class="nav-group">
-            <div class="nav-group-label">Vue d'ensemble</div>
-            <div class="nav-item active" data-view="overview">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-                Overview
-            </div>
-        </div>
-
-        <div class="nav-group">
-            <div class="nav-group-label">Données</div>
-            <div class="nav-item" data-view="leads">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                Leads
-                <span class="badge" id="leadsBadge" style="display:none"></span>
-            </div>
-            <div class="nav-item" data-view="appointments">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                Rendez-vous
-                <span class="badge" id="apptBadge" style="display:none"></span>
-            </div>
-        </div>
-
-        <div class="nav-group">
-            <div class="nav-group-label">Contenu du site</div>
-            <div class="nav-item" data-view="content-hero">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
-                Hero
-            </div>
-            <div class="nav-item" data-view="content-projects">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                Projets
-            </div>
-            <div class="nav-item" data-view="content-gallery">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                Galerie photo
-            </div>
-            <div class="nav-item" data-view="content-faq">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
-                FAQ
-            </div>
-        </div>
-
-        <div class="sidebar-footer">
-            <div class="cmdk-hint" id="cmdkHint"><span>Recherche rapide</span><kbd>⌘K</kbd></div>
-            <div class="nav-item" id="logoutBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Déconnexion
-            </div>
-        </div>
-    </aside>
-
-    <main class="main">
-        <!-- OVERVIEW -->
-        <section class="view active" id="view-overview">
-            <div class="topbar">
-                <h2>Overview</h2>
-                <div class="topbar-actions">
-                    <button class="icon-btn" id="themeToggle" title="Changer de thème">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                    </button>
-                    <button class="icon-btn" id="refreshBtn" title="Rafraîchir">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="kpi-grid">
-                <div class="kpi-card hero">
-                    <div class="kpi-label">Nouveaux leads (7 derniers jours)</div>
-                    <div class="kpi-value" id="kpiNewLeads">—</div>
-                    <div class="kpi-delta up" id="kpiNewLeadsDelta"></div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Total leads</div>
-                    <div class="kpi-value" id="kpiTotalLeads">—</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">RDV en attente</div>
-                    <div class="kpi-value" id="kpiPendingAppt">—</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Taux de conversion</div>
-                    <div class="kpi-value" id="kpiConversion">—</div>
-                </div>
-            </div>
-
-            <div class="panel-grid">
-                <div class="panel">
-                    <h3>Leads reçus — 30 derniers jours</h3>
-                    <canvas id="leadsChart" height="90"></canvas>
-                </div>
-                <div class="panel">
-                    <h3>Répartition par statut</h3>
-                    <div id="statusBreakdown"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- LEADS -->
-        <section class="view" id="view-leads">
-            <div class="topbar">
-                <h2>Leads</h2>
-            </div>
-            <div class="toolbar">
-                <div class="search-box">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="leadsSearch" placeholder="Rechercher un nom, un email, un message...">
-                </div>
-                <button class="filter-chip active" data-status="">Tous</button>
-                <button class="filter-chip" data-status="new">Nouveau</button>
-                <button class="filter-chip" data-status="contacted">Contacté</button>
-                <button class="filter-chip" data-status="won">Gagné</button>
-                <button class="filter-chip" data-status="lost">Perdu</button>
-            </div>
-            <div id="leadsTableWrap"></div>
-        </section>
-
-        <!-- APPOINTMENTS -->
-        <section class="view" id="view-appointments">
-            <div class="topbar">
-                <h2>Rendez-vous</h2>
-            </div>
-            <div class="toolbar">
-                <button class="filter-chip active" data-astatus="">Tous</button>
-                <button class="filter-chip" data-astatus="pending">En attente</button>
-                <button class="filter-chip" data-astatus="confirmed">Confirmé</button>
-                <button class="filter-chip" data-astatus="done">Terminé</button>
-                <button class="filter-chip" data-astatus="cancelled">Annulé</button>
-            </div>
-            <div id="apptTableWrap"></div>
-        </section>
-
-        <!-- CONTENU : HERO -->
-        <section class="view" id="view-content-hero">
-            <div class="topbar">
-                <h2>Hero</h2>
-                <div class="topbar-actions">
-                    <button class="btn-primary" id="saveHeroBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
-                </div>
-            </div>
-            <div class="panel" style="max-width:560px;">
-                <div class="drawer-field">
-                    <label>Titre principal</label>
-                    <input type="text" id="heroTitleInput" style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:0.9rem;">
-                </div>
-                <div class="drawer-field">
-                    <label>Sous-titre (tagline)</label>
-                    <input type="text" id="heroTaglineInput" style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:0.9rem;">
-                </div>
-                <p class="cell-muted">Ces textes sont ceux affichés en haut de florian-b.fr, au-dessus de la barre de recherche IA.</p>
-            </div>
-        </section>
-
-        <!-- CONTENU : PROJETS -->
-        <section class="view" id="view-content-projects">
-            <div class="topbar">
-                <h2>Projets</h2>
-                <div class="topbar-actions">
-                    <button class="btn-primary" id="addProjectBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Ajouter un projet</button>
-                    <button class="btn-primary" id="saveProjectsBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
-                </div>
-            </div>
-            <p class="cell-muted" style="margin-bottom:1rem;">Modifie le titre, le sous-titre et la couverture de chaque carte projet. Glisse pour réordonner. Les projets historiques (Courtepaille, BNP...) gardent leur galerie détaillée telle quelle — seule la carte d'aperçu est éditable ici.</p>
-            <div id="projectsListWrap"></div>
-        </section>
-
-        <!-- CONTENU : GALERIE PHOTO -->
-        <section class="view" id="view-content-gallery">
-            <div class="topbar">
-                <h2>Galerie photo (Portfolio)</h2>
-                <div class="topbar-actions">
-                    <label class="btn-primary" style="width:auto; padding:0.6rem 1.2rem; cursor:pointer;">
-                        + Ajouter des photos
-                        <input type="file" id="galleryUploadInput" accept="image/*" multiple style="display:none;">
-                    </label>
-                    <button class="btn-primary" id="saveGalleryBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
-                </div>
-            </div>
-            <p class="cell-muted" style="margin-bottom:1rem;" id="galleryCount"></p>
-            <div id="galleryGridWrap" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:0.8rem;"></div>
-        </section>
-
-        <!-- CONTENU : FAQ -->
-        <section class="view" id="view-content-faq">
-            <div class="topbar">
-                <h2>FAQ</h2>
-                <div class="topbar-actions">
-                    <button class="btn-primary" id="addFaqBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Ajouter une question</button>
-                    <button class="btn-primary" id="saveFaqBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
-                </div>
-            </div>
-            <div id="faqListWrap"></div>
-        </section>
-    </main>
-</div>
-
-<!-- DRAWER -->
-<div class="drawer-overlay" id="drawerOverlay"></div>
-<div class="drawer" id="drawer"></div>
-
-<!-- COMMAND PALETTE -->
-<div class="cmdk-overlay" id="cmdkOverlay">
-    <div class="cmdk-box">
-        <input type="text" class="cmdk-input" id="cmdkInput" placeholder="Tapez une commande ou une recherche...">
-        <div class="cmdk-results" id="cmdkResults"></div>
-    </div>
-</div>
-
-<div class="toast-container" id="toastContainer"></div>
-
-<script>
-/* ============================================================
-   CONFIGURATION — l'URL de l'API est relative si le dashboard
-   est servi par le même serveur Express (recommandé).
-   ============================================================ */
-const API_BASE = ''; // ex: 'https://api.florian-b.fr' si le dashboard est hébergé ailleurs
-
-let TOKEN = localStorage.getItem('fb_token') || null;
-let currentView = 'overview';
-let leadsCache = [];
-let apptCache = [];
-let leadsChartInstance = null;
-
-/* ---------------- API HELPERS ---------------- */
-async function api(path, opts = {}) {
-    const res = await fetch(API_BASE + path, {
-        ...opts,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}),
-            ...(opts.headers || {}),
-        },
-    });
-    if (res.status === 401) { logout(); throw new Error('Session expirée'); }
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Erreur API'); }
-    return res.status === 204 ? null : res.json();
-}
-
-/* ---------------- AUTH ---------------- */
-document.getElementById('loginBtn').addEventListener('click', login);
-document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-
-async function login() {
-    const password = document.getElementById('loginPassword').value;
-    const errBox = document.getElementById('loginError');
-    errBox.style.display = 'none';
-    try {
-        const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ password }) });
-        TOKEN = data.token;
-        localStorage.setItem('fb_token', TOKEN);
-        boot();
-    } catch (e) {
-        errBox.textContent = e.message;
-        errBox.style.display = 'block';
-    }
-}
-
-function logout() {
-    TOKEN = null;
-    localStorage.removeItem('fb_token');
-    document.getElementById('app').classList.remove('active');
-    document.getElementById('loginScreen').style.display = 'flex';
-}
-document.getElementById('logoutBtn').addEventListener('click', logout);
-
-async function boot() {
-    try {
-        await api('/api/auth/me');
-    } catch { return; }
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').classList.add('active');
-    loadOverview();
-}
-
-/* ---------------- THEME ---------------- */
-const savedTheme = localStorage.getItem('fb_theme') || 'light';
-document.body.setAttribute('data-theme', savedTheme);
-document.getElementById('themeToggle').addEventListener('click', () => {
-    const next = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    document.body.setAttribute('data-theme', next);
-    localStorage.setItem('fb_theme', next);
-    if (leadsChartInstance) renderLeadsChart(leadsChartInstance._lastData || []);
-});
-
-/* ---------------- NAVIGATION ---------------- */
-document.querySelectorAll('.nav-item[data-view]').forEach(item => {
-    item.addEventListener('click', () => switchView(item.dataset.view));
-});
-
-function switchView(view) {
-    currentView = view;
-    document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.toggle('active', i.dataset.view === view));
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-' + view).classList.add('active');
-    if (view === 'overview') loadOverview();
-    if (view === 'leads') loadLeads();
-    if (view === 'appointments') loadAppointments();
-    if (view === 'content-hero') loadContentHero();
-    if (view === 'content-projects') loadContentProjects();
-    if (view === 'content-gallery') loadContentGallery();
-    if (view === 'content-faq') loadContentFaq();
-}
-
-document.getElementById('refreshBtn').addEventListener('click', () => switchView(currentView));
-
-/* ---------------- OVERVIEW ---------------- */
-async function loadOverview() {
-    try {
-        const s = await api('/api/stats');
-        document.getElementById('kpiNewLeads').textContent = s.newLeads7d;
-        document.getElementById('kpiTotalLeads').textContent = s.totalLeads;
-        document.getElementById('kpiPendingAppt').textContent = s.pendingAppointments;
-        const rate = s.totalLeads ? Math.round((s.wonLeads / s.totalLeads) * 100) : 0;
-        document.getElementById('kpiConversion').textContent = rate + '%';
-        document.getElementById('kpiNewLeadsDelta').textContent = s.chatOpens ? `${s.chatOpens} ouvertures du chat au total` : '';
-
-        renderLeadsChart(s.byDay);
-
-        const colors = { new: 'var(--info)', contacted: 'var(--warning)', won: 'var(--success)', lost: 'var(--danger)' };
-        const labels = { new: 'Nouveau', contacted: 'Contacté', won: 'Gagné', lost: 'Perdu' };
-        const wrap = document.getElementById('statusBreakdown');
-        if (!s.byStatus.length) {
-            wrap.innerHTML = emptyStateHTML('Aucune donnée pour le moment');
-        } else {
-            wrap.innerHTML = s.byStatus.map(row => `
-                <div class="status-row">
-                    <span><span class="dot" style="background:${colors[row.status] || '#999'}"></span>${labels[row.status] || row.status}</span>
-                    <strong>${row.c}</strong>
-                </div>
-            `).join('');
+            /* --- Design tokens additionnels (système 2026) --- */
+            --accent-2: #ff2f76;
+            --accent-3: #ff8fb3;
+            --glass-bg: rgba(255, 255, 255, 0.045);
+            --glass-border: rgba(255, 255, 255, 0.09);
+            --shadow-soft: 0 20px 50px rgba(0, 0, 0, 0.45);
+            --shadow-glow: 0 10px 40px rgba(218, 44, 72, 0.25);
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --ease-calm: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        document.getElementById('leadsBadge').style.display = s.newLeads7d ? 'inline-flex' : 'none';
-        document.getElementById('leadsBadge').textContent = s.newLeads7d;
-        document.getElementById('apptBadge').style.display = s.pendingAppointments ? 'inline-flex' : 'none';
-        document.getElementById('apptBadge').textContent = s.pendingAppointments;
-    } catch (e) { toast(e.message); }
-}
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+        }
 
-function renderLeadsChart(byDay) {
-    const ctx = document.getElementById('leadsChart').getContext('2d');
-    const isDark = document.body.getAttribute('data-theme') === 'dark';
-    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-    const textColor = isDark ? '#96969e' : '#6b6b74';
-    if (leadsChartInstance) leadsChartInstance.destroy();
-    leadsChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: byDay.map(r => r.d.slice(5)),
-            datasets: [{
-                data: byDay.map(r => r.c),
-                borderColor: '#da2c48',
-                backgroundColor: 'rgba(218,44,72,0.08)',
-                fill: true,
-                tension: 0.35,
-                pointRadius: 0,
-                borderWidth: 2,
-            }],
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
-                y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 }, precision: 0 } },
-            },
-        },
-    });
-    leadsChartInstance._lastData = byDay;
-}
+        /* Grain subtil — profondeur calme, signature 2026 */
+        .grain-overlay {
+            position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+            opacity: 0.035; mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
 
-function emptyStateHTML(msg) {
-    return `<div class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.5 9.5c.5-1 1.5-1.5 2.5-1.5s2 .5 2.5 1.5M9 15c1 1 2 1.5 3 1.5s2-.5 3-1.5" stroke-linecap="round"/></svg>
-        <p>${msg}</p>
-    </div>`;
-}
+        /* Barre de progression de scroll — motion disciplinée, pas décorative */
+        .scroll-progress { position: fixed; top: 0; left: 0; height: 2.5px; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); z-index: 10001; transition: width 0.1s linear; }
 
-/* ---------------- LEADS ---------------- */
-let leadsStatusFilter = '';
-document.querySelectorAll('#view-leads .filter-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        document.querySelectorAll('#view-leads .filter-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        leadsStatusFilter = chip.dataset.status;
-        loadLeads();
-    });
-});
-let searchDebounce;
-document.getElementById('leadsSearch').addEventListener('input', () => {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(loadLeads, 300);
-});
+        /* Reveal au scroll — storytelling sobre */
+        .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.9s var(--ease-calm), transform 0.9s var(--ease-calm); }
+        .reveal.in-view { opacity: 1; transform: translateY(0); }
 
-async function loadLeads() {
-    const q = document.getElementById('leadsSearch').value;
-    const params = new URLSearchParams();
-    if (leadsStatusFilter) params.set('status', leadsStatusFilter);
-    if (q) params.set('q', q);
-    try {
-        leadsCache = await api('/api/leads?' + params.toString());
-        renderLeadsTable();
-    } catch (e) { toast(e.message); }
-}
+        /* Tilt 3D léger sur les cartes projet (pointer fin uniquement) */
+        @media (pointer: fine) {
+            .project-showcase { transform-style: preserve-3d; will-change: transform; }
+        }
 
-function renderLeadsTable() {
-    const wrap = document.getElementById('leadsTableWrap');
-    if (!leadsCache.length) { wrap.innerHTML = emptyStateHTML("Aucun lead pour le moment. Ils apparaîtront ici dès qu'un visiteur utilisera le chat."); return; }
-    wrap.innerHTML = `
-        <table class="data-table">
-            <thead><tr><th>Nom</th><th>Email</th><th>Message</th><th>Statut</th><th>Reçu</th></tr></thead>
-            <tbody>
-                ${leadsCache.map(l => `
-                    <tr onclick="openLeadDrawer(${l.id})">
-                        <td>${escapeHtml(l.name || '—')}</td>
-                        <td class="cell-muted">${escapeHtml(l.email)}</td>
-                        <td class="cell-muted">${escapeHtml((l.message || '').slice(0, 50))}${(l.message || '').length > 50 ? '…' : ''}</td>
-                        <td><span class="badge ${l.status}">${statusLabel(l.status)}</span></td>
-                        <td class="cell-muted">${formatDate(l.created_at)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; font-size: 16px; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: var(--font-body); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        img { -webkit-user-select: none; user-select: none; -webkit-user-drag: none; max-width: 100%; height: auto; }
+        body.modal-open { overflow: hidden; }
+        a { color: inherit !important; text-decoration: none !important; transition: var(--transition); }
+        .container { max-width: var(--max-width); margin: 0 auto; padding: 0 clamp(1.5rem, 5vw, 5rem); }
 
-function openLeadDrawer(id) {
-    const l = leadsCache.find(x => x.id === id);
-    if (!l) return;
-    document.getElementById('drawer').innerHTML = `
-        <div class="drawer-header">
-            <h3>${escapeHtml(l.name || 'Lead #' + l.id)}</h3>
-            <button class="drawer-close" onclick="closeDrawer()">✕</button>
-        </div>
-        <div class="drawer-field"><label>Email</label><div class="value">${escapeHtml(l.email)}</div></div>
-        <div class="drawer-field"><label>Message</label><div class="value">${escapeHtml(l.message || '')}</div></div>
-        <div class="drawer-field"><label>Source</label><div class="value">${escapeHtml(l.source || 'chat')}</div></div>
-        <div class="drawer-field"><label>Reçu le</label><div class="value">${formatDate(l.created_at, true)}</div></div>
-        <div class="drawer-field">
-            <label>Statut</label>
-            <select id="drawerStatus">
-                ${['new', 'contacted', 'won', 'lost'].map(s => `<option value="${s}" ${s === l.status ? 'selected' : ''}>${statusLabel(s)}</option>`).join('')}
-            </select>
-        </div>
-        <div class="drawer-field"><label>Notes internes</label><textarea id="drawerNotes" placeholder="Notes privées...">${escapeHtml(l.notes || '')}</textarea></div>
-        <div class="drawer-actions">
-            <button class="btn-secondary" onclick="saveLead(${l.id})">Enregistrer</button>
-            <button class="btn-danger" onclick="deleteLead(${l.id})">Supprimer</button>
-        </div>
-    `;
-    openDrawer();
-}
+        @media (pointer: fine) {
+            .cursor { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99999; transform: translate(-2px, -24px); }
+            .cursor svg { width: 24px; height: 24px; color: var(--text-main); transition: 0.2s; }
+            .cursor.hovered svg { color: var(--accent); transform: scale(1.3) rotate(-10deg); }
+        }
+        @media (pointer: coarse) {
+            .cursor { display: none !important; }
+        }
 
-async function saveLead(id) {
-    try {
-        await api('/api/leads/' + id, { method: 'PATCH', body: JSON.stringify({
-            status: document.getElementById('drawerStatus').value,
-            notes: document.getElementById('drawerNotes').value,
-        }) });
-        toast('Lead mis à jour');
-        closeDrawer();
-        loadLeads();
-    } catch (e) { toast(e.message); }
-}
-async function deleteLead(id) {
-    if (!confirm('Supprimer définitivement ce lead ?')) return;
-    try { await api('/api/leads/' + id, { method: 'DELETE' }); toast('Lead supprimé'); closeDrawer(); loadLeads(); }
-    catch (e) { toast(e.message); }
-}
+        .menu-toggle { display: none; position: relative; width: 50px; height: 50px; background: none; border: none; cursor: pointer; z-index: 1001; padding: 0; }
+        .menu-toggle .burger-line { position: absolute; width: 28px; height: 2.5px; background: var(--text-main); border-radius: 2px; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); left: 11px; }
+        .menu-toggle .line1 { top: 14px; }
+        .menu-toggle .line2 { top: 23px; opacity: 1; }
+        .menu-toggle .line3 { top: 32px; }
+        .menu-toggle.active .line1 { transform: translateY(9px) rotate(45deg); }
+        .menu-toggle.active .line2 { opacity: 0; transform: translateX(15px); }
+        .menu-toggle.active .line3 { transform: translateY(-9px) rotate(-45deg); }
 
-/* ---------------- APPOINTMENTS ---------------- */
-let apptStatusFilter = '';
-document.querySelectorAll('#view-appointments .filter-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        document.querySelectorAll('#view-appointments .filter-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        apptStatusFilter = chip.dataset.astatus;
-        loadAppointments();
-    });
-});
+        .mobile-nav { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: linear-gradient(135deg, rgba(10,10,10,0.98) 0%, rgba(20,10,15,0.98) 100%); z-index: 999; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+        .mobile-nav.active { display: flex; flex-direction: column; justify-content: flex-start; padding-top: 100px; }
+        .mobile-nav-links { display: flex; flex-direction: column; gap: 2rem; padding: 2rem; width: 100%; }
+        .mobile-nav-links a { font-family: var(--font-display); font-size: 2rem; font-weight: 800; text-transform: uppercase; letter-spacing: -1px; opacity: 0.6; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); position: relative; }
+        .mobile-nav-links a::before { content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 2px; background: var(--accent); transition: width 0.4s cubic-bezier(0.19, 1, 0.22, 1); }
+        .mobile-nav-links a:hover { opacity: 1; }
+        .mobile-nav-links a:hover::before { width: 100%; }
 
-async function loadAppointments() {
-    const params = new URLSearchParams();
-    if (apptStatusFilter) params.set('status', apptStatusFilter);
-    try {
-        apptCache = await api('/api/appointments?' + params.toString());
-        renderApptTable();
-    } catch (e) { toast(e.message); }
-}
+        .welcome-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.5s cubic-bezier(0.19, 1, 0.22, 1); backdrop-filter: blur(20px); }
+        .welcome-modal.active { opacity: 1; visibility: visible; pointer-events: auto; }
+        .welcome-content {
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(14,14,14,0.98) 16%);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            padding: clamp(2.2rem, 5vw, 3rem) clamp(1.8rem, 4vw, 2.6rem);
+            border-radius: var(--radius-lg); border: 1px solid var(--glass-border);
+            max-width: 460px; width: 90%; text-align: center; position: relative;
+            box-shadow: var(--shadow-soft), 0 0 70px rgba(218,44,72,0.14);
+            overflow: hidden;
+        }
+        .welcome-content::before {
+            content: ""; position: absolute; top: -60%; left: 50%; transform: translateX(-50%);
+            width: 140%; height: 220px; pointer-events: none; z-index: 0;
+            background: radial-gradient(circle, rgba(255,47,118,0.28) 0%, transparent 70%);
+        }
+        .welcome-content > * { position: relative; z-index: 1; }
+        .welcome-content h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 5vw, 2.2rem); margin-bottom: 1rem; text-transform: uppercase; font-weight: 800; line-height: 1.1; letter-spacing: -1px; }
+        .welcome-content p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.8rem; line-height: 1.6; }
+        .welcome-ai-cta {
+            display: flex; align-items: center; justify-content: center; gap: 0.55rem; width: 100%;
+            padding: 0.95rem 1.5rem; margin-bottom: 0.9rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: #fff !important;
+            border: none; border-radius: 100px; font-family: var(--font-display); font-weight: 800;
+            font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: var(--transition);
+        }
+        .welcome-ai-cta:hover { transform: translateY(-3px); box-shadow: var(--shadow-glow); }
+        .insta-promo { display: block; background: var(--glass-bg); border: 1px solid var(--glass-border); color: #fff !important; padding: 0.85rem 1.5rem; border-radius: 100px; font-family: var(--font-body); font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 1px; transition: 0.3s; }
+        .insta-promo:hover { border-color: var(--accent-2); background: rgba(255,47,118,0.1); color: #fff !important; }
+        .close-welcome { position: absolute; top: 1.3rem; right: 1.5rem; color: var(--text-muted); font-size: 2.2rem; border: none; background: none; cursor: pointer; z-index: 2; line-height: 1; transition: color 0.2s; }
+        .close-welcome:hover { color: var(--text-main); }
 
-function renderApptTable() {
-    const wrap = document.getElementById('apptTableWrap');
-    if (!apptCache.length) { wrap.innerHTML = emptyStateHTML('Aucune demande de RDV pour le moment.'); return; }
-    wrap.innerHTML = `
-        <table class="data-table">
-            <thead><tr><th>Objet</th><th>Date souhaitée</th><th>Heure</th><th>Email</th><th>Statut</th></tr></thead>
-            <tbody>
-                ${apptCache.map(a => `
-                    <tr onclick="openApptDrawer(${a.id})">
-                        <td>${escapeHtml(a.subject || '—')}</td>
-                        <td class="cell-muted">${escapeHtml(a.date_text || '—')}</td>
-                        <td class="cell-muted">${escapeHtml(a.time_text || '—')}</td>
-                        <td class="cell-muted">${escapeHtml(a.email)}</td>
-                        <td><span class="badge ${a.status}">${statusLabel(a.status)}</span></td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
+        nav { position: fixed; top: 0; width: 100%; z-index: 1000; transition: var(--transition); padding: 1.5rem 0; }
+        nav.scrolled { background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 1rem 0; }
+        nav .container { display: flex; justify-content: space-between; align-items: center; padding: 0 clamp(1rem, 4vw, 4rem); flex-wrap: wrap; }
+        .logo-group { display: flex; flex-direction: column; line-height: 1.2; }
+        .logo-main { font-family: var(--font-display); font-weight: 800; font-size: clamp(1rem, 3vw, 1.3rem); text-transform: uppercase; letter-spacing: -1px; }
+        .logo-main span { color: var(--accent); }
+        .logo-sub { font-size: 0.6rem; text-transform: uppercase; font-weight: 700; letter-spacing: 2px; color: var(--accent); margin-top: 3px; opacity: 0; transform: translateY(-5px); transition: var(--transition); }
+        nav.scrolled .logo-sub { opacity: 1; transform: translateY(0); }
+        .nav-links { display: flex; gap: clamp(1.2rem, 3vw, 2.5rem); }
+        .nav-links a { position: relative; font-size: clamp(0.7rem, 2vw, 0.8rem); text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px; opacity: 0.6; transition: opacity 0.3s var(--ease-calm); }
+        .nav-links a::after { content: ""; position: absolute; left: 0; bottom: -4px; width: 100%; height: 1.5px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transform: scaleX(0); transform-origin: right; transition: transform 0.4s var(--ease-calm); }
+        .nav-links a:hover { opacity: 1; color: var(--accent) !important; }
+        .nav-links a:hover::after { transform: scaleX(1); transform-origin: left; }
 
-function openApptDrawer(id) {
-    const a = apptCache.find(x => x.id === id);
-    if (!a) return;
-    document.getElementById('drawer').innerHTML = `
-        <div class="drawer-header">
-            <h3>${escapeHtml(a.subject || 'RDV #' + a.id)}</h3>
-            <button class="drawer-close" onclick="closeDrawer()">✕</button>
-        </div>
-        <div class="drawer-field"><label>Email</label><div class="value">${escapeHtml(a.email)}</div></div>
-        <div class="drawer-field"><label>Date souhaitée</label><div class="value">${escapeHtml(a.date_text || '—')}</div></div>
-        <div class="drawer-field"><label>Heure souhaitée</label><div class="value">${escapeHtml(a.time_text || '—')}</div></div>
-        <div class="drawer-field"><label>Demandé le</label><div class="value">${formatDate(a.created_at, true)}</div></div>
-        <div class="drawer-field">
-            <label>Statut</label>
-            <select id="drawerAStatus">
-                ${['pending', 'confirmed', 'done', 'cancelled'].map(s => `<option value="${s}" ${s === a.status ? 'selected' : ''}>${statusLabel(s)}</option>`).join('')}
-            </select>
-        </div>
-        <div class="drawer-field"><label>Notes internes</label><textarea id="drawerANotes" placeholder="Notes privées...">${escapeHtml(a.notes || '')}</textarea></div>
-        <div class="drawer-actions">
-            <button class="btn-secondary" onclick="saveAppt(${a.id})">Enregistrer</button>
-            <button class="btn-danger" onclick="deleteAppt(${a.id})">Supprimer</button>
-        </div>
-    `;
-    openDrawer();
-}
+        .hero { height: 100vh; display: flex; align-items: center; position: relative; width: 100%; overflow: hidden; padding-top: 80px; }
+        .hero::before {
+            content: ""; position: absolute; inset: 0;
+            background: linear-gradient(rgba(0,0,0,0.16), rgba(0,0,0,0.16)), linear-gradient(to right, rgba(10,10,10,0.75) 0%, rgba(10,10,10,0.3) 45%, rgba(10,10,10,0.12) 70%, transparent 100%), url('hero-photo-flo.webp?v=7');
+            background-size: cover; background-position: 5% 52%; opacity: 1; z-index: -1;
+        }
 
-async function saveAppt(id) {
-    try {
-        await api('/api/appointments/' + id, { method: 'PATCH', body: JSON.stringify({
-            status: document.getElementById('drawerAStatus').value,
-            notes: document.getElementById('drawerANotes').value,
-        }) });
-        toast('Rendez-vous mis à jour');
-        closeDrawer();
-        loadAppointments();
-    } catch (e) { toast(e.message); }
-}
-async function deleteAppt(id) {
-    if (!confirm('Supprimer définitivement ce rendez-vous ?')) return;
-    try { await api('/api/appointments/' + id, { method: 'DELETE' }); toast('Rendez-vous supprimé'); closeDrawer(); loadAppointments(); }
-    catch (e) { toast(e.message); }
-}
-
-/* ---------------- DRAWER ---------------- */
-function openDrawer() { document.getElementById('drawer').classList.add('active'); document.getElementById('drawerOverlay').classList.add('active'); }
-function closeDrawer() { document.getElementById('drawer').classList.remove('active'); document.getElementById('drawerOverlay').classList.remove('active'); }
-document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
-
-/* ============================================================
-   CONTENU DU SITE — "theme builder"
-   Le site (florian-b.fr) va chercher ce contenu via GET /api/content
-   à chaque chargement de page. Toute modification enregistrée ici
-   est visible immédiatement sur le site, sans jamais toucher au code.
-   ============================================================ */
-const SITE_URL = 'https://florian-b.fr'; // 🔧 à corriger si le domaine change
-let contentCache = null;
-
-async function fetchContent(force) {
-    if (contentCache && !force) return contentCache;
-    const res = await fetch(API_BASE + '/api/content');
-    if (!res.ok) throw new Error('Impossible de charger le contenu du site');
-    contentCache = await res.json();
-    return contentCache;
-}
-
-async function saveContent(partial) {
-    const current = await fetchContent();
-    const updated = { ...current, ...partial };
-    await api('/api/admin/content', { method: 'PUT', body: JSON.stringify(updated) });
-    contentCache = updated;
-    toast('Enregistré — visible immédiatement sur le site ✅');
-}
-
-function resolveImgUrl(path) {
-    if (!path) return '';
-    if (path.startsWith('/uploads/')) return API_BASE + path;
-    if (/^https?:\/\//.test(path)) return path;
-    return SITE_URL + '/' + path;
-}
-
-function escapeAttr(str) {
-    const d = document.createElement('div');
-    d.textContent = str ?? '';
-    return d.innerHTML.replace(/"/g, '&quot;');
-}
-
-async function uploadImage(file) {
-    const formData = new FormData();
-    formData.append('image', file);
-    const res = await fetch(API_BASE + '/api/admin/upload', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + TOKEN },
-        body: formData,
-    });
-    if (!res.ok) throw new Error("Échec de l'upload");
-    const data = await res.json();
-    return data.url; // ex: /uploads/12345-photo.jpg
-}
-
-function moveEditCard(btn, dir) {
-    const card = btn.closest('.edit-card');
-    const wrap = card.parentElement;
-    const cards = Array.from(wrap.children);
-    const swapWith = cards[cards.indexOf(card) + dir];
-    if (!swapWith) return;
-    if (dir === -1) wrap.insertBefore(card, swapWith);
-    else wrap.insertBefore(swapWith, card.nextSibling);
-}
-
-/* ---- HERO ---- */
-async function loadContentHero() {
-    try {
-        const content = await fetchContent();
-        document.getElementById('heroTitleInput').value = content.hero?.title || '';
-        document.getElementById('heroTaglineInput').value = content.hero?.tagline || '';
-    } catch (e) { toast(e.message); }
-}
-document.getElementById('saveHeroBtn').addEventListener('click', async () => {
-    try {
-        await saveContent({ hero: {
-            title: document.getElementById('heroTitleInput').value,
-            tagline: document.getElementById('heroTaglineInput').value,
-        } });
-    } catch (e) { toast(e.message); }
-});
-
-/* ---- PROJETS ---- */
-async function loadContentProjects() {
-    try {
-        const content = await fetchContent();
-        renderProjectsEditor(content.projects || []);
-    } catch (e) { toast(e.message); }
-}
-
-function projectCardHTML(p) {
-    return `
-        <div class="thumb-upload-wrap">
-            <img class="edit-card-thumb" src="${p.cover ? resolveImgUrl(p.cover) : ''}" alt="">
-            <input type="file" accept="image/*" class="project-cover-input">
-        </div>
-        <div class="edit-card-fields">
-            <div class="edit-card-label">Titre</div>
-            <input type="text" class="project-title-input" placeholder="Nom du projet" value="${escapeAttr(p.title || '')}">
-            <div class="edit-card-label">Sous-titre</div>
-            <input type="text" class="project-type-input" placeholder="Ex : Branding & UI/UX" value="${escapeAttr(p.type || '')}">
-            <div class="edit-card-label">Action au clic (avancé)</div>
-            <input type="text" class="project-action-input" value="${escapeAttr(p.action || "window.open('https://', '_blank', 'noopener,noreferrer')")}">
-        </div>
-        <div class="edit-card-actions">
-            <button class="move-up" title="Monter">↑</button>
-            <button class="move-down" title="Descendre">↓</button>
-            <button class="danger remove-project" title="Supprimer">✕</button>
-        </div>
-    `;
-}
-
-function renderProjectsEditor(projects) {
-    const wrap = document.getElementById('projectsListWrap');
-    wrap.innerHTML = '';
-    if (!projects.length) { wrap.innerHTML = emptyStateHTML('Aucun projet — clique sur "+ Ajouter un projet".'); return; }
-    projects.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'edit-card';
-        card.innerHTML = projectCardHTML(p);
-        wrap.appendChild(card);
-    });
-    attachProjectCardEvents();
-}
-
-function attachProjectCardEvents() {
-    document.querySelectorAll('#projectsListWrap .move-up').forEach(btn => btn.onclick = () => moveEditCard(btn, -1));
-    document.querySelectorAll('#projectsListWrap .move-down').forEach(btn => btn.onclick = () => moveEditCard(btn, 1));
-    document.querySelectorAll('#projectsListWrap .remove-project').forEach(btn => btn.onclick = (e) => {
-        if (!confirm("Retirer ce projet de la page d'accueil ?")) return;
-        e.target.closest('.edit-card').remove();
-    });
-    document.querySelectorAll('#projectsListWrap .project-cover-input').forEach(input => {
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            try {
-                const url = await uploadImage(file);
-                const card = e.target.closest('.edit-card');
-                card.querySelector('.edit-card-thumb').src = resolveImgUrl(url);
-                card.dataset.newCover = url;
-            } catch (err) { toast(err.message); }
-        };
-    });
-}
-
-document.getElementById('addProjectBtn').addEventListener('click', () => {
-    const wrap = document.getElementById('projectsListWrap');
-    if (wrap.querySelector('.empty-state')) wrap.innerHTML = '';
-    const card = document.createElement('div');
-    card.className = 'edit-card';
-    card.innerHTML = projectCardHTML({});
-    wrap.appendChild(card);
-    attachProjectCardEvents();
-});
-
-document.getElementById('saveProjectsBtn').addEventListener('click', async () => {
-    try {
-        const cards = document.querySelectorAll('#projectsListWrap .edit-card');
-        const projects = Array.from(cards).map((card, i) => {
-            let cover = card.dataset.newCover;
-            if (!cover) {
-                const src = card.querySelector('.edit-card-thumb').getAttribute('src') || '';
-                cover = src.startsWith(API_BASE + '/uploads/') ? src.replace(API_BASE, '') : src.replace(SITE_URL + '/', '');
+        /* Tablette : le sujet est centré dans l'image, on garde le même cadrage */
+        @media (max-width: 1024px) {
+            .hero::before {
+                background: linear-gradient(rgba(0,0,0,0.16), rgba(0,0,0,0.16)), linear-gradient(180deg, rgba(10,10,10,0.5) 0%, rgba(10,10,10,0.22) 45%, rgba(10,10,10,0.12) 70%, transparent 100%), url('hero-photo-flo.webp?v=7');
+                background-position: 9% 52%;
             }
-            return {
-                id: 'project-' + (i + 1),
-                title: card.querySelector('.project-title-input').value,
-                type: card.querySelector('.project-type-input').value,
-                cover,
-                action: card.querySelector('.project-action-input').value,
-            };
+        }
+
+        /* Mobile : recadrage vertical serré, le sujet étant centré horizontalement il reste toujours visible */
+        @media (max-width: 768px) {
+            .hero::before {
+                background: linear-gradient(rgba(0,0,0,0.16), rgba(0,0,0,0.16)), linear-gradient(180deg, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.28) 40%, rgba(10,10,10,0.15) 70%, transparent 95%), url('hero-photo-flo.webp?v=7');
+                background-size: cover;
+                background-position: center 54%;
+                background-attachment: scroll;
+            }
+        }
+
+        /* Très petits écrans : léger ajustement, le centrage horizontal suffit déjà */
+        @media (max-width: 420px) {
+            .hero::before { background-position: center 56%; }
+        }
+        .hero .container { width: 100%; position: relative; z-index: 1; }
+
+        /* Halo aurora — signature visuelle rouge-rose, calme et animée */
+        .hero::after {
+            content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                radial-gradient(circle at 18% 28%, rgba(218,44,72,0.38), transparent 45%),
+                radial-gradient(circle at 78% 18%, rgba(255,47,118,0.30), transparent 50%),
+                radial-gradient(circle at 55% 85%, rgba(255,143,179,0.16), transparent 55%);
+            mix-blend-mode: screen;
+            animation: auroraDrift 20s ease-in-out infinite alternate;
+        }
+        @keyframes auroraDrift {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-2%, 3%) scale(1.08); }
+            100% { transform: translate(3%, -2%) scale(1.03); }
+        }
+        @media (prefers-reduced-motion: reduce) { .hero::after { animation: none; } }
+
+        .hero-title { font-family: var(--font-display); font-size: clamp(2rem, 8vw, 4.5rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px; }
+        .hero-title span.red { color: var(--accent); display: inline-block; animation: dotPulse 3.2s ease-in-out infinite; text-shadow: 0 0 24px rgba(218,44,72,0.5); }
+
+        /* Entrée en scène du hero — cascade façon Apple au chargement */
+        .hero-title, .hero-tagline, .ai-hero-search-hint, .hero-cta {
+            opacity: 0; transform: translateY(24px); filter: blur(6px);
+            animation: heroReveal 1s var(--ease-calm) forwards;
+        }
+        .hero-title { animation-delay: 0.15s; }
+        .hero-tagline { animation-delay: 0.32s; }
+        .ai-hero-search-hint { animation-delay: 0.6s; }
+        .hero-cta { animation-delay: 0.72s; }
+        /* La barre de recherche apparaît en simple fondu, sans transform ni blur,
+           pour rester cliquable/tapable dès le premier instant (pas d'ambiguïté de hit-testing) */
+        .ai-hero-search { opacity: 0; animation: heroFadeOnly 0.6s ease-out 0.4s forwards; }
+        @keyframes heroFadeOnly { to { opacity: 1; } }
+        @keyframes heroReveal { to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+        @media (prefers-reduced-motion: reduce) {
+            .hero-title, .hero-tagline, .ai-hero-search, .ai-hero-search-hint, .hero-cta { animation: none; opacity: 1; transform: none; filter: none; }
+        }
+        @keyframes dotPulse {
+            0%, 100% { color: var(--accent); text-shadow: 0 0 18px rgba(218,44,72,0.45); }
+            50% { color: var(--accent-2); text-shadow: 0 0 34px rgba(255,47,118,0.65); }
+        }
+        @media (prefers-reduced-motion: reduce) { .hero-title span.red { animation: none; } }
+        .hero-tagline { margin-top: 0.8rem; font-size: clamp(0.85rem, 2.5vw, 0.95rem); opacity: 0.9; color: #fff; font-family: var(--font-body); font-weight: 400; font-style: italic; }
+        .hero-cta { position: relative; overflow: visible; margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.6rem; padding: clamp(0.9rem, 2vw, 1.1rem) clamp(1.5rem, 3vw, 2.5rem); background: var(--accent); color: white !important; font-family: var(--font-display); font-weight: 800; font-size: clamp(0.75rem, 2vw, 0.85rem); text-transform: uppercase; border-radius: 100px; border: 2px solid var(--accent); cursor: pointer; transition: transform 0.35s var(--ease-calm), box-shadow 0.35s var(--ease-calm), background 0.35s, border-color 0.35s; }
+        .hero-cta::before {
+            content: ""; position: absolute; inset: -3px; border-radius: 100px; border: 1.5px solid var(--accent-2);
+            opacity: 0; pointer-events: none;
+        }
+        .hero-cta span { display: inline-block; transition: transform 0.5s var(--ease-calm); }
+        .hero-cta:hover { background: var(--accent-2); border-color: var(--accent-2); box-shadow: 0 12px 34px rgba(255,47,118,0.4); }
+        .hero-cta:hover::before { animation: ctaPulseRing 1.15s ease-out infinite; }
+        .hero-cta:hover span { transform: rotate(180deg) scale(1.25); }
+        @keyframes ctaPulseRing {
+            0% { opacity: 0.65; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.22); }
+        }
+        @media (prefers-reduced-motion: reduce) { .hero-cta:hover::before { animation: none; } }
+
+        /* ============ BARRE DE RECHERCHE IA (hero) ============ */
+        .ai-hero-search {
+            position: relative; z-index: 2; pointer-events: auto; margin-top: 1.8rem; max-width: 560px;
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.35rem 0.4rem 0.35rem 1.1rem;
+            background: rgba(8,8,10,0.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-radius: 100px; border: 1px solid rgba(255,255,255,0.14);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+            transition: border-color 0.3s var(--ease-calm), box-shadow 0.3s var(--ease-calm), background 0.3s;
+        }
+        @media (min-width: 900px) {
+            .ai-hero-search { max-width: 560px; padding: 0.65rem 0.7rem 0.65rem 1.5rem; gap: 0.8rem; }
+            .ai-hero-search input { font-size: 1.05rem; padding: 0.8rem 0; }
+            .ai-hero-search-submit { width: 48px; height: 48px; }
+            .ai-hero-search-icon { width: 22px; height: 22px; }
+        }
+        .ai-hero-search::before {
+            content: ""; position: absolute; inset: -1.5px; border-radius: 100px; padding: 1.5px;
+            background: linear-gradient(120deg, var(--accent), var(--accent-2), transparent 60%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .ai-hero-search:focus-within { background: rgba(8,8,10,0.85); box-shadow: 0 12px 40px rgba(218,44,72,0.25); }
+        .ai-hero-search:focus-within::before { opacity: 1; }
+        .ai-hero-search-icon { flex-shrink: 0; width: 18px; height: 18px; color: var(--accent-2); }
+        .ai-hero-search input {
+            flex: 1; min-width: 0; background: none; border: none; outline: none; color: #fff;
+            font-family: var(--font-body); font-size: clamp(0.82rem, 2vw, 0.9rem); padding: 0.5rem 0;
+        }
+        .ai-hero-search input::placeholder { color: rgba(255,255,255,0.55); transition: opacity 0.3s ease; }
+        .ai-hero-search-submit {
+            flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+            display: flex; align-items: center; justify-content: center; transition: transform 0.25s ease;
+        }
+        .ai-hero-search-submit:hover { transform: scale(1.08); }
+        .ai-hero-search-submit svg { width: 15px; height: 15px; }
+        .ai-hero-search-hint { margin-top: 0.6rem; font-size: 0.7rem; color: rgba(255,255,255,0.45); display: flex; align-items: center; gap: 0.4rem; padding-left: 0.3rem; }
+        .ai-hero-search-hint svg { width: 12px; height: 12px; }
+        @media (max-width: 640px) { .ai-hero-search { max-width: 100%; } }
+
+        .marquee-wrapper { background: #000; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 1rem 0; overflow: hidden; white-space: nowrap; }
+        .marquee-content { display: inline-block; animation: scroll 25s linear infinite; }
+        .marquee-content span { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: clamp(0.8rem, 2vw, 1.1rem); margin-right: 2rem; }
+        .marquee-content span i { color: var(--accent); font-style: normal; margin-right: 0.5rem; }
+
+        .work, .resume-section, .social-section, .contact, .about-human { padding: clamp(4rem, 8vw, 8rem) 0; }
+        .section-title { font-family: var(--font-display); font-size: clamp(1.6rem, 6vw, 2.5rem); margin-bottom: clamp(2rem, 5vw, 4rem); border-bottom: 1px solid var(--border); padding-bottom: 1rem; text-transform: uppercase; font-weight: 800; }
+        .section-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--font-body); font-size: 0.7rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--accent-2); margin-bottom: 0.7rem; }
+        .section-eyebrow::before { content: ""; width: 18px; height: 1.5px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+        
+        .projects-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); grid-auto-flow: dense; gap: clamp(1.5rem, 3vw, 2.5rem); }
+        .project-showcase:nth-child(4n+1) { grid-column: span 2; }
+        .project-showcase.wide { grid-column: span 2; }
+        @media (max-width: 900px) { .project-showcase:nth-child(4n+1), .project-showcase.wide { grid-column: span 1; } }
+        .project-showcase { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; cursor: pointer; background: rgba(255,255,255,0.02); transition: transform 0.15s ease-out, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease; }
+        .project-showcase:hover { border-color: var(--accent-2); transform: translateY(-8px); background: rgba(218,44,72,0.05); box-shadow: 0 24px 60px rgba(218,44,72,0.18), 0 0 0 1px rgba(255,47,118,0.15); }
+        .project-header { padding: clamp(1.2rem, 3vw, 2rem); border-bottom: 1px solid var(--border); }
+        .project-title { font-family: var(--font-display); font-size: clamp(1.1rem, 3vw, 1.5rem); font-weight: 800; text-transform: uppercase; margin-bottom: 0.8rem; }
+        .project-type { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+        .project-gallery { position: relative; display: block; padding: 0; overflow: hidden; }
+        .project-gallery img { width: 100%; height: clamp(200px, 26vw, 280px); object-fit: cover; border-radius: 0; display: block; transition: transform 0.45s ease-out; }
+        .project-gallery img:nth-of-type(n+2) { display: none; }
+
+        /* Cover en mosaïque (plusieurs images) — pour Cover Art & Portfolio Photos */
+        .project-gallery.mosaic {
+            display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr);
+            gap: 3px; height: clamp(200px, 26vw, 280px);
+        }
+        .project-showcase.wide .project-gallery.mosaic {
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
+        }
+        .project-gallery.mosaic img {
+            display: block !important; width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.45s ease-out;
+        }
+        .project-showcase:hover .project-gallery.mosaic img { transform: scale(1.06); }
+        .project-showcase:hover .project-gallery img { transform: scale(1.07); }
+        .project-gallery::after {
+            content: "Voir le projet →"; position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: flex-start;
+            padding: clamp(1.2rem, 3vw, 1.6rem); box-sizing: border-box;
+            background: linear-gradient(0deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 45%, transparent 70%);
+            color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;
+            opacity: 0; transform: translateY(10px); transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+            pointer-events: none;
+        }
+        .project-showcase:hover .project-gallery::after { opacity: 1; transform: translateY(0); }
+        @media (max-width: 768px) {
+            .project-gallery::after { opacity: 1; transform: translateY(0); background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 60%); }
+        }
+
+        @media (max-width: 640px) {
+            .project-gallery { grid-template-columns: 1fr; }
+            .project-gallery img { height: 250px; }
+        }
+
+        .resume-item { margin-bottom: 2.5rem; border-left: 2px solid var(--border); padding-left: 1.5rem; transition: all 0.4s ease; }
+        .resume-item:hover { border-left: 3px solid var(--accent); padding-left: 1.8rem; }
+        .resume-item:hover h4 { color: var(--accent); }
+        .resume-item span { color: var(--text-muted); font-size: 0.85rem; display: block; margin-bottom: 0.4rem; }
+        .resume-item h4 { font-family: var(--font-display); font-size: clamp(1.1rem, 3vw, 1.4rem); margin: 0.5rem 0; font-weight: 800; text-transform: uppercase; transition: 0.3s; }
+        .resume-item p { color: var(--text-muted); font-size: 0.9rem; }
+
+        .faq-section { background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%); }
+        .faq-list { display: flex; flex-direction: column; gap: 1rem; max-width: 900px; }
+        .faq-item { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 1.3rem 1.6rem; transition: var(--transition); }
+        .faq-item:hover { border-color: var(--accent); }
+        .faq-item summary { font-family: var(--font-display); font-weight: 800; font-size: clamp(0.95rem, 2.5vw, 1.1rem); cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 1.4rem; color: var(--accent); flex-shrink: 0; transition: transform 0.3s ease; }
+        .faq-item[open] summary::after { transform: rotate(45deg); }
+        .faq-item p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; margin-top: 1rem; }
+
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: clamp(1.5rem, 3vw, 2rem); }
+        .contact-card { 
+            background: linear-gradient(135deg, rgba(218, 44, 72, 0.1) 0%, rgba(218, 44, 72, 0.02) 100%);
+            border: 1px solid var(--border); 
+            padding: clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2.5rem); 
+            border-radius: 20px; 
+            cursor: pointer; 
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .contact-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: 0.6s;
+        }
+        .contact-card:hover::before { left: 100%; }
+        .contact-card:hover { 
+            border-color: var(--accent); 
+            transform: translateY(-10px);
+            background: linear-gradient(135deg, rgba(218, 44, 72, 0.15) 0%, rgba(218, 44, 72, 0.05) 100%);
+            box-shadow: 0 20px 40px rgba(218, 44, 72, 0.2);
+        }
+        .contact-card.revealed { background: linear-gradient(135deg, rgba(218, 44, 72, 0.2) 0%, rgba(218, 44, 72, 0.08) 100%); }
+        .contact-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; color: var(--accent); margin-bottom: 1rem; display: block; }
+        .contact-info-placeholder { font-family: var(--font-display); font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 800; text-transform: uppercase; color: var(--text-muted); }
+        .contact-info { 
+            font-family: var(--font-display); 
+            font-size: clamp(1rem, 3vw, 1.4rem); 
+            font-weight: 800; 
+            color: var(--accent);
+            word-break: break-all;
+            animation: slideIn 0.4s ease-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .social-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: clamp(1.5rem, 3vw, 2rem); }
+        .social-card { 
+            background: rgba(255, 255, 255, 0.02); 
+            border: 1px solid var(--border); 
+            padding: clamp(1.8rem, 4vw, 2.5rem); 
+            border-radius: 20px; 
+            text-align: center; 
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+        .social-card::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(218, 44, 72, 0.2) 0%, transparent 70%);
+            opacity: 0;
+            transition: 0.4s;
+        }
+        .social-card:hover::before { opacity: 1; }
+        .social-card:hover { 
+            border-color: var(--accent); 
+            transform: translateY(-12px);
+            background: rgba(218, 44, 72, 0.08);
+        }
+        .social-icon { 
+            font-size: clamp(2rem, 5vw, 3rem); 
+            margin-bottom: 0.8rem;
+            display: block;
+            transition: 0.3s;
+        }
+        .social-card:hover .social-icon { transform: scale(1.2) rotate(-10deg); }
+        .social-card h4 { 
+            font-family: var(--font-display); 
+            text-transform: uppercase; 
+            margin-bottom: 0.4rem; 
+            letter-spacing: 1px;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+        .social-card span { 
+            color: var(--text-muted);
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            position: relative;
+            z-index: 1;
+        }
+        .social-card:hover span { color: var(--text-main); }
+
+        .about-human { background: linear-gradient(135deg, rgba(218,44,72,0.05) 0%, rgba(218,44,72,0.02) 100%); }
+        .about-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(1.5rem, 3vw, 2.5rem); align-items: stretch; }
+        .about-human-card, .about-ai-card { border-radius: var(--radius-lg); padding: clamp(2rem, 4vw, 2.8rem); border: 1px solid var(--border); }
+        .about-human-card { background: rgba(255,255,255,0.02); }
+        .about-lead { font-size: clamp(1rem, 2.2vw, 1.15rem); line-height: 1.7; color: var(--text-main); margin-bottom: 1.6rem; }
+        .about-signoff { font-family: var(--font-display); font-weight: 800; color: var(--accent-2); font-style: italic; }
+
+        .about-ai-card {
+            background: linear-gradient(160deg, rgba(218,44,72,0.12) 0%, rgba(255,47,118,0.04) 60%, transparent 100%);
+            border-color: rgba(255,47,118,0.25);
+            display: flex; flex-direction: column;
+        }
+        .new-badge {
+            display: inline-flex; align-items: center; gap: 0.55rem;
+            padding: 0.5rem 1.1rem 0.5rem 0.75rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            border-radius: 100px;
+            font-family: var(--font-display); font-weight: 800; font-size: 0.72rem;
+            text-transform: uppercase; letter-spacing: 1px; color: #fff !important;
+            box-shadow: 0 10px 28px rgba(255,47,118,0.35);
+            margin-bottom: 1.1rem;
+        }
+        .new-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; flex-shrink: 0; animation: newBadgePulse 1.8s ease-in-out infinite; }
+        @keyframes newBadgePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.65); }
+            50% { box-shadow: 0 0 0 5px rgba(255,255,255,0); }
+        }
+        @media (prefers-reduced-motion: reduce) { .new-badge-dot { animation: none; } }
+
+        .about-ai-card h3 { font-family: var(--font-display); font-size: clamp(1.1rem, 2.6vw, 1.4rem); font-weight: 800; margin: 0.8rem 0 0.9rem; line-height: 1.25; }
+        .about-ai-card > p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.65; margin-bottom: 1.4rem; }
+        .about-ai-list { list-style: none; display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 1.6rem; }
+        .about-ai-list li { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 0.85rem; color: var(--text-main); line-height: 1.4; }
+        .about-ai-list li svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--accent-2); margin-top: 0.1rem; }
+        .about-ai-cta {
+            margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.8rem 1.5rem; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+            border: none; border-radius: 100px; font-family: var(--font-display); font-weight: 800;
+            font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: var(--transition);
+        }
+        .about-ai-cta:hover { transform: translateY(-3px); box-shadow: var(--shadow-glow); }
+        @media (max-width: 900px) { .about-grid { grid-template-columns: 1fr; } }
+
+        .cv-download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: clamp(1rem, 2.5vw, 1.3rem) clamp(2rem, 4vw, 3rem);
+            background: linear-gradient(135deg, rgba(218,44,72,0.2) 0%, rgba(218,44,72,0.05) 100%);
+            border: 2px solid var(--accent);
+            border-radius: 100px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: clamp(0.75rem, 2vw, 0.9rem);
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .cv-download-btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            z-index: -1;
+            transition: 0.4s;
+        }
+        .cv-download-btn:hover::before { left: 0; }
+        .cv-download-btn:hover { color: #fff; transform: translateY(-3px); box-shadow: 0 15px 30px rgba(218,44,72,0.3); }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 9999; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.4s var(--ease-calm); backdrop-filter: blur(20px); }
+        .modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
+        .modal-content { background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(18,18,18,1) 12%); width: 95%; max-height: 90vh; border-radius: var(--radius-lg); overflow-y: auto; padding: clamp(1.5rem, 4vw, 4rem); border: 1px solid var(--glass-border); position: relative; box-shadow: var(--shadow-soft); transform: scale(0.94) translateY(16px); opacity: 0; transition: transform 0.5s var(--ease-calm), opacity 0.5s var(--ease-calm); }
+        .modal-overlay.active .modal-content { transform: scale(1) translateY(0); opacity: 1; }
+        .modal-close { position: sticky; top: 0; float: right; background: var(--accent); border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 1.8rem; z-index: 100; transition: transform 0.3s var(--ease-calm), background 0.3s; }
+        .modal-close:hover { background: var(--accent-2); transform: rotate(90deg); }
+        .modal-content h2 { margin-bottom: 0.8rem; font-family: var(--font-display); font-size: clamp(1.4rem, 4vw, 2rem); }
+        .modal-description { color: var(--text-muted); margin-bottom: 2rem; line-height: 1.8; font-size: 0.95rem; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+        .gallery-grid-full { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        #photo-modal .gallery-grid-full { grid-template-columns: repeat(2, 1fr); }
+        @media (max-width: 560px) { #photo-modal .gallery-grid-full { grid-template-columns: 1fr; } }
+        .gallery-grid img, .gallery-grid-full img { width: 100%; border-radius: 12px; border: 1px solid var(--border); transition: transform 0.5s var(--ease-calm), border-color 0.3s; }
+        .gallery-grid img:hover, .gallery-grid-full img:hover { transform: scale(1.02); border-color: var(--accent-2); }
+
+        /* Cover dédiée au projet Augmantor : fond dégradé + logo centré */
+        .augmantor-cover {
+            height: clamp(200px, 26vw, 280px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 30% 30%, #ff5f8f 0%, #f2214f 35%, #c81d4e 65%, #6e0f2e 100%);
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+        .augmantor-cover img {
+            max-width: 65%;
+            max-height: 65%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35));
+            transition: transform 0.45s ease-out;
+        }
+        .project-showcase:hover .augmantor-cover img { transform: scale(1.08); }
+
+        /* Cover dédiée au projet Trustify : logo sombre → fond clair pour le faire ressortir */
+        .trustify-cover {
+            height: clamp(200px, 26vw, 280px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 30% 30%, #f4f7fb 0%, #e3ebf3 45%, #cdd9e6 100%);
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+        .trustify-cover img {
+            max-width: 60%;
+            max-height: 55%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 6px 16px rgba(40, 74, 107, 0.25));
+            transition: transform 0.45s ease-out;
+        }
+        .project-showcase:hover .trustify-cover img { transform: scale(1.08); }
+
+        /* Grille dédiée aux covers : 4 par ligne max, responsive */
+        .gallery-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .gallery-grid-4 img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); transition: transform 0.5s var(--ease-calm), border-color 0.3s; }
+        .gallery-grid-4 img:hover { transform: scale(1.03); border-color: var(--accent-2); }
+        @media (max-width: 1024px) { .gallery-grid-4 { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .gallery-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 420px) { .gallery-grid-4 { grid-template-columns: repeat(1, 1fr); } }
+
+        footer { padding: clamp(4rem, 6vw, 6rem) 0 2rem; border-top: 1px solid var(--border); background: #000; }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: clamp(2rem, 4vw, 4rem); }
+        .footer-logo { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.3rem, 4vw, 1.8rem); text-transform: uppercase; margin-bottom: 1rem; }
+        .footer-logo span { color: var(--accent); }
+        .footer-col h5 { font-family: var(--font-display); color: var(--accent); font-size: clamp(0.75rem, 2vw, 0.85rem); letter-spacing: 2.5px; margin-bottom: 1.5rem; text-transform: uppercase; font-weight: 800; }
+        .footer-col a { opacity: 0.7; transition: opacity 0.3s var(--ease-calm), transform 0.3s var(--ease-calm), color 0.3s; display: block; margin-bottom: 0.6rem; font-size: 0.9rem; }
+        .footer-col a:hover { opacity: 1; color: var(--accent-2); transform: translateX(4px); }
+        .footer-col p { font-size: clamp(0.8rem, 2vw, 0.9rem); }
+        .footer-bottom { border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 3rem; display: flex; justify-content: space-between; flex-direction: column; gap: 1rem; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.4; }
+
+        @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+
+        @media (max-width: 1024px) {
+            .footer-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            nav .container { padding: 0 clamp(1rem, 2vw, 2rem); }
+            .nav-links { display: none; }
+            .menu-toggle { display: block; }
+            .hero { padding-top: 60px; }
+            .projects-container { grid-template-columns: 1fr; }
+            .resume-item { margin-bottom: 2rem; padding-left: 1.2rem; }
+            .footer-bottom { flex-direction: row; justify-content: space-between; }
+            .footer-grid { gap: 2rem; }
+            .project-gallery img { height: 150px; }
+        }
+
+        @media (max-width: 480px) {
+            .hero-cta { padding: 0.8rem 1.5rem; margin-top: 1rem; }
+            .welcome-content { padding: 2rem 1.5rem; }
+            .welcome-content h2 { font-size: 1.4rem; }
+            .resume-item { margin-bottom: 1.8rem; padding-left: 1rem; border-left-width: 2px; }
+            .contact-card { padding: 1.5rem; }
+            .about-grid { gap: 1.2rem; }
+            .modal-content { padding: 1.5rem; }
+            .hero-title { font-size: clamp(1.8rem, 6vw, 3rem); }
+            .section-title { font-size: clamp(1.3rem, 4vw, 1.8rem); }
+            .project-title { font-size: clamp(1rem, 2.5vw, 1.2rem); }
+            .project-gallery img { height: 120px; }
+            .mobile-nav-links a { font-size: 1.5rem; }
+        }
+
+        @media (max-width: 640px) {
+            .projects-container { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        }
+
+        /* ================================================================
+           AI CHAT WIDGET — Assistant conversationnel style ChatGPT
+           Automatisations : prise de RDV (Google Calendar) + envoi de
+           messages réels via l'API FormSubmit (aucun backend requis)
+           ================================================================ */
+
+        .ai-chat-widget { position: fixed; bottom: clamp(1.2rem, 3vw, 2rem); right: clamp(1.2rem, 3vw, 2rem); z-index: 10000; font-family: var(--font-body); }
+
+        .ai-chat-toggle {
+            position: relative; width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            color: #fff; display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-glow); transition: transform 0.4s var(--ease-calm), box-shadow 0.4s var(--ease-calm);
+        }
+        .ai-chat-toggle:hover { transform: scale(1.07) translateY(-2px); box-shadow: 0 14px 46px rgba(218, 44, 72, 0.4); }
+        .ai-chat-toggle svg { width: 26px; height: 26px; position: absolute; transition: opacity 0.25s ease, transform 0.25s ease; }
+        .ai-chat-toggle-icon-close { opacity: 0; transform: rotate(-45deg) scale(0.6); }
+        .ai-chat-toggle-icon-open { opacity: 1; transform: rotate(0) scale(1); }
+        .ai-chat-widget.open .ai-chat-toggle-icon-open { opacity: 0; transform: rotate(45deg) scale(0.6); }
+        .ai-chat-widget.open .ai-chat-toggle-icon-close { opacity: 1; transform: rotate(0) scale(1); }
+
+        .ai-chat-ping { position: absolute; top: -3px; right: -3px; width: 16px; height: 16px; border-radius: 50%; background: #22c55e; border: 2px solid var(--bg-color); }
+        .ai-chat-ping::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #22c55e; animation: ai-ping 2s cubic-bezier(0,0,0.2,1) infinite; }
+        .ai-chat-widget.open .ai-chat-ping, .ai-chat-widget.notified .ai-chat-ping { display: flex; }
+        .ai-chat-widget:not(.notified):not(.open) .ai-chat-ping { display: none; }
+        @keyframes ai-ping { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(2.4); opacity: 0; } }
+
+        .ai-chat-panel {
+            position: absolute; bottom: 78px; right: 0; width: min(400px, 92vw); height: min(640px, 74vh);
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(14,14,14,0.98) 12%);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft); display: flex; flex-direction: column; overflow: hidden;
+            opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(24px) scale(0.97);
+            transform-origin: bottom right; transition: opacity 0.45s var(--ease-calm), transform 0.45s var(--ease-calm);
+        }
+        .ai-chat-widget.open .ai-chat-panel { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1); }
+
+        .ai-chat-header { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.3rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .ai-chat-header-info { display: flex; align-items: center; gap: 0.8rem; }
+        .ai-chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 0.85rem; color: #fff; flex-shrink: 0; }
+        .ai-chat-header-info h4 { font-family: var(--font-display); font-size: 0.95rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.2rem; }
+        .ai-chat-status { font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
+        .ai-chat-status i { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block; box-shadow: 0 0 8px #22c55e; }
+        .ai-chat-close { background: none; border: none; color: var(--text-muted); cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.25s; }
+        .ai-chat-close:hover { background: rgba(255,255,255,0.08); color: var(--text-main); }
+        .ai-chat-close svg { width: 18px; height: 18px; }
+
+        .ai-chat-messages { flex: 1; overflow-y: auto; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.9rem; scroll-behavior: smooth; }
+        .ai-chat-messages::-webkit-scrollbar { width: 5px; }
+        .ai-chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+        .ai-msg { display: flex; gap: 0.6rem; max-width: 88%; animation: ai-msg-in 0.35s var(--ease-calm); }
+        @keyframes ai-msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .ai-msg-bot { align-self: flex-start; }
+        .ai-msg-user { align-self: flex-end; flex-direction: row-reverse; }
+        .ai-msg-avatar { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; font-family: var(--font-display); }
+        .ai-msg-bot .ai-msg-avatar { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
+        .ai-msg-user .ai-msg-avatar { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .ai-msg-bubble { padding: 0.7rem 1rem; border-radius: 16px; font-size: 0.85rem; line-height: 1.55; }
+        .ai-msg-bot .ai-msg-bubble { background: var(--glass-bg); border: 1px solid var(--glass-border); border-top-left-radius: 4px; color: var(--text-main); }
+        .ai-msg-user .ai-msg-bubble { background: linear-gradient(135deg, var(--accent) 0%, #b3243c 100%); border-top-right-radius: 4px; color: #fff; }
+        .ai-msg-bubble a { text-decoration: underline !important; color: inherit; font-weight: 700; }
+        .ai-msg-bubble .ai-cal-link { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.6rem; padding: 0.55rem 0.9rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 100px; font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.25s; }
+        .ai-msg-bubble .ai-cal-link:hover { background: #fff; color: #111 !important; }
+
+        .ai-typing { display: flex; gap: 4px; padding: 0.9rem 1rem; }
+        .ai-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: ai-bounce 1.2s infinite ease-in-out; }
+        .ai-typing span:nth-child(2) { animation-delay: 0.15s; }
+        .ai-typing span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes ai-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+        .ai-chat-quickreplies { display: flex; gap: 0.5rem; padding: 0 1.2rem 0.9rem; flex-wrap: wrap; flex-shrink: 0; }
+        .ai-chip { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); font-size: 0.75rem; font-weight: 600; padding: 0.5rem 0.9rem; border-radius: 100px; cursor: pointer; transition: 0.25s; white-space: nowrap; }
+        .ai-chip:hover { background: var(--accent); border-color: var(--accent); color: #fff; transform: translateY(-2px); }
+
+        .ai-chat-inputbar { display: flex; align-items: flex-end; gap: 0.6rem; padding: 0.9rem 1.1rem; border-top: 1px solid var(--border); flex-shrink: 0; }
+        .ai-chat-inputbar textarea { flex: 1; resize: none; max-height: 100px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 14px; padding: 0.65rem 0.9rem; color: var(--text-main); font-family: var(--font-body); font-size: 0.85rem; outline: none; transition: 0.25s; }
+        .ai-chat-inputbar textarea:focus { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+        .ai-chat-send { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: 0.25s; }
+        .ai-chat-send:hover { background: var(--accent-2); transform: scale(1.08); }
+        .ai-chat-send svg { width: 17px; height: 17px; }
+        .ai-chat-disclaimer { font-size: 0.62rem; color: var(--text-muted); text-align: center; padding: 0 1rem 0.9rem; opacity: 0.7; }
+
+        @media (max-width: 560px) {
+            .ai-chat-widget { bottom: 1rem; right: 1rem; }
+            .ai-chat-panel { position: fixed; inset: 0; width: 100%; height: 100%; border-radius: 0; bottom: 0; right: 0; }
+            .ai-chat-toggle { width: 56px; height: 56px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grain-overlay"></div>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <div class="welcome-modal" id="welcomeModal">
+        <div class="welcome-content">
+            <button class="close-welcome" onclick="closeWelcome()">&times;</button>
+            <span class="new-badge"><i class="new-badge-dot"></i> Bienvenue</span>
+            <h2>VOTRE VISION,<br>MON IMPACT.</h2>
+            <p>Directeur Artistique & Graphiste basé à Paris. Créons ensemble des identités qui marquent les esprits.</p>
+            <button class="welcome-ai-cta" onclick="closeWelcome(); if (window.florianAI) window.florianAI.openRdv();">
+                <span>✦</span> Discuter avec mon assistant IA
+            </button>
+            <a href="https://www.instagram.com/florian.b93tsz" target="_blank" class="insta-promo">Suivre Florian sur Instagram</a>
+        </div>
+    </div>
+
+    <div class="cursor" id="cursor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg></div>
+
+    <nav id="navbar">
+        <div class="container">
+            <div class="logo-group">
+                <div class="logo-main">FLORIAN B<span>.</span></div>
+                <div class="logo-sub">Graphiste</div>
+            </div>
+            <div class="nav-links">
+                <a href="#work">Projets</a>
+                <a href="#resume">Parcours</a>
+                <a href="#about">L'humain & l'IA</a>
+                <a href="#faq">FAQ</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">
+                <span class="burger-line line1"></span>
+                <span class="burger-line line2"></span>
+                <span class="burger-line line3"></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-links">
+            <a href="#work" onclick="toggleMobileMenu()">Projets</a>
+            <a href="#resume" onclick="toggleMobileMenu()">Parcours</a>
+            <a href="#about" onclick="toggleMobileMenu()">L'humain & l'IA</a>
+            <a href="#faq" onclick="toggleMobileMenu()">FAQ</a>
+            <a href="#contact" onclick="toggleMobileMenu()">Contact</a>
+        </div>
+    </div>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title" onanimationend="this.style.animation='none';this.style.opacity='1';this.style.transform='none';this.style.filter='none'">Florian B<span class="red">.</span></h1>
+            <p class="hero-tagline" onanimationend="this.style.animation='none';this.style.opacity='1';this.style.transform='none';this.style.filter='none'">Les pixels sont nos atomes créatifs</p>
+
+            <form class="ai-hero-search" id="aiHeroSearch" onanimationend="this.style.animation='none';this.style.opacity='1';this.style.transform='none';this.style.filter='none'">
+                <svg class="ai-hero-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6L12 3z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9L19 15z"/></svg>
+                <input type="text" id="aiHeroInput" placeholder="Demandez-moi n'importe quoi sur le travail de Florian..." autocomplete="off">
+                <button type="submit" class="ai-hero-search-submit" aria-label="Envoyer à l'assistant">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+            </form>
+            <div class="ai-hero-search-hint" onanimationend="this.style.animation='none';this.style.opacity='1';this.style.transform='none';this.style.filter='none'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                Répond en direct, prend RDV et transmet vos messages à Florian
+            </div>
+
+            <button class="hero-cta" id="heroCallCta" onanimationend="this.style.animation='none';this.style.opacity='1';this.style.transform='none';this.style.filter='none'">
+                <span>✦</span> Discutons de votre projet
+            </button>
+        </div>
+    </section>
+
+    <div class="marquee-wrapper">
+        <div class="marquee-content">
+            <span><i>•</i> Branding</span><span><i>•</i> Communication Digitale</span><span><i>•</i> Communication Print</span><span><i>•</i> IA Générative</span><span><i>•</i> UI/UX Design</span><span><i>•</i> Montage Vidéo</span><span><i>•</i> Motion Design</span><span><i>•</i> Photographie</span>
+        </div>
+    </div>
+
+    <section id="work" class="work">
+        <div class="container">
+            <h2 class="section-title">Sélection Projets</h2>
+            <div class="projects-container">
+                <div class="project-showcase" data-project-id="project-1" onclick="openModal('courtepaille-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">Courtepaille</h3>
+                        <span class="project-type">Branding & Design</span>
+                    </div>
+                    <div class="project-gallery">
+                        <img src="Courtepaille7.webp" alt="Courtepaille">
+                        <img src="Courtepaille1.webp" alt="Branding">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-2" onclick="openModal('bnp-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">BNP Paribas</h3>
+                        <span class="project-type">Branding</span>
+                    </div>
+                    <div class="project-gallery">
+                        <img src="Branding BNP Paribas5.webp" alt="BNP">
+                        <img src="Branding BNP Paribas1.webp" alt="BNP">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-3" onclick="openModal('oofti-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">oofti.fr</h3>
+                        <span class="project-type">Branding</span>
+                    </div>
+                    <div class="project-gallery">
+                        <img src="oofti.fr1.webp" alt="oofti">
+                        <img src="oofti.fr2.webp" alt="oofti">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-4" onclick="openModal('basicfit-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">BasicFit</h3>
+                        <span class="project-type">Branding</span>
+                    </div>
+                    <div class="project-gallery">
+                        <img src="BasicFit3.webp" alt="BasicFit">
+                        <img src="BasicFit1.webp" alt="BasicFit">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-5" onclick="openModal('finish-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">Finish</h3>
+                        <span class="project-type">Packaging Design</span>
+                    </div>
+                    <div class="project-gallery">
+                        <img src="Finish pack.webp" alt="Finish">
+                        <img src="Finish pack1.webp" alt="Finish">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-6" onclick="openModal('mllepitch-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">MllePitch</h3>
+                        <span class="project-type">Campagne</span>
+                    </div>
+                    <div class="project-gallery">
+                        <img src="MllePitch1.webp" alt="MllePitch">
+                        <img src="MllePitch2.webp" alt="MllePitch">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-7" onclick="openModal('cover-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">Cover Art</h3>
+                        <span class="project-type">Art Direction</span>
+                    </div>
+                    <div class="project-gallery mosaic">
+                        <img src="Cover1.webp" alt="Cover" onerror="this.style.display='none'">
+                        <img src="Cover2.webp" alt="Cover" onerror="this.style.display='none'">
+                        <img src="Cover9.webp" alt="Cover" onerror="this.style.display='none'">
+                        <img src="Cover18.webp" alt="Cover" onerror="this.style.display='none'">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-8" onclick="window.open('https://evidentall.vercel.app', '_blank', 'noopener,noreferrer')">
+                    <div class="project-header">
+                        <h3 class="project-title">Evidentall Patient</h3>
+                        <span class="project-type">UI/UX Design — App Web</span>
+                    </div>
+                    <div class="project-gallery">
+                        <img src="evidentall-cover.svg" alt="Evidentall Patient" style="grid-column: 1 / -1; height: 260px;" onerror="this.style.display='none'">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-9" onclick="window.open('https://augmantor.com', '_blank', 'noopener,noreferrer')">
+                    <div class="project-header">
+                        <h3 class="project-title">Augmantor</h3>
+                        <span class="project-type">Branding & UI/UX — Mentorat Chirurgiens-Dentistes</span>
+                    </div>
+                    <div class="project-gallery">
+                        <div class="augmantor-cover">
+                            <img src="Logo-Augmantor-BlancFichier-1.png" alt="Augmantor" onerror="this.style.display='none'">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project-showcase wide" data-project-id="project-10" onclick="openModal('photo-modal')">
+                    <div class="project-header">
+                        <h3 class="project-title">Portfolio</h3>
+                        <span class="project-type">Photographie</span>
+                    </div>
+                    <div class="project-gallery mosaic">
+                        <img src="Photo1.webp" alt="Photo">
+                        <img src="Photo3.webp" alt="Photo">
+                        <img src="Photo9.webp" alt="Photo">
+                        <img src="Photo17.webp" alt="Photo">
+                        <img src="Photo12.webp" alt="Photo">
+                        <img src="Photo20.webp" alt="Photo">
+                    </div>
+                </div>
+
+                <div class="project-showcase" data-project-id="project-11" onclick="window.open('https://trustify.best', '_blank', 'noopener,noreferrer')">
+                    <div class="project-header">
+                        <h3 class="project-title">Trustify</h3>
+                        <span class="project-type">Branding & UI/UX — Plateforme d'Avis Vérifiés</span>
+                    </div>
+                    <div class="project-gallery">
+                        <div class="trustify-cover">
+                            <img src="trustify-logo-dark.svg" alt="Trustify" onerror="this.style.display='none'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="resume" class="resume-section">
+        <div class="container">
+            <span class="section-eyebrow">À propos</span>
+            <h2 class="section-title">Mon Parcours</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3rem; margin-bottom: 3rem;">
+                <div>
+                    <h3 style="color: var(--accent); margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 3px; font-weight: 800; text-transform: uppercase;">EXPÉRIENCES</h3>
+                    
+                    <div class="resume-item">
+                        <span>OCTOBRE 2024 — AUJOURD'HUI</span>
+                        <h4>Graphiste</h4>
+                        <p>oofti.fr | Montreuil</p>
+                    </div>
+
+                    <div class="resume-item">
+                        <span>AVRIL 2020 — AUJOURD'HUI</span>
+                        <h4>Fondateur / CM</h4>
+                        <p>DailyRapFrance | Neuilly-Plaisance</p>
+                    </div>
+
+                    <div class="resume-item">
+                        <span>SEPTEMBRE 2023 — FÉVRIER 2024</span>
+                        <h4>Chef de Projet</h4>
+                        <p>Instincts Productions | Paris</p>
+                    </div>
+
+                    <div class="resume-item">
+                        <span>SEPTEMBRE 2022 — AOÛT 2023</span>
+                        <h4>Graphiste</h4>
+                        <p>SIM Consulting | Bry-sur-Marne</p>
+                    </div>
+
+                    <div class="resume-item">
+                        <span>NOVEMBRE 2020 — JANVIER 2021</span>
+                        <h4>Assistant Créateur e-learning</h4>
+                        <p>Total Energies | La Défense</p>
+                    </div>
+
+                    <div class="resume-item">
+                        <span>JANVIER 2020</span>
+                        <h4>Assistant DA</h4>
+                        <p>Publicis Groupe | Paris</p>
+                    </div>
+
+                    <div class="resume-item">
+                        <span>JUIN 2019 — JUILLET 2019</span>
+                        <h4>Assistant sublimation 3D</h4>
+                        <p>Pacific Colour | Bonneuil-sur-Marne</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style="color: var(--accent); margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 3px; font-weight: 800; text-transform: uppercase;">FORMATIONS</h3>
+                    
+                    <div class="resume-item">
+                        <span>2021 — 2024</span>
+                        <h4>Bachelor Design graphique</h4>
+                        <p>MJM Graphic Design | Mention Très Bien</p>
+                    </div>
+
+                    <div class="resume-item">
+                        <span>2018 — 2021</span>
+                        <h4>Bac Pro Visuelle</h4>
+                        <p>Claude Nicolas Ledoux | Mention Bien</p>
+                    </div>
+
+                    <h3 style="color: var(--accent); margin: 2.5rem 0 1.5rem; font-size: 0.9rem; letter-spacing: 3px; font-weight: 800; text-transform: uppercase;">COMPÉTENCES</h3>
+                    <div style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.8;">
+                        <p>Branding, Communication Digitale, Communication Print, Community Management, Design Thinking, Direction Artistique, Esprit critique, Intelligence Artificielle, Montage Vidéo, Motion Design, Mise en page, Photographie, Tournage vidéo, UI/UX Design</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:center;">
+                <a href="CV-Florian-Bonnet.pdf" target="_blank" class="cv-download-btn">
+                    <span>📥</span> Télécharger le CV
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="about-human">
+        <div class="container">
+            <div class="about-grid">
+                <div class="about-human-card reveal">
+                    <span class="section-eyebrow">Derrière l'écran</span>
+                    <h2 class="section-title" style="border:none; margin-bottom:1.2rem; padding-bottom:0;">Florian, avant d'être un portfolio</h2>
+                    <p class="about-lead">Graphiste et directeur artistique basé à Paris. Je crois qu'une identité visuelle doit durer, pas juste faire de l'effet le temps d'un scroll. Alors avant de dessiner quoi que ce soit, je prends le temps de vous écouter vraiment. Pas de brief coché à la va-vite, une vraie conversation, entre nous.</p>
+                    <p class="about-signoff">Florian B.</p>
+                </div>
+
+                <div class="about-ai-card reveal">
+                    <span class="new-badge"><i class="new-badge-dot"></i> Nouveau — Assistant IA intégré</span>
+                    <h3>Un assistant qui travaille pour moi, même hors ligne</h3>
+                    <p>J'ai construit un assistant IA directement sur ce site : il répond à vos questions sur mon travail, propose des créneaux de RDV et me transmet vos messages instantanément — jour et nuit, sans intermédiaire.</p>
+                    <ul class="about-ai-list">
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Réponses instantanées sur mes projets et mes services</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Prise de RDV automatique, avec ajout direct à votre agenda</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Vos messages transmis à Florian, sans détour</li>
+                    </ul>
+                    <button class="about-ai-cta" id="aboutAiCta">
+                        <span>✦</span> Discuter avec l'assistant
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="socials" class="social-section">
+        <div class="container">
+            <h2 class="section-title">Connectons-nous</h2>
+            <div class="social-grid">
+                <a href="https://www.instagram.com/florian.b93tsz" target="_blank" class="social-card">
+                    <span class="social-icon">📸</span>
+                    <h4>Instagram</h4>
+                    <span>@florian.b93tsz</span>
+                </a>
+                <a href="https://www.linkedin.com/in/florian-bonnet-b82018198/" target="_blank" class="social-card">
+                    <span class="social-icon">💼</span>
+                    <h4>LinkedIn</h4>
+                    <span>Florian Bonnet</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="faq-section">
+        <div class="container">
+            <span class="section-eyebrow">Tout savoir</span>
+            <h2 class="section-title">Questions Fréquentes</h2>
+            <div class="faq-list">
+                <details class="faq-item">
+                    <summary>Qui est Florian B. ?</summary>
+                    <p>Florian Bonnet est un graphiste et directeur artistique freelance basé à Paris, spécialisé en branding, UI/UX Design, communication digitale et print. Il a travaillé pour des marques comme BNP Paribas, Courtepaille, BasicFit et des startups comme Augmantor et Trustify.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Quels services propose Florian B. ?</summary>
+                    <p>Florian B. propose du branding et identité visuelle, du UI/UX Design pour applications et sites web, de la communication digitale et print, du motion design et de la photographie.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Comment contacter Florian B. pour un projet de graphisme ?</summary>
+                    <p>Florian B. est joignable via le formulaire de contact et l'assistant conversationnel de son site, par email, ou via LinkedIn et Instagram (@florian.b93tsz). Un système de prise de rendez-vous automatisé est disponible directement sur le site.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Où trouver un graphiste freelance à Paris ?</summary>
+                    <p>Florian Bonnet est un graphiste et directeur artistique freelance basé à Paris, disponible pour des missions de branding, UI/UX Design et communication visuelle auprès d'entreprises et de startups.</p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <div class="container">
+            <span class="section-eyebrow">Disponible pour de nouveaux projets</span>
+            <h2 class="section-title">Travaillons ensemble</h2>
+            <div class="contact-grid">
+                <div class="contact-card" onclick="revealContact(this, 'contact@florian-b.fr')">
+                    <span class="contact-label">E-MAIL</span>
+                    <span class="contact-info-placeholder">DÉVOILER L'ADRESSE</span>
+                </div>
+                <div class="contact-card" id="reveal-tel" onclick="revealContact(this, '+33 6 46 20 78 25')">
+                    <span class="contact-label">TÉLÉPHONE</span>
+                    <span class="contact-info-placeholder">DÉVOILER LE NUMÉRO</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <div class="footer-logo">FLORIAN B<span>.</span></div>
+                    <p>Directeur Artistique & Graphiste basé à Paris.</p>
+                </div>
+                <div class="footer-col">
+                    <h5>NAVIGATION</h5>
+                    <a href="#work">Projets</a>
+                    <a href="#resume">Parcours</a>
+                    <a href="#about">L'humain & l'IA</a>
+                    <a href="#contact">Contact</a>
+                </div>
+                <div class="footer-col">
+                    <h5>RÉSEAUX</h5>
+                    <a href="https://www.instagram.com/florian.b93tsz" target="_blank">Instagram</a>
+                    <a href="https://www.linkedin.com/in/florian-bonnet-b82018198/" target="_blank">LinkedIn</a>
+                </div>
+            </div>
+            <div class="footer-bottom"><div>© 2026 — FLORIAN BONNET</div><div>BASÉ À PARIS</div></div>
+        </div>
+    </footer>
+
+    <!-- MODALES -->
+    <div class="modal-overlay" id="courtepaille-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('courtepaille-modal')">&times;</button>
+            <h2>Courtepaille — Restaurant Branding</h2>
+            <p class="modal-description">Identité visuelle complète pour la chaîne de restaurants Courtepaille : de la façade au menu, en passant par le merchandising et l'ambiance intérieure.</p>
+            <div class="gallery-grid-full">
+                <img src="Courtepaille1.webp" alt="Facade">
+                <img src="Courtepaille2.webp" alt="Affiche">
+                <img src="Courtepaille3.webp" alt="Ambiance">
+                <img src="Courtepaille4.webp" alt="Art table">
+                <img src="Courtepaille5.webp" alt="Art table">
+                <img src="Courtepaille6.webp" alt="Board">
+                <img src="Courtepaille7.webp" alt="Burger">
+                <img src="Courtepaille8.webp" alt="Identité">
+                <img src="Courtepaille9.webp" alt="Intérieur">
+                <img src="Courtepaille10.webp" alt="Menu">
+                <img src="Courtepaille11.webp" alt="Menu">
+                <img src="Courtepaille12.webp" alt="Menu">
+                <img src="Courtepaille13.webp" alt="Packaging">
+                <img src="Courtepaille14.webp" alt="Salle">
+                <img src="Courtepaille15.webp" alt="Staff">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="bnp-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('bnp-modal')">&times;</button>
+            <h2>BNP Paribas — Brand Evolution</h2>
+            <p class="modal-description">Modernisation de l'identité BNP Paribas avec une approche contemporaine et dynamique.</p>
+            <div class="gallery-grid-full">
+                <img src="Branding BNP Paribas3.webp" alt="Logo">
+                <img src="Branding BNP Paribas1.webp" alt="Logo">
+                <img src="Branding BNP Paribas4.webp" alt="App">
+                <img src="Branding BNP Paribas2.webp" alt="Carte">
+                <img src="Branding BNP Paribas5.webp" alt="Enseigne">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="oofti-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('oofti-modal')">&times;</button>
+            <h2>oofti.fr — E-commerce Brand</h2>
+            <p class="modal-description">Création de l'identité complète de la plateforme e-commerce oofti.fr.</p>
+            <div class="gallery-grid" style="margin-bottom: 1.5rem;">
+                <img src="oofti.fr3.webp" alt="Comparatif" style="grid-column: 1 / -1;">
+                <img src="oofti.fr1.webp" alt="Logo">
+                <img src="oofti.fr4.webp" alt="Cartes">
+            </div>
+            <div class="gallery-grid-full">
+                <img src="oofti.fr2.webp" alt="Smartphone">
+                <img src="oofti.fr5.webp" alt="Posts">
+                <img src="oofti.fr6.webp" alt="Stories">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="basicfit-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('basicfit-modal')">&times;</button>
+            <h2>BasicFit — Fitness Branding</h2>
+            <p class="modal-description">Identité sportive et énergique pour la chaîne de fitness BasicFit.</p>
+            <div class="gallery-grid-full">
+                <img src="BasicFit3.webp" alt="Comparaison">
+                <img src="BasicFit1.webp" alt="Logo">
+                <img src="BasicFit2.webp" alt="Enseigne">
+                <img src="BasicFit4.webp" alt="Haltères">
+                <img src="BasicFit5.webp" alt="Typo">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="finish-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('finish-modal')">&times;</button>
+            <h2>Finish — Packaging Design</h2>
+            <p class="modal-description">Design d'emballage premium avec structure innovante.</p>
+            <div class="gallery-grid-full">
+                <img src="Finish pack2.webp" alt="Comparaison">
+                <img src="Finish pack3.webp" alt="Coulisses">
+                <img src="Finish pack4.webp" alt="Déplié">
+                <img src="Finish pack5.webp" alt="Gabarit">
+                <img src="Finish pack6.webp" alt="Côté">
+                <img src="Finish pack7.webp" alt="Dos">
+                <img src="Finish pack.webp" alt="Face">
+                <img src="Finish pack8.webp" alt="Ouvert">
+                <img src="Finish pack9.webp" alt="Ouvert">
+                <img src="Finish pack1.webp" alt="Présentation">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="mllepitch-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('mllepitch-modal')">&times;</button>
+            <h2>MllePitch — Campagne Urbaine</h2>
+            <p class="modal-description">Campagne de communication urbaine multiformat.</p>
+            <div class="gallery-grid-full">
+                <img src="MllePitch3.webp" alt="Abribus">
+                <img src="MllePitch4.webp" alt="Affichage">
+                <img src="MllePitch2.webp" alt="Métro">
+                <img src="MllePitch5.webp" alt="Panneau">
+                <img src="MllePitch1.webp" alt="Visuel">
+                <img src="MllePitch6.webp" alt="Visuel">
+                <img src="MllePitch7.webp" alt="Visuel">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="cover-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('cover-modal')">&times;</button>
+            <h2>Cover Art — Direction Artistique</h2>
+            <p class="modal-description">Direction artistique et conception de covers d'albums pour artistes rap.</p>
+            <div class="gallery-grid-4">
+                <img src="Cover1.webp" alt="Cover" onerror="this.style.display='none'">
+                <img src="Cover2.webp" alt="Cover" onerror="this.style.display='none'">
+                <img src="Cover3.webp" alt="Badara" onerror="this.style.display='none'">
+                <img src="Cover4.webp" alt="Industrie" onerror="this.style.display='none'">
+                <img src="Cover5.webp" alt="Vidal" onerror="this.style.display='none'">
+                <img src="BENEF - IA.jpg" alt="Benef IA" onerror="this.style.display='none'">
+                <img src="Cover6.webp" alt="No Limit" onerror="this.style.display='none'">
+                <img src="Cover7.webp" alt="Tolerance" onerror="this.style.display='none'">
+                <img src="Cover8.webp" alt="Mafia" onerror="this.style.display='none'">
+                <img src="Cover9.webp" alt="Mini Moi" onerror="this.style.display='none'">
+                <img src="Cover10.webp" alt="La Même" onerror="this.style.display='none'">
+                <img src="Cover11.webp" alt="Le Temps" onerror="this.style.display='none'">
+                <img src="Cover12.webp" alt="Esprit" onerror="this.style.display='none'">
+                <img src="Cover13.webp" alt="Fuis" onerror="this.style.display='none'">
+                <img src="Cover14.webp" alt="Tracklist" onerror="this.style.display='none'">
+                <img src="Cover15.webp" alt="Jayce" onerror="this.style.display='none'">
+                <img src="Cover16.webp" alt="Jayce" onerror="this.style.display='none'">
+                <img src="modele-benef-vf.jpg" alt="Modèle" onerror="this.style.display='none'">
+                <img src="Cover17.webp" alt="Pression" onerror="this.style.display='none'">
+                <img src="Cover18.webp" alt="Modèle Benef" onerror="this.style.display='none'">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="photo-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('photo-modal')">&times;</button>
+            <h2>Portfolio — Photographies</h2>
+            <p class="modal-description">Sélection de photographies du portfolio.</p>
+            <div class="gallery-grid-full">
+                <img src="Photo1.webp" alt="Photo"><img src="Photo2.webp" alt="Photo"><img src="Photo3.webp" alt="Photo"><img src="Photo4.webp" alt="Photo"><img src="Photo6.webp" alt="Photo"><img src="Photo7.webp" alt="Photo"><img src="Photo8.webp" alt="Photo"><img src="Photo9.webp" alt="Photo"><img src="Photo10.webp" alt="Photo"><img src="Photo11.webp" alt="Photo"><img src="Photo12.webp" alt="Photo"><img src="Photo13.webp" alt="Photo"><img src="Photo14.webp" alt="Photo"><img src="Photo15.webp" alt="Photo"><img src="Photo16.webp" alt="Photo"><img src="Photo17.webp" alt="Photo"><img src="Photo18.webp" alt="Photo"><img src="Photo19.webp" alt="Photo"><img src="Photo20.webp" alt="Photo"><img src="Photo21.webp" alt="Photo"><img src="Photo22.webp" alt="Photo"><img src="Photo23.webp" alt="Photo"><img src="Photo24.webp" alt="Photo"><img src="IMG_1376.jpg" alt="Photo"><img src="IMG_1382.jpg" alt="Photo"><img src="IMG_1384.jpg" alt="Photo"><img src="IMG_1386.jpg" alt="Photo"><img src="IMG_0331.jpg" alt="Photo"><img src="IMG_0332.jpg" alt="Photo"><img src="IMG_0366.jpg" alt="Photo"><img src="IMG_0370.jpg" alt="Photo"><img src="IMG_0374.jpg" alt="Photo"><img src="IMG_0383.jpg" alt="Photo"><img src="IMG_0399.jpg" alt="Photo"><img src="IMG_4203.jpg" alt="Photo"><img src="IMG_4204.jpg" alt="Photo"><img src="IMG_4205 3.jpg" alt="Photo"><img src="P1022645.jpg" alt="Photo"><img src="Photo25.jpg" alt="Photo"><img src="Photo26.jpg" alt="Photo"><img src="Photo27.jpg" alt="Photo"><img src="Photo28.jpg" alt="Photo"><img src="Photo29.jpg" alt="Photo"><img src="Photo30.jpg" alt="Photo"><img src="Photo31.jpg" alt="Photo"><img src="Photo32.jpg" alt="Photo"><img src="Photo33.jpg" alt="Photo"><img src="Photo34.jpg" alt="Photo"><img src="Photo35.jpg" alt="Photo"><img src="Photo36.jpg" alt="Photo"><img src="Photo37.jpg" alt="Photo"><img src="Photo38.jpg" alt="Photo"><img src="Photo39.jpg" alt="Photo"><img src="Photo40.jpg" alt="Photo"><img src="IMG_0622.jpg" alt="Photo"><img src="IMG_0945.jpg" alt="Photo"><img src="IMG_1265.jpg" alt="Photo"><img src="IMG_1375.jpg" alt="Photo"><img src="IMG_8999.jpg" alt="Photo"><img src="IMG_9261.jpg" alt="Photo"><img src="IMG_9516.jpg" alt="Photo"><img src="IMG_9519.jpg" alt="Photo"><img src="IMG_9541.jpg" alt="Photo"><img src="IMG_9709.jpg" alt="Photo"><img src="IMG_9757.jpg" alt="Photo">
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= AI CHAT WIDGET ================= -->
+    <div class="ai-chat-widget" id="aiChatWidget">
+        <button class="ai-chat-toggle" id="aiChatToggle" aria-label="Ouvrir l'assistant IA">
+            <svg class="ai-chat-toggle-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            <svg class="ai-chat-toggle-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            <span class="ai-chat-ping"></span>
+        </button>
+
+        <div class="ai-chat-panel" id="aiChatPanel" role="dialog" aria-label="Assistant IA de Florian">
+            <div class="ai-chat-header">
+                <div class="ai-chat-header-info">
+                    <div class="ai-chat-avatar">FB</div>
+                    <div>
+                        <h4>Assistant de Florian</h4>
+                        <span class="ai-chat-status"><i></i> En ligne — répond instantanément</span>
+                    </div>
+                </div>
+                <button class="ai-chat-close" id="aiChatClose" aria-label="Fermer l'assistant">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="ai-chat-messages" id="aiChatMessages" aria-live="polite"></div>
+
+            <div class="ai-chat-quickreplies" id="aiChatQuickReplies"></div>
+
+            <form class="ai-chat-inputbar" id="aiChatForm">
+                <textarea id="aiChatInput" placeholder="Écrivez votre message..." rows="1" autocomplete="off"></textarea>
+                <button type="submit" class="ai-chat-send" aria-label="Envoyer le message">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+            </form>
+            <div class="ai-chat-disclaimer">Assistant automatisé — pour toute urgence, contactez directement Florian.</div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = () => { setTimeout(() => { document.getElementById('welcomeModal').classList.add('active'); document.body.classList.add('modal-open'); }, 800); };
+        function closeWelcome() {
+            const modal = document.getElementById('welcomeModal');
+            modal.classList.remove('active');
+            document.body.classList.remove('modal-open');
+            // Corrige un bug Safari où le backdrop-filter (flou) reste visible
+            // à l'écran tant que l'élément est encore dans l'arbre de rendu.
+            setTimeout(() => { modal.style.display = 'none'; }, 650);
+        }
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => modal.classList.add('active'));
+            document.body.classList.add('modal-open');
+        }
+        function hideModalEl(modal) {
+            modal.classList.remove('active');
+            document.body.classList.remove('modal-open');
+            // Corrige un bug Safari où le backdrop-filter (flou) reste visible
+            // à l'écran tant que l'élément est encore dans l'arbre de rendu.
+            setTimeout(() => { modal.style.display = 'none'; }, 550);
+        }
+        function closeModal(id) { hideModalEl(document.getElementById(id)); }
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            document.querySelectorAll('.modal-overlay.active').forEach(hideModalEl);
         });
-        await saveContent({ projects });
-        loadContentProjects();
-    } catch (e) { toast(e.message); }
-});
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) hideModalEl(overlay); });
+        });
+        
+        function revealContact(element, info) {
+            if (!element.classList.contains('revealed')) {
+                element.classList.add('revealed');
+                const placeholder = element.querySelector('.contact-info-placeholder');
+                placeholder.innerHTML = `<span class="contact-info">${info}</span>`;
+            }
+        }
 
-/* ---- GALERIE PHOTO ---- */
-let galleryState = [];
+        function toggleMobileMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileNav = document.getElementById('mobileNav');
+            menuToggle.classList.toggle('active');
+            mobileNav.classList.toggle('active');
+            document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : 'auto';
+        }
 
-async function loadContentGallery() {
-    try {
-        const content = await fetchContent();
-        galleryState = [...(content.gallery || [])];
-        renderGalleryGrid();
-    } catch (e) { toast(e.message); }
-}
+        document.addEventListener('click', (e) => {
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileNav = document.getElementById('mobileNav');
+            if (!menuToggle.contains(e.target) && !mobileNav.contains(e.target) && mobileNav.classList.contains('active')) {
+                toggleMobileMenu();
+            }
+        });
 
-function renderGalleryGrid() {
-    const wrap = document.getElementById('galleryGridWrap');
-    document.getElementById('galleryCount').textContent = `${galleryState.length} photo(s) dans la galerie Portfolio`;
-    if (!galleryState.length) { wrap.innerHTML = emptyStateHTML('Aucune photo. Ajoutes-en avec le bouton ci-dessus.'); return; }
-    wrap.innerHTML = galleryState.map((path, i) => `
-        <div class="gallery-item">
-            <img src="${resolveImgUrl(path)}" alt="">
-            <span class="gallery-item-order">${i + 1}</span>
-            <button class="gallery-item-remove" data-index="${i}">✕</button>
-        </div>
-    `).join('');
-    wrap.querySelectorAll('.gallery-item-remove').forEach(btn => {
-        btn.onclick = () => { galleryState.splice(Number(btn.dataset.index), 1); renderGalleryGrid(); };
-    });
-}
+        const cursor = document.getElementById('cursor');
+        document.addEventListener('mousemove', e => { if(cursor && window.matchMedia('(pointer: fine)').matches) { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; } });
+        
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 80) nav.classList.add('scrolled'); else nav.classList.remove('scrolled');
+        });
 
-document.getElementById('galleryUploadInput').addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files || []);
-    for (const file of files) {
-        try { galleryState.push(await uploadImage(file)); }
-        catch (err) { toast(err.message); }
+        document.querySelectorAll('a, button, .project-showcase, .social-card, .contact-card, .about-ai-cta, .resume-item, .faq-item').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+    </script>
+
+    <script>
+        /* ============================================================
+           ASSISTANT IA — Chat conversationnel avec automatisations
+           - Prise de RDV → génère un lien Google Agenda pré-rempli
+           - Contact → envoi réel d'e-mail via l'API FormSubmit
+             (service tiers gratuit, aucun backend requis)
+           À FAIRE : la 1ère fois, FormSubmit envoie un e-mail
+           d'activation à CONTACT_EMAIL — il suffit de cliquer sur le
+           lien de confirmation pour activer l'envoi automatique.
+           ============================================================ */
+        (() => {
+            const CONTACT_EMAIL = 'contact@florian-b.fr';
+            const CC_EMAIL = 'flightxflo04@gmail.com'; // copie automatique de chaque message/RDV
+            const FORM_ENDPOINT = `https://formsubmit.co/ajax/${CONTACT_EMAIL}`;
+            // 🔧 Renseignez ici l'URL de votre backend une fois déployé sur OVH (ex: 'https://api.florian-b.fr')
+            // Laissez vide pour désactiver l'envoi vers le dashboard (FormSubmit continuera de fonctionner seul).
+            const BACKEND_URL = 'https://backend-portfolio-production-132e.up.railway.app';
+
+            async function sendToDashboard(path, payload) {
+                if (!BACKEND_URL) return;
+                try {
+                    await fetch(`${BACKEND_URL}${path}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                } catch (e) { /* silencieux — le dashboard n'est qu'un bonus, ne doit jamais bloquer le chat */ }
+            }
+
+            const widget = document.getElementById('aiChatWidget');
+            const toggle = document.getElementById('aiChatToggle');
+            const closeBtn = document.getElementById('aiChatClose');
+            const messagesEl = document.getElementById('aiChatMessages');
+            const quickRepliesEl = document.getElementById('aiChatQuickReplies');
+            const form = document.getElementById('aiChatForm');
+            const input = document.getElementById('aiChatInput');
+
+            let state = { flow: null, step: 0, data: {} };
+            let hasOpened = false;
+
+            const DEFAULT_REPLIES = [
+                { label: '📅 Prendre RDV', value: 'rdv' },
+                { label: '✉️ Me contacter', value: 'contact' },
+                { label: '🎨 Voir les projets', value: 'projects' },
+                { label: '📄 Télécharger le CV', value: 'cv' },
+            ];
+
+            function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+            function addMessage(sender, html) {
+                const wrap = document.createElement('div');
+                wrap.className = `ai-msg ai-msg-${sender}`;
+                wrap.innerHTML = `<div class="ai-msg-avatar">${sender === 'bot' ? 'FB' : '🙂'}</div><div class="ai-msg-bubble">${html}</div>`;
+                messagesEl.appendChild(wrap);
+                scrollToBottom();
+                return wrap;
+            }
+
+            function showTyping() {
+                const wrap = document.createElement('div');
+                wrap.className = 'ai-msg ai-msg-bot';
+                wrap.id = 'aiTypingIndicator';
+                wrap.innerHTML = `<div class="ai-msg-avatar">FB</div><div class="ai-typing"><span></span><span></span><span></span></div>`;
+                messagesEl.appendChild(wrap);
+                scrollToBottom();
+            }
+            function hideTyping() { const el = document.getElementById('aiTypingIndicator'); if (el) el.remove(); }
+
+            function botSay(html, delay = 650) {
+                showTyping();
+                return new Promise(resolve => {
+                    setTimeout(() => { hideTyping(); addMessage('bot', html); resolve(); }, delay);
+                });
+            }
+
+            function setQuickReplies(options) {
+                quickRepliesEl.innerHTML = '';
+                options.forEach(opt => {
+                    const chip = document.createElement('button');
+                    chip.className = 'ai-chip';
+                    chip.type = 'button';
+                    chip.textContent = opt.label;
+                    chip.onclick = () => handleUserInput(opt.label, opt.label, opt.value);
+                    quickRepliesEl.appendChild(chip);
+                });
+            }
+            function clearQuickReplies() { quickRepliesEl.innerHTML = ''; }
+
+            function isValidEmail(str) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim()); }
+            function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+
+            function detectIntent(text) {
+                const t = text.toLowerCase();
+                if (/rdv|rendez.vous|rencontre|appel|call|dispo/.test(t)) return 'rdv';
+                if (/contact|email|mail|joindre|écri|message/.test(t)) return 'contact';
+                if (/projet|portfolio|travail|réalisation|augmantor|trustify|courtepaille|bnp|basicfit/.test(t)) return 'projects';
+                if (/âge|age a|quel age|quel âge/.test(t)) return 'age';
+                if (/formation|diplôme|diplome|étude|ecole|école|mjm|ebtp|bac\b/.test(t)) return 'formation';
+                if (/expérience|experience|parcours pro|déjà travaillé|deja travaille|publicis|dailyrapfrance|sim consulting|instinctsproductions|total energies|en agence/.test(t)) return 'experience';
+                if (/langue|anglais|espagnol/.test(t)) return 'languages';
+                if (/compétence|competence|outil|logiciel|adobe|figma|photoshop|maîtrise|maitrise/.test(t)) return 'skills';
+                if (/\bcv\b|parcours/.test(t)) return 'cv';
+                if (/tarif|prix|devis|budget|coût|cout|combien/.test(t)) return 'pricing';
+                if (/bonjour|salut|hello|hey|coucou/.test(t)) return 'greeting';
+                if (/merci|thanks/.test(t)) return 'thanks';
+                return null;
+            }
+
+            async function handleUserInput(displayText, rawText, codeOverride) {
+                addMessage('user', displayText);
+                input.value = '';
+                input.style.height = 'auto';
+                clearQuickReplies();
+
+                if (state.flow === 'rdv') return handleRdvFlow(rawText);
+                if (state.flow === 'contact') return handleContactFlow(rawText);
+
+                const code = codeOverride || detectIntent(rawText);
+                routeIntent(code);
+            }
+
+            async function routeIntent(code) {
+                switch (code) {
+                    case 'rdv': return startRdvFlow();
+                    case 'contact': return startContactFlow();
+                    case 'projects':
+                        await botSay("Florian a travaillé sur des marques comme <b>Courtepaille</b>, <b>BNP Paribas</b>, <b>BasicFit</b>, <b>Augmantor</b> (mentorat pour chirurgiens-dentistes) ou encore <b>Trustify</b> — une plateforme d'avis vérifiés. Je vous emmène voir la section projets ?");
+                        setQuickReplies([{ label: '🔗 Aller aux projets', value: 'goto_projects' }, { label: '⬅️ Retour au menu', value: 'back_menu' }]);
+                        break;
+                    case 'age':
+                        await botSay("Florian a <b>23 ans</b> 🎂 Diplômé en 2024, il cumule déjà plusieurs expériences en agence et a fondé son propre média en parallèle.");
+                        setQuickReplies([{ label: '🎓 Sa formation', value: 'formation' }, { label: '💼 Son expérience', value: 'experience' }, { label: '⬅️ Retour au menu', value: 'back_menu' }]);
+                        break;
+                    case 'formation':
+                        await botSay(`Formation de Florian (23 ans) :<br><br>
+                            <b>MJM Graphic Design</b> — Bachelor Design Graphique, mention Très bien (2021-2024)<br>
+                            <b>Claude Nicolas Ledoux (EBTP)</b> — Bac pro Communication visuelle & pluri-média, mention Bien (2018-2021)<br>
+                            <b>Albert de Mun</b> — Diplôme National du Brevet, mention Bien (2013-2018)`);
+                        setQuickReplies([{ label: '💼 Son expérience', value: 'experience' }, { label: '🛠️ Ses compétences', value: 'skills' }, { label: '⬅️ Retour au menu', value: 'back_menu' }]);
+                        break;
+                    case 'experience':
+                        await botSay(`Expérience professionnelle de Florian :<br><br>
+                            <b>DailyRapFrance</b> — Fondateur & Community Manager, depuis avril 2021<br>
+                            <b>InstinctsProductions</b> — Chef de projet, production audiovisuel (5 mois, 2023-2024)<br>
+                            <b>SIM Consulting</b> — Graphiste en agence de communication (11 mois, 2022-2023)<br>
+                            <b>Publicis Groupe</b> — Assistant DA, à deux reprises (2019 et 2020)<br>
+                            <b>Total Energies</b> — Assistant créateur e-learning (3 mois, 2020-2021)`);
+                        setQuickReplies([{ label: '🎓 Sa formation', value: 'formation' }, { label: '🛠️ Ses compétences', value: 'skills' }, { label: '⬅️ Retour au menu', value: 'back_menu' }]);
+                        break;
+                    case 'skills':
+                        await botSay(`Compétences de Florian :<br><br>
+                            Branding, UI/UX Design, Communication digitale & print, Community management, Photographie, Montage vidéo, Motion design, Mise en page, Outils IA.<br><br>
+                            Logiciels : <b>Figma</b>, la suite <b>Adobe</b> complète (Photoshop, Illustrator, InDesign, After Effects, Premiere...), <b>WordPress</b>.`);
+                        setQuickReplies([{ label: '🌍 Ses langues', value: 'languages' }, { label: '💼 Son expérience', value: 'experience' }, { label: '⬅️ Retour au menu', value: 'back_menu' }]);
+                        break;
+                    case 'languages':
+                        await botSay("Florian parle <b>anglais</b> (niveau avancé) et a des bases en <b>espagnol</b> (niveau introductif).");
+                        setQuickReplies([{ label: '🛠️ Ses compétences', value: 'skills' }, { label: '⬅️ Retour au menu', value: 'back_menu' }]);
+                        break;
+                    case 'cv':
+                        await botSay(`Florian a <b>23 ans</b>, il est Graphiste & Directeur Artistique basé à Paris. Diplômé d'un Bachelor Design Graphique (mention Très bien, MJM Graphic Design), il a travaillé en agence — notamment chez <b>Publicis Groupe</b> et <b>SIM Consulting</b> — et a fondé son propre média, <b>DailyRapFrance</b>, en 2021. <a href="CV-Florian-Bonnet.pdf" target="_blank">Télécharger son CV complet</a>.`);
+                        setQuickReplies([{ label: '🎓 Formation', value: 'formation' }, { label: '💼 Expérience', value: 'experience' }, { label: '🛠️ Compétences', value: 'skills' }]);
+                        break;
+                    case 'pricing':
+                        await botSay("Chaque projet est différent (branding, UI/UX, print...), donc il n'y a pas de tarif fixe — <b>le mieux est de contacter Florian directement</b> pour qu'il vous fasse un devis personnalisé selon vos besoins 🙂");
+                        setQuickReplies([{ label: '✉️ Envoyer ma demande', value: 'contact' }, { label: '📅 Plutôt prendre RDV', value: 'rdv' }]);
+                        break;
+                    case 'greeting':
+                        await botSay("Bonjour 👋 Ravi de vous voir ici ! Comment puis-je vous aider ?");
+                        setQuickReplies(DEFAULT_REPLIES);
+                        break;
+                    case 'thanks':
+                        await botSay("Avec plaisir 🙏 N'hésitez pas si vous avez d'autres questions !");
+                        setQuickReplies(DEFAULT_REPLIES);
+                        break;
+                    case 'goto_projects':
+                        closePanel();
+                        document.querySelector('#work').scrollIntoView({ behavior: 'smooth' });
+                        break;
+                    case 'goto_resume':
+                        closePanel();
+                        document.querySelector('#resume').scrollIntoView({ behavior: 'smooth' });
+                        break;
+                    case 'back_menu':
+                        await botSay("Que souhaitez-vous faire ?");
+                        setQuickReplies(DEFAULT_REPLIES);
+                        break;
+                    default:
+                        await botSay("Je ne suis pas certain de bien comprendre 🤔 Voici ce que je peux faire pour vous :");
+                        setQuickReplies(DEFAULT_REPLIES);
+                }
+            }
+
+            // -------- FLOW : PRISE DE RENDEZ-VOUS --------
+            async function startRdvFlow() {
+                state = { flow: 'rdv', step: 1, data: {} };
+                await botSay("Parfait, organisons ça 📅 Quel jour vous conviendrait le mieux ? <i>(ex : jeudi 17 juillet)</i>");
+            }
+
+            async function handleRdvFlow(text) {
+                const d = state.data;
+                if (state.step === 1) {
+                    d.date = text; state.step = 2;
+                    await botSay("Merci ! Et à quelle heure environ ? <i>(ex : 14h30)</i>");
+                } else if (state.step === 2) {
+                    d.time = text; state.step = 3;
+                    await botSay("Super. En une phrase, quel est l'objet du rendez-vous ? <i>(ex : projet de branding)</i>");
+                } else if (state.step === 3) {
+                    d.subject = text; state.step = 4;
+                    await botSay("Dernière étape : votre email pour la confirmation ?");
+                } else if (state.step === 4) {
+                    if (!isValidEmail(text)) { await botSay("Hmm, cet email ne semble pas valide 🤔 Pouvez-vous le ressaisir ?"); return; }
+                    d.email = text;
+                    await botSay("Je transmets votre demande à Florian et je vous prépare un lien pour l'agenda ⏳");
+                    const calLink = buildCalendarLink(d);
+                    sendToDashboard('/api/appointments', { date_text: d.date, time_text: d.time, subject: d.subject, email: d.email });
+                    const sent = await sendToFormSubmit({
+                        _subject: `Nouvelle demande de RDV — ${d.subject}`,
+                        _cc: CC_EMAIL,
+                        Type: 'Demande de rendez-vous',
+                        Date_souhaitee: d.date,
+                        Heure_souhaitee: d.time,
+                        Objet: d.subject,
+                        Email: d.email,
+                    });
+                    await botSay(`✅ Demande ${sent ? 'envoyée à Florian' : 'préparée (activez FormSubmit pour l\'envoi automatique)'} ! Récapitulatif :<br><b>${escapeHtml(d.date)}</b> à <b>${escapeHtml(d.time)}</b> — ${escapeHtml(d.subject)}.<br><a class="ai-cal-link" href="${calLink}" target="_blank">📅 Ajouter à Google Agenda</a>`, 900);
+                    state = { flow: null, step: 0, data: {} };
+                    setQuickReplies(DEFAULT_REPLIES);
+                }
+            }
+
+            function buildCalendarLink(d) {
+                const start = new Date(Date.now() + 24 * 3600 * 1000);
+                start.setHours(10, 0, 0, 0);
+                const end = new Date(start.getTime() + 3600 * 1000);
+                const fmt = (dt) => dt.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                const params = new URLSearchParams({
+                    action: 'TEMPLATE',
+                    text: `RDV avec Florian B. — ${d.subject}`,
+                    dates: `${fmt(start)}/${fmt(end)}`,
+                    details: `Rendez-vous demandé via le site (à ajuster) : ${d.date} à ${d.time}. Objet : ${d.subject}. Contact : ${d.email}`,
+                });
+                return `https://calendar.google.com/calendar/render?${params.toString()}`;
+            }
+
+            // -------- FLOW : CONTACT --------
+            async function startContactFlow() {
+                state = { flow: 'contact', step: 1, data: {} };
+                await botSay("Avec plaisir ✉️ Comment vous appelez-vous ?");
+            }
+
+            async function handleContactFlow(text) {
+                const d = state.data;
+                if (state.step === 1) {
+                    d.name = text; state.step = 2;
+                    await botSay(`Enchanté ${escapeHtml(text)} ! Quel est votre email pour vous répondre ?`);
+                } else if (state.step === 2) {
+                    if (!isValidEmail(text)) { await botSay("Cet email ne semble pas valide 🤔 Pouvez-vous le ressaisir ?"); return; }
+                    d.email = text; state.step = 3;
+                    await botSay("Et votre message pour Florian ?");
+                } else if (state.step === 3) {
+                    d.message = text;
+                    await botSay("Envoi en cours... ⏳");
+                    sendToDashboard('/api/leads', { name: d.name, email: d.email, message: d.message, source: 'chat' });
+                    const sent = await sendToFormSubmit({
+                        _subject: `Nouveau message via l'assistant IA — ${d.name}`,
+                        _cc: CC_EMAIL,
+                        Type: 'Message de contact',
+                        Nom: d.name,
+                        Email: d.email,
+                        Message: d.message,
+                    });
+                    if (sent) {
+                        await botSay(`✅ Message envoyé à Florian ! Il vous répondra directement à <b>${escapeHtml(d.email)}</b> dans les meilleurs délais.`, 800);
+                    } else {
+                        await botSay(`⚠️ L'envoi automatique n'a pas abouti (pensez à activer FormSubmit). Vous pouvez écrire directement à <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.`, 800);
+                    }
+                    state = { flow: null, step: 0, data: {} };
+                    setQuickReplies(DEFAULT_REPLIES);
+                }
+            }
+
+            async function sendToFormSubmit(payload) {
+                try {
+                    const res = await fetch(FORM_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    return res.ok;
+                } catch (e) { return false; }
+            }
+
+            async function init() {
+                setQuickReplies(DEFAULT_REPLIES);
+                await botSay("👋 Salut, je suis l'assistant virtuel de Florian ! Je peux vous aider à <b>prendre rendez-vous</b>, <b>envoyer un message</b> ou <b>découvrir ses projets</b>. Que puis-je faire pour vous ?", 500);
+            }
+
+            function openPanel() {
+                widget.classList.add('open');
+                widget.classList.remove('notified');
+                document.body.classList.add('modal-open');
+                if (!hasOpened) { hasOpened = true; init(); sendToDashboard('/api/events', { type: 'chat_opened' }); }
+                setTimeout(() => input.focus(), 400);
+            }
+            function closePanel() {
+                widget.classList.remove('open');
+                document.body.classList.remove('modal-open');
+            }
+
+            toggle.addEventListener('click', () => widget.classList.contains('open') ? closePanel() : openPanel());
+            closeBtn.addEventListener('click', closePanel);
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && widget.classList.contains('open')) closePanel(); });
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const text = input.value.trim();
+                if (!text) return;
+                handleUserInput(text, text);
+            });
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+            input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 100) + 'px'; });
+
+            // Invitation proactive discrète (AI "copilot", pas intrusive) après quelques secondes
+            setTimeout(() => { if (!hasOpened) widget.classList.add('notified'); }, 6000);
+
+            /* ---------------- API PUBLIQUE ----------------
+               Permet à d'autres éléments du site (barre de recherche hero,
+               CTA "Je veux être appelé"...) de piloter l'assistant. */
+            window.florianAI = {
+                ask(text) {
+                    const wasFirstOpen = !hasOpened;
+                    openPanel();
+                    setTimeout(() => handleUserInput(text, text), wasFirstOpen ? 1700 : 300);
+                },
+                openRdv() {
+                    const wasFirstOpen = !hasOpened;
+                    openPanel();
+                    setTimeout(() => { clearQuickReplies(); startRdvFlow(); }, wasFirstOpen ? 1700 : 300);
+                },
+                open() { openPanel(); },
+            };
+        })();
+
+        /* ============================================================
+           MICRO-INTERACTIONS 2026 : progression de scroll, reveal
+           au scroll, tilt 3D léger sur les cartes projets
+           ============================================================ */
+        (() => {
+            const progressBar = document.getElementById('scrollProgress');
+            window.addEventListener('scroll', () => {
+                const h = document.documentElement;
+                const scrolled = h.scrollHeight > h.clientHeight ? (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100 : 0;
+                if (progressBar) progressBar.style.width = scrolled + '%';
+            });
+
+            const revealTargets = document.querySelectorAll('.project-showcase, .resume-item, .social-card, .contact-card, .about-human-card, .about-ai-card, .section-title, .section-eyebrow, .faq-item');
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!reduceMotion && 'IntersectionObserver' in window) {
+                revealTargets.forEach(el => el.classList.add('reveal'));
+                // Stagger : les éléments d'une même grille (mêmes parent) apparaissent en cascade
+                const staggerCounters = new WeakMap();
+                revealTargets.forEach(el => {
+                    const parent = el.parentElement;
+                    const n = (staggerCounters.get(parent) || 0);
+                    staggerCounters.set(parent, n + 1);
+                    el.style.transitionDelay = Math.min(n * 70, 420) + 'ms';
+                });
+                const io = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) { entry.target.classList.add('in-view'); io.unobserve(entry.target); }
+                    });
+                }, { threshold: 0.12 });
+                revealTargets.forEach(el => io.observe(el));
+            }
+
+            if (window.matchMedia('(pointer: fine)').matches && !reduceMotion) {
+                document.querySelectorAll('.project-showcase').forEach(card => {
+                    card.addEventListener('mousemove', (e) => {
+                        const rect = card.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width - 0.5;
+                        const y = (e.clientY - rect.top) / rect.height - 0.5;
+                        card.style.transform = `perspective(800px) rotateX(${-y * 6}deg) rotateY(${x * 6}deg) translateY(-4px)`;
+                    });
+                    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+                });
+            }
+        })();
+
+        /* ============================================================
+           BARRE DE RECHERCHE IA (hero) + CTA "Je veux être appelé"
+           ============================================================ */
+        (() => {
+            const heroForm = document.getElementById('aiHeroSearch');
+            const heroInput = document.getElementById('aiHeroInput');
+            const heroCta = document.getElementById('heroCallCta');
+
+            heroForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const text = heroInput.value.trim();
+                if (!text || !window.florianAI) return;
+                window.florianAI.ask(text);
+                heroInput.value = '';
+                heroInput.blur();
+            });
+
+            heroCta.addEventListener('click', () => {
+                if (window.florianAI) window.florianAI.openRdv();
+            });
+
+            const aboutAiCta = document.getElementById('aboutAiCta');
+            if (aboutAiCta) {
+                aboutAiCta.addEventListener('click', () => { if (window.florianAI) window.florianAI.open(); });
+            }
+
+            // Placeholder rotatif façon interfaces IA (Perplexity/ChatGPT) — suggestions réelles et utiles
+            const suggestions = [
+                "Demandez-moi n'importe quoi sur le travail de Florian...",
+                "Montre-moi les derniers projets de Florian",
+                "Comment prendre RDV avec Florian ?",
+                "Quels sont ses tarifs pour un branding ?",
+                "A-t-il déjà travaillé pour une startup santé ?",
+            ];
+            let sIndex = 0;
+            setInterval(() => {
+                // On ne touche JAMAIS à l'input lui-même (opacité, style...) — uniquement au texte
+                // du placeholder, et seulement s'il n'est ni focus ni déjà rempli.
+                if (document.activeElement === heroInput || heroInput.value) return;
+                sIndex = (sIndex + 1) % suggestions.length;
+                heroInput.placeholder = suggestions[sIndex];
+            }, 3400);
+
+            // Effet magnétique discret sur les CTA principaux (désactivé au clavier/tactile/reduced-motion)
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (window.matchMedia('(pointer: fine)').matches && !reduceMotion) {
+                [heroCta, document.getElementById('aiChatToggle'), aboutAiCta].forEach(el => {
+                    if (!el) return;
+                    el.addEventListener('mousemove', (e) => {
+                        const r = el.getBoundingClientRect();
+                        const x = (e.clientX - r.left - r.width / 2) * 0.25;
+                        const y = (e.clientY - r.top - r.height / 2) * 0.25;
+                        el.style.transform = `translate(${x}px, ${y}px) scale(1.05)`;
+                    });
+                    el.addEventListener('mouseleave', () => { el.style.transform = ''; });
+                });
+            }
+        })();
+
+        /* ============================================================
+           PROTECTION DU TRAVAIL — freins côté navigateur
+           (Le vrai rempart reste le filigrane intégré aux fichiers image :
+           ceci ajoute seulement de la friction pour un usage occasionnel ;
+           un utilisateur déterminé peut toujours contourner un blocage
+           purement client-side, d'où l'importance du filigrane réel.)
+           ============================================================ */
+        (() => {
+            function protectImages(root) {
+                root.querySelectorAll('img').forEach(img => {
+                    img.setAttribute('draggable', 'false');
+                    img.addEventListener('contextmenu', (e) => e.preventDefault());
+                    img.addEventListener('dragstart', (e) => e.preventDefault());
+                });
+            }
+            protectImages(document);
+            // Protège aussi les images ajoutées dynamiquement (ex: dans le chat IA)
+            new MutationObserver((mutations) => {
+                mutations.forEach(m => m.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return;
+                    if (node.tagName === 'IMG') protectImages({ querySelectorAll: () => [node] });
+                    else if (node.querySelectorAll) protectImages(node);
+                }));
+            }).observe(document.body, { childList: true, subtree: true });
+        })();
+    </script>
+<script>
+    /* ============================================================
+       CHARGEMENT DU CONTENU DYNAMIQUE (theme builder)
+       Va chercher le contenu à jour sur le backend. Si le backend
+       est injoignable, le site garde silencieusement le contenu
+       codé en dur ci-dessus — jamais de page cassée.
+       ============================================================ */
+    (async function loadDynamicContent() {
+        if (!BACKEND_URL) return; // pas encore configuré : on garde le contenu actuel
+        try {
+            const res = await fetch(BACKEND_URL + '/api/content', { cache: 'no-store' });
+            if (!res.ok) return;
+            const content = await res.json();
+
+            // --- Hero ---
+            if (content.hero) {
+                const titleEl = document.querySelector('.hero-title');
+                const tagEl = document.querySelector('.hero-tagline');
+                if (titleEl && content.hero.title) titleEl.childNodes[0].textContent = content.hero.title;
+                if (tagEl && content.hero.tagline) tagEl.textContent = content.hero.tagline;
+            }
+
+            // --- FAQ ---
+            if (Array.isArray(content.faq) && content.faq.length) {
+                const list = document.querySelector('.faq-list');
+                if (list) {
+                    list.innerHTML = content.faq.map(item => `
+                        <details class="faq-item">
+                            <summary>${item.q}</summary>
+                            <p>${item.a}</p>
+                        </details>
+                    `).join('');
+                }
+            }
+
+            // --- Galerie photo (Portfolio) ---
+            if (Array.isArray(content.gallery) && content.gallery.length) {
+                const grid = document.querySelector('#photo-modal .gallery-grid-full');
+                if (grid) {
+                    grid.innerHTML = content.gallery.map(src =>
+                        `<img src="${resolveContentUrl(src)}" alt="Photo">`
+                    ).join('');
+                }
+            }
+
+            // --- Projets (titre / sous-titre / couverture / ordre) ---
+            if (Array.isArray(content.projects) && content.projects.length) {
+                const container = document.querySelector('.projects-container');
+                if (container) {
+                    content.projects.forEach(p => {
+                        let card = container.querySelector(`[data-project-id="${p.id}"]`);
+                        if (!card) {
+                            // nouveau projet ajouté depuis le backend : carte simple
+                            card = document.createElement('div');
+                            card.className = 'project-showcase';
+                            card.dataset.projectId = p.id;
+                            card.setAttribute('onclick', p.action || '');
+                            card.innerHTML = `
+                                <div class="project-gallery"><img src="${resolveContentUrl(p.cover)}" alt="${p.title}"></div>
+                                <div class="project-info">
+                                    <h3 class="project-title">${p.title}</h3>
+                                    <span class="project-type">${p.type}</span>
+                                </div>`;
+                            container.appendChild(card);
+                        } else {
+                            // carte existante : on met juste à jour titre/sous-titre/action,
+                            // la structure interne (mosaïques etc.) reste intacte
+                            const titleEl = card.querySelector('.project-title');
+                            const typeEl = card.querySelector('.project-type');
+                            if (titleEl && p.title) titleEl.textContent = p.title;
+                            if (typeEl && p.type) typeEl.textContent = p.type;
+                            if (p.action) card.setAttribute('onclick', p.action);
+                        }
+                        container.appendChild(card); // réordonne selon l'ordre du backend
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Contenu dynamique indisponible, affichage du contenu par défaut.', e);
+        }
+    })();
+
+    function resolveContentUrl(path) {
+        if (!path) return '';
+        if (/^https?:\/\//.test(path)) return path;
+        if (path.startsWith('/uploads/')) return BACKEND_URL + path;
+        return path; // fichier déjà présent à la racine du site
     }
-    renderGalleryGrid();
-    e.target.value = '';
-});
-
-document.getElementById('saveGalleryBtn').addEventListener('click', async () => {
-    try { await saveContent({ gallery: galleryState }); }
-    catch (e) { toast(e.message); }
-});
-
-/* ---- FAQ ---- */
-async function loadContentFaq() {
-    try {
-        const content = await fetchContent();
-        renderFaqEditor(content.faq || []);
-    } catch (e) { toast(e.message); }
-}
-
-function faqCardHTML(q, a) {
-    return `
-        <div class="edit-card-fields">
-            <div class="edit-card-label">Question</div>
-            <input type="text" class="faq-q-input" value="${escapeAttr(q || '')}">
-            <div class="edit-card-label">Réponse</div>
-            <textarea class="faq-a-input">${escapeAttr(a || '')}</textarea>
-        </div>
-        <div class="edit-card-actions">
-            <button class="move-up" title="Monter">↑</button>
-            <button class="move-down" title="Descendre">↓</button>
-            <button class="danger remove-faq" title="Supprimer">✕</button>
-        </div>
-    `;
-}
-
-function addFaqCard(q, a) {
-    const wrap = document.getElementById('faqListWrap');
-    if (wrap.querySelector('.empty-state')) wrap.innerHTML = '';
-    const card = document.createElement('div');
-    card.className = 'edit-card';
-    card.innerHTML = faqCardHTML(q, a);
-    wrap.appendChild(card);
-    card.querySelector('.move-up').onclick = (e) => moveEditCard(e.target, -1);
-    card.querySelector('.move-down').onclick = (e) => moveEditCard(e.target, 1);
-    card.querySelector('.remove-faq').onclick = (e) => { if (confirm('Supprimer cette question ?')) e.target.closest('.edit-card').remove(); };
-}
-
-function renderFaqEditor(faqs) {
-    const wrap = document.getElementById('faqListWrap');
-    wrap.innerHTML = '';
-    if (!faqs.length) { wrap.innerHTML = emptyStateHTML('Aucune question — clique sur "+ Ajouter une question".'); return; }
-    faqs.forEach(item => addFaqCard(item.q, item.a));
-}
-
-document.getElementById('addFaqBtn').addEventListener('click', () => addFaqCard('', ''));
-
-document.getElementById('saveFaqBtn').addEventListener('click', async () => {
-    try {
-        const cards = document.querySelectorAll('#faqListWrap .edit-card');
-        const faq = Array.from(cards).map(card => ({
-            q: card.querySelector('.faq-q-input').value,
-            a: card.querySelector('.faq-a-input').value,
-        }));
-        await saveContent({ faq });
-    } catch (e) { toast(e.message); }
-});
-
-/* ---------------- COMMAND PALETTE ---------------- */
-const commands = [
-    { label: 'Aller à Overview', icon: 'grid', action: () => switchView('overview') },
-    { label: 'Aller à Leads', icon: 'inbox', action: () => switchView('leads') },
-    { label: 'Aller à Rendez-vous', icon: 'calendar', action: () => switchView('appointments') },
-    { label: 'Aller à Hero', icon: 'grid', action: () => switchView('content-hero') },
-    { label: 'Aller à Projets', icon: 'grid', action: () => switchView('content-projects') },
-    { label: 'Aller à Galerie photo', icon: 'grid', action: () => switchView('content-gallery') },
-    { label: 'Aller à FAQ', icon: 'grid', action: () => switchView('content-faq') },
-    { label: 'Basculer le thème clair/sombre', icon: 'sun', action: () => document.getElementById('themeToggle').click() },
-    { label: 'Rafraîchir les données', icon: 'refresh', action: () => switchView(currentView) },
-    { label: 'Se déconnecter', icon: 'logout', action: logout },
-];
-function openCmdk() {
-    document.getElementById('cmdkOverlay').classList.add('active');
-    document.getElementById('cmdkInput').value = '';
-    document.getElementById('cmdkInput').focus();
-    renderCmdk(commands);
-}
-function closeCmdk() { document.getElementById('cmdkOverlay').classList.remove('active'); }
-function renderCmdk(list) {
-    document.getElementById('cmdkResults').innerHTML = list.map((c, i) => `
-        <div class="cmdk-item ${i === 0 ? 'selected' : ''}" data-index="${i}">${c.label}</div>
-    `).join('') || '<div class="cmdk-item">Aucun résultat</div>';
-    document.querySelectorAll('.cmdk-item').forEach((el, i) => {
-        el.addEventListener('click', () => { list[i].action(); closeCmdk(); });
-    });
-}
-document.getElementById('cmdkHint').addEventListener('click', openCmdk);
-document.getElementById('cmdkOverlay').addEventListener('click', e => { if (e.target.id === 'cmdkOverlay') closeCmdk(); });
-document.getElementById('cmdkInput').addEventListener('input', e => {
-    const q = e.target.value.toLowerCase();
-    renderCmdk(commands.filter(c => c.label.toLowerCase().includes(q)));
-});
-document.addEventListener('keydown', e => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openCmdk(); }
-    if (e.key === 'Escape') { closeCmdk(); closeDrawer(); }
-});
-
-/* ---------------- UTILS ---------------- */
-function statusLabel(s) {
-    return { new: 'Nouveau', contacted: 'Contacté', won: 'Gagné', lost: 'Perdu', pending: 'En attente', confirmed: 'Confirmé', done: 'Terminé', cancelled: 'Annulé' }[s] || s;
-}
-function formatDate(iso, full = false) {
-    if (!iso) return '—';
-    const d = new Date(iso.replace(' ', 'T') + 'Z');
-    return full ? d.toLocaleString('fr-FR') : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-}
-function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str ?? ''; return div.innerHTML; }
-function toast(msg) {
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.textContent = msg;
-    document.getElementById('toastContainer').appendChild(t);
-    setTimeout(() => t.remove(), 3500);
-}
-
-/* ---------------- INIT ---------------- */
-if (TOKEN) boot(); else document.getElementById('loginScreen').style.display = 'flex';
 </script>
 </body>
 </html>
