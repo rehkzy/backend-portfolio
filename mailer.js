@@ -165,6 +165,106 @@ function leadReplyEmail(lead, message) {
     };
 }
 
+// ---- Devis / Factures ----
+function quoteItemsHtml(items, forEmail = false) {
+    const rows = (items || []).map(i => `
+        <tr>
+            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'};">${i.desc || ''}</td>
+            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'}; text-align:center;">${i.qty || 0}</td>
+            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'}; text-align:right;">${(Number(i.price) || 0).toFixed(2)} €</td>
+            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'}; text-align:right; font-weight:700;">${((Number(i.qty) || 0) * (Number(i.price) || 0)).toFixed(2)} €</td>
+        </tr>
+    `).join('');
+    return `
+        <table style="width:100%; border-collapse:collapse; margin:16px 0;">
+            <thead>
+                <tr style="text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:${forEmail ? '#888' : '#999'};">
+                    <th style="padding-bottom:8px;">Prestation</th>
+                    <th style="padding-bottom:8px; text-align:center;">Qté</th>
+                    <th style="padding-bottom:8px; text-align:right;">Prix unit.</th>
+                    <th style="padding-bottom:8px; text-align:right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+function quoteEmail(quote) {
+    return {
+        to: quote.clientEmail,
+        subject: `Devis — ${quote.clientName || 'Votre projet'} — Florian B.`,
+        html: brandEmailWrapper(`
+            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Votre devis</p>
+            <p style="margin:0 0 16px;">Bonjour ${quote.clientName || ''},</p>
+            <p style="margin:0 0 16px;">Voici le détail de la proposition pour votre projet :</p>
+            ${quoteItemsHtml(quote.items, true)}
+            <p style="text-align:right; font-size:18px; font-weight:700; color:#fff; margin:16px 0;">Total : ${(quote.total || 0).toFixed(2)} €</p>
+            ${quote.notes ? `<p style="margin:16px 0; color:#bbb; font-style:italic;">${quote.notes}</p>` : ''}
+            <p style="margin:24px 0 0;">N'hésitez pas si vous avez des questions.<br><strong style="color:#fff;">Florian B.</strong></p>
+        `, { preheader: `Votre devis - Total ${(quote.total || 0).toFixed(2)} €` }),
+    };
+}
+
+function quoteHtmlPage(quote) {
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Devis — ${quote.clientName || ''}</title>
+<style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #da2c48; padding-bottom:20px; margin-bottom:30px; }
+    .logo { font-family: Georgia, serif; font-weight:700; font-size:24px; }
+    .logo span { color:#da2c48; }
+    .meta { text-align:right; font-size:13px; color:#666; }
+    .client { margin-bottom: 24px; }
+    .total-row { text-align:right; font-size:22px; font-weight:700; margin-top:16px; }
+    .status { display:inline-block; padding:4px 12px; border-radius:100px; font-size:12px; font-weight:700; text-transform:uppercase; }
+    @media print { body { margin: 0; } }
+</style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">FLORIAN B<span>.</span></div>
+        <div class="meta">
+            Devis n°${quote.id}<br>
+            ${new Date(quote.created_at).toLocaleDateString('fr-FR')}<br>
+            <span class="status" style="background:#f0f0f0;">${quote.status === 'paid' ? 'Payé' : quote.status === 'sent' ? 'Envoyé' : 'Brouillon'}</span>
+        </div>
+    </div>
+    <div class="client">
+        <strong>${quote.clientName || ''}</strong><br>
+        ${quote.clientEmail}
+    </div>
+    ${quoteItemsHtml(quote.items, false)}
+    <div class="total-row">Total : ${(quote.total || 0).toFixed(2)} €</div>
+    ${quote.notes ? `<p style="margin-top:24px; color:#666; font-style:italic;">${quote.notes}</p>` : ''}
+    <p style="margin-top:60px; font-size:12px; color:#999;">Florian Bonnet — Graphiste & Directeur Artistique, Paris — florian-b.fr</p>
+    <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
+</body>
+</html>`;
+}
+
+// ---- Rapport mensuel ----
+function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
+    const monthName = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return {
+        to: process.env.NOTIFY_EMAIL || process.env.SMTP_USER,
+        subject: `📊 Rapport mensuel — ${monthName}`,
+        html: brandEmailWrapper(`
+            <p style="margin:0 0 20px; font-size:20px; font-weight:700; color:#ffffff;">Votre mois en résumé</p>
+            <table style="width:100%; border-collapse:collapse;">
+                <tr><td style="padding:10px 0; border-bottom:1px solid #262626; color:#888;">Nouveaux leads</td><td style="padding:10px 0; border-bottom:1px solid #262626; text-align:right; font-weight:700; color:#fff;">${newLeads}</td></tr>
+                <tr><td style="padding:10px 0; border-bottom:1px solid #262626; color:#888;">Projets gagnés</td><td style="padding:10px 0; border-bottom:1px solid #262626; text-align:right; font-weight:700; color:#fff;">${wonLeads}</td></tr>
+                <tr><td style="padding:10px 0; border-bottom:1px solid #262626; color:#888;">Chiffre d'affaires encaissé</td><td style="padding:10px 0; border-bottom:1px solid #262626; text-align:right; font-weight:700; color:#fff;">${revenue.toFixed(2)} €</td></tr>
+                ${visitors !== null ? `<tr><td style="padding:10px 0; color:#888;">Visiteurs actifs (30j)</td><td style="padding:10px 0; text-align:right; font-weight:700; color:#fff;">${visitors}</td></tr>` : ''}
+            </table>
+            <p style="margin:24px 0 0; color:#888; font-size:13px;">Généré automatiquement le 1er de chaque mois.</p>
+        `),
+    };
+}
+
 module.exports = {
     sendMail,
     leadConfirmationEmail,
@@ -172,4 +272,7 @@ module.exports = {
     appointmentConfirmationEmail,
     appointmentNotificationEmail,
     leadReplyEmail,
+    quoteEmail,
+    quoteHtmlPage,
+    monthlyReportEmail,
 };

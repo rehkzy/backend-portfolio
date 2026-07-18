@@ -9,6 +9,7 @@ const multer = require('multer');
 const db = require('./db');
 const mailer = require('./mailer');
 const analytics = require('./analytics');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -261,6 +262,193 @@ app.get('/api/analytics/overview', auth, async (req, res) => {
     }
 });
 
+/* ============================================================
+   DEVIS & FACTURES
+   ============================================================ */
+function computeQuoteTotal(items) {
+    return (items || []).reduce((sum, i) => sum + (Number(i.qty) || 0) * (Number(i.price) || 0), 0);
+}
+
+app.get('/api/quotes', auth, (req, res) => {
+    res.json([...db.get('quotes').value()].reverse());
+});
+
+app.post('/api/quotes', auth, (req, res) => {
+    const { clientName, clientEmail, items, notes, leadId } = req.body || {};
+    if (!clientEmail) return res.status(400).json({ error: 'clientEmail requis' });
+    const quote = {
+        id: nextId('quotes'), created_at: now(), leadId: leadId || null,
+        clientName: clientName || '', clientEmail,
+        items: Array.isArray(items) ? items : [],
+        notes: notes || '', status: 'draft', sent_at: null, paid_at: null,
+    };
+    quote.total = computeQuoteTotal(quote.items);
+    db.get('quotes').push(quote).write();
+    res.status(201).json(quote);
+});
+
+app.patch('/api/quotes/:id', auth, (req, res) => {
+    const id = Number(req.params.id);
+    const q = db.get('quotes').find({ id });
+    if (!q.value()) return res.status(404).json({ error: 'Devis introuvable' });
+    const { clientName, clientEmail, items, notes, status } = req.body || {};
+    const patch = {};
+    if (clientName !== undefined) patch.clientName = clientName;
+    if (clientEmail !== undefined) patch.clientEmail = clientEmail;
+    if (notes !== undefined) patch.notes = notes;
+    if (status !== undefined) {
+        patch.status = status;
+        if (status === 'paid') patch.paid_at = now();
+    }
+    if (items !== undefined) { patch.items = items; patch.total = computeQuoteTotal(items); }
+    q.assign(patch).write();
+    res.json({ ok: true });
+});
+
+app.delete('/api/quotes/:id', auth, (req, res) => {
+    db.get('quotes').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+// Page HTML imprimable (le graphiste peut l'ouvrir et "Imprimer > Enregistrer en PDF")
+app.get('/api/quotes/:id/view', auth, (req, res) => {
+    const quote = db.get('quotes').find({ id: Number(req.params.id) }).value();
+    if (!quote) return res.status(404).send('Devis introuvable');
+    res.set('Content-Type', 'text/html');
+    res.send(mailer.quoteHtmlPage(quote));
+});
+
+// Envoi du devis par email au client
+app.post('/api/quotes/:id/send', auth, async (req, res) => {
+    const id = Number(req.params.id);
+    const quote = db.get('quotes').find({ id }).value();
+    if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
+    const result = await mailer.sendMail(mailer.quoteEmail(quote));
+    if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
+    db.get('quotes').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
+    res.json({ ok: true });
+});
+
+/* ============================================================
+   SUIVI DE PROJET CLIENT (post-vente)
+   ============================================================ */
+const PROJECT_STAGES = ['brief', 'maquettes', 'revisions', 'livre'];
+
+app.get('/api/projects', auth, (req, res) => {
+    res.json([...db.get('projects').value()].reverse());
+});
+
+app.post('/api/projects', auth, (req, res) => {
+    const { name, clientEmail, leadId, stage } = req.body || {};
+    if (!name || !clientEmail) return res.status(400).json({ error: 'name et clientEmail requis' });
+    const project = {
+        id: nextId('projects'), created_at: now(), leadId: leadId || null,
+        name, clientEmail, stage: PROJECT_STAGES.includes(stage) ? stage : 'brief', notes: '',
+    };
+    db.get('projects').push(project).write();
+    res.status(201).json(project);
+});
+
+app.patch('/api/projects/:id', auth, (req, res) => {
+    const id = Number(req.params.id);
+    const p = db.get('projects').find({ id });
+    if (!p.value()) return res.status(404).json({ error: 'Projet introuvable' });
+    const { name, clientEmail, stage, notes } = req.body || {};
+    const patch = {};
+    if (name !== undefined) patch.name = name;
+    if (clientEmail !== undefined) patch.clientEmail = clientEmail;
+    if (notes !== undefined) patch.notes = notes;
+    if (stage !== undefined && PROJECT_STAGES.includes(stage)) patch.stage = stage;
+    p.assign(patch).write();
+    res.json({ ok: true });
+});
+
+app.delete('/api/projects/:id', auth, (req, res) => {
+    db.get('projects').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+/* ============================================================
+   CALENDRIER DE CONTENU (Instagram etc.)
+   ============================================================ */
+app.get('/api/content-calendar', auth, (req, res) => {
+    res.json([...db.get('contentCalendar').value()].sort((a, b) => (a.date || '').localeCompare(b.date || '')));
+});
+
+app.post('/api/content-calendar', auth, (req, res) => {
+    const { title, date, caption, status } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'title requis' });
+    const item = {
+        id: nextId('contentCalendar'), created_at: now(),
+        title, date: date || null, caption: caption || '', status: status || 'idea',
+    };
+    db.get('contentCalendar').push(item).write();
+    res.status(201).json(item);
+});
+
+app.patch('/api/content-calendar/:id', auth, (req, res) => {
+    const id = Number(req.params.id);
+    const item = db.get('contentCalendar').find({ id });
+    if (!item.value()) return res.status(404).json({ error: 'Introuvable' });
+    const { title, date, caption, status } = req.body || {};
+    const patch = {};
+    if (title !== undefined) patch.title = title;
+    if (date !== undefined) patch.date = date;
+    if (caption !== undefined) patch.caption = caption;
+    if (status !== undefined) patch.status = status;
+    item.assign(patch).write();
+    res.json({ ok: true });
+});
+
+app.delete('/api/content-calendar/:id', auth, (req, res) => {
+    db.get('contentCalendar').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+/* ============================================================
+   SAUVEGARDE — export complet des données en un clic
+   ============================================================ */
+app.get('/api/admin/backup', auth, (req, res) => {
+    const data = db.getState();
+    const filename = `florianb-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    res.set('Content-Disposition', `attachment; filename="${filename}"`);
+    res.set('Content-Type', 'application/json');
+    res.send(JSON.stringify(data, null, 2));
+});
+
+/* ============================================================
+   RAPPORT MENSUEL — génération à la demande + envoi programmé
+   ============================================================ */
+async function buildAndSendMonthlyReport() {
+    const leads = db.get('leads').value();
+    const quotes = db.get('quotes').value();
+    const now30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const newLeads = leads.filter(l => l.created_at >= now30).length;
+    const wonLeads = leads.filter(l => l.status === 'won' && l.created_at >= now30).length;
+    const revenue = quotes.filter(q => q.status === 'paid' && q.paid_at >= now30).reduce((s, q) => s + (q.total || 0), 0);
+
+    let gaSummary = null;
+    try { gaSummary = analytics.isConfigured() ? await analytics.getOverview(30) : null; } catch { gaSummary = null; }
+
+    const result = await mailer.sendMail(mailer.monthlyReportEmail({
+        newLeads, wonLeads, revenue,
+        visitors: gaSummary?.configured ? gaSummary.totals.activeUsers : null,
+    }));
+    return result;
+}
+
+app.post('/api/admin/send-report', auth, async (req, res) => {
+    const result = await buildAndSendMonthlyReport();
+    if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
+    res.json({ ok: true });
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+// Rapport mensuel automatique — le 1er de chaque mois à 8h (heure de Paris)
+cron.schedule('0 8 1 * *', () => {
+    console.log('📊 Envoi du rapport mensuel automatique...');
+    buildAndSendMonthlyReport().catch(err => console.error('Erreur rapport mensuel:', err.message));
+}, { timezone: 'Europe/Paris' });
 
 app.listen(PORT, () => console.log(`✅ Backend Florian B. sur http://localhost:${PORT}`));

@@ -88,7 +88,7 @@
     .cmdk-hint kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.65rem; }
 
     .main { padding: 1.6rem 2rem 4rem; overflow-y: auto; }
-    .global-toolbar { position: fixed; top: 1.2rem; right: 1.4rem; z-index: 400; display: flex; align-items: center; gap: 0.5rem; }
+    .global-toolbar { position: sticky; top: 0; z-index: 400; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin: -1.6rem -2rem 1.4rem; padding: 0.8rem 2rem; background: var(--bg); border-bottom: 1px solid var(--border); }
     .global-toolbar-status { font-size: 0.7rem; color: var(--text-muted); margin-right: 0.2rem; white-space: nowrap; }
     .global-toolbar .icon-btn.spinning svg { animation: spin 0.6s linear; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -133,6 +133,26 @@
     .filter-chip { padding: 0.5rem 0.9rem; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); font-size: 0.78rem; font-weight: 600; color: var(--text-muted); transition: 0.2s; }
     .reply-template-btn { padding: 0.4rem 0.8rem; border-radius: 100px; border: 1px solid var(--border); background: var(--bg); font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: 0.15s; }
     .reply-template-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ============ VIEW TOGGLE ============ */
+    .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .view-toggle-btn { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--text-muted); border: none; }
+    .view-toggle-btn svg { width: 15px; height: 15px; }
+    .view-toggle-btn.active { background: var(--accent); color: #fff; }
+    .view-toggle-btn:first-child { border-right: 1px solid var(--border); }
+
+    /* ============ KANBAN ============ */
+    .kanban-board { display: grid; grid-template-columns: repeat(4, minmax(240px, 1fr)); gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; }
+    .kanban-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.9rem; min-height: 200px; }
+    .kanban-col-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 0.8rem; padding: 0 0.2rem; }
+    .kanban-col-count { background: var(--bg); border-radius: 100px; padding: 0.1rem 0.5rem; font-size: 0.7rem; }
+    .kanban-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.8rem; margin-bottom: 0.6rem; cursor: grab; transition: 0.15s; font-size: 0.82rem; }
+    .kanban-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .kanban-card.dragging { opacity: 0.4; }
+    .kanban-card-title { font-weight: 700; margin-bottom: 0.2rem; }
+    .kanban-card-meta { color: var(--text-muted); font-size: 0.72rem; }
+    .kanban-col.drag-over { background: rgba(218,44,72,0.06); border-color: var(--accent); }
+    @media (max-width: 900px) { .kanban-board { grid-template-columns: minmax(240px, 1fr); grid-auto-flow: column; } }
     .filter-chip.active { background: var(--text); color: var(--surface); border-color: var(--text); }
 
     .data-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
@@ -250,7 +270,7 @@
 
         .drawer { width: 100vw; }
 
-        .global-toolbar { top: auto; bottom: 1rem; right: 1rem; background: var(--surface); padding: 0.4rem; border-radius: 100px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+        .global-toolbar { position: fixed; top: auto; bottom: 1rem; right: 1rem; left: auto; margin: 0; background: var(--surface); padding: 0.4rem; border-radius: 100px; border: 1px solid var(--border); box-shadow: var(--shadow); }
         .global-toolbar-status { display: none; }
 
         .edit-card { flex-direction: column; }
@@ -325,6 +345,26 @@
         </div>
 
         <div class="nav-group">
+            <div class="nav-group-label">Business</div>
+            <div class="nav-item" data-view="quotes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                Devis & Factures
+            </div>
+            <div class="nav-item" data-view="projects">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                Suivi de projets
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Marketing</div>
+            <div class="nav-item" data-view="calendar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+                Calendrier de contenu
+            </div>
+        </div>
+
+        <div class="nav-group">
             <div class="nav-group-label">Contenu du site</div>
             <div class="nav-item" data-view="content-hero">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
@@ -344,6 +384,14 @@
             </div>
         </div>
 
+        <div class="nav-group">
+            <div class="nav-group-label">Système</div>
+            <div class="nav-item" id="backupBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Télécharger une sauvegarde
+            </div>
+        </div>
+
         <div class="sidebar-footer">
             <div class="cmdk-hint" id="cmdkHint"><span>Recherche rapide</span><kbd>⌘K</kbd></div>
             <div class="nav-item" id="logoutBtn">
@@ -353,17 +401,17 @@
         </div>
     </aside>
 
-    <div class="global-toolbar">
-        <span class="global-toolbar-status" id="lastRefreshLabel"></span>
-        <button class="icon-btn" id="themeToggle" title="Changer de thème">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        </button>
-        <button class="icon-btn" id="refreshBtn" title="Rafraîchir cette page">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        </button>
-    </div>
-
     <main class="main">
+        <div class="global-toolbar">
+            <span class="global-toolbar-status" id="lastRefreshLabel"></span>
+            <button class="icon-btn" id="themeToggle" title="Changer de thème">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+            <button class="icon-btn" id="refreshBtn" title="Rafraîchir cette page">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+        </div>
+
         <!-- OVERVIEW -->
         <section class="view active" id="view-overview">
             <div class="topbar">
@@ -480,10 +528,18 @@
             <div class="topbar">
                 <h2>Leads</h2>
                 <div class="topbar-actions">
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active" id="leadsViewList" title="Vue liste">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        </button>
+                        <button class="view-toggle-btn" id="leadsViewKanban" title="Vue Kanban">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="10"/></svg>
+                        </button>
+                    </div>
                     <button class="btn-primary" id="addLeadBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Ajouter un lead</button>
                 </div>
             </div>
-            <div class="toolbar">
+            <div class="toolbar" id="leadsListToolbar">
                 <div class="search-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input type="text" id="leadsSearch" placeholder="Rechercher un nom, un email, un message...">
@@ -495,6 +551,7 @@
                 <button class="filter-chip" data-status="lost">Perdu</button>
             </div>
             <div id="leadsTableWrap"></div>
+            <div class="kanban-board" id="leadsKanban" style="display:none;"></div>
         </section>
 
         <!-- APPOINTMENTS -->
@@ -578,6 +635,59 @@
                 </div>
             </div>
             <div id="faqListWrap"></div>
+        </section>
+
+        <!-- DEVIS & FACTURES -->
+        <section class="view" id="view-quotes">
+            <div class="topbar">
+                <h2>Devis & Factures</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="addQuoteBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouveau devis</button>
+                </div>
+            </div>
+            <div class="toolbar">
+                <button class="filter-chip active" data-qstatus="">Tous</button>
+                <button class="filter-chip" data-qstatus="draft">Brouillon</button>
+                <button class="filter-chip" data-qstatus="sent">Envoyé</button>
+                <button class="filter-chip" data-qstatus="paid">Payé</button>
+            </div>
+            <div class="kpi-grid" style="margin-bottom:1.2rem;">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total facturé</div>
+                    <div class="kpi-value" id="quotesTotalAll">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Encaissé</div>
+                    <div class="kpi-value" id="quotesTotalPaid">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">En attente</div>
+                    <div class="kpi-value" id="quotesTotalPending">—</div>
+                </div>
+            </div>
+            <div id="quotesTableWrap"></div>
+        </section>
+
+        <!-- SUIVI DE PROJETS -->
+        <section class="view" id="view-projects">
+            <div class="topbar">
+                <h2>Suivi de projets</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="addProjectTrackBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouveau projet</button>
+                </div>
+            </div>
+            <div class="kanban-board" id="projectsKanban"></div>
+        </section>
+
+        <!-- CALENDRIER DE CONTENU -->
+        <section class="view" id="view-calendar">
+            <div class="topbar">
+                <h2>Calendrier de contenu</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="addContentBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Idée de post</button>
+                </div>
+            </div>
+            <div id="calendarListWrap"></div>
         </section>
     </main>
 </div>
@@ -704,6 +814,9 @@ function switchView(view) {
     if (view === 'content-projects') loadContentProjects();
     if (view === 'content-project-galleries') loadProjectGalleries();
     if (view === 'content-faq') loadContentFaq();
+    if (view === 'quotes') loadQuotes();
+    if (view === 'projects') loadProjectsTrack();
+    if (view === 'calendar') loadContentCalendar();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => refreshCurrentView());
@@ -1516,6 +1629,400 @@ document.getElementById('saveFaqBtn').addEventListener('click', async () => {
     } catch (e) { toast(e.message); }
 });
 
+/* ============================================================
+   KANBAN LEADS — bascule liste/kanban + drag & drop
+   ============================================================ */
+document.getElementById('leadsViewList').addEventListener('click', () => {
+    document.getElementById('leadsViewList').classList.add('active');
+    document.getElementById('leadsViewKanban').classList.remove('active');
+    document.getElementById('leadsListToolbar').style.display = 'flex';
+    document.getElementById('leadsTableWrap').style.display = 'block';
+    document.getElementById('leadsKanban').style.display = 'none';
+});
+document.getElementById('leadsViewKanban').addEventListener('click', () => {
+    document.getElementById('leadsViewKanban').classList.add('active');
+    document.getElementById('leadsViewList').classList.remove('active');
+    document.getElementById('leadsListToolbar').style.display = 'none';
+    document.getElementById('leadsTableWrap').style.display = 'none';
+    document.getElementById('leadsKanban').style.display = 'grid';
+    renderLeadsKanban();
+});
+
+const LEAD_STAGES = [
+    { key: 'new', label: 'Nouveau' },
+    { key: 'contacted', label: 'Contacté' },
+    { key: 'won', label: 'Gagné' },
+    { key: 'lost', label: 'Perdu' },
+];
+
+function renderLeadsKanban() {
+    const wrap = document.getElementById('leadsKanban');
+    wrap.innerHTML = LEAD_STAGES.map(stage => {
+        const items = leadsCache.filter(l => l.status === stage.key);
+        return `
+            <div class="kanban-col" data-stage="${stage.key}">
+                <div class="kanban-col-header"><span>${stage.label}</span><span class="kanban-col-count">${items.length}</span></div>
+                <div class="kanban-col-body" data-stage="${stage.key}">
+                    ${items.map(l => `
+                        <div class="kanban-card" draggable="true" data-id="${l.id}" onclick="openLeadDrawer(${l.id})">
+                            <div class="kanban-card-title">${escapeHtml(l.name || l.email)}</div>
+                            <div class="kanban-card-meta">${escapeHtml((l.message || '').slice(0, 40))}${(l.message || '').length > 40 ? '…' : ''}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+    attachKanbanDragEvents(wrap, async (id, newStage) => {
+        await api('/api/leads/' + id, { method: 'PATCH', body: JSON.stringify({ status: newStage }) });
+        await loadLeads();
+        renderLeadsKanban();
+    });
+}
+
+function attachKanbanDragEvents(boardEl, onDrop) {
+    let draggedId = null;
+    boardEl.querySelectorAll('.kanban-card').forEach(card => {
+        card.addEventListener('dragstart', () => { draggedId = card.dataset.id; card.classList.add('dragging'); });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    });
+    boardEl.querySelectorAll('.kanban-col').forEach(col => {
+        col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('drag-over'); });
+        col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+        col.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            col.classList.remove('drag-over');
+            if (draggedId) await onDrop(Number(draggedId), col.dataset.stage);
+        });
+    });
+}
+
+/* ============================================================
+   DEVIS & FACTURES
+   ============================================================ */
+let quotesCache = [];
+let quotesFilter = '';
+
+document.querySelectorAll('#view-quotes .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        document.querySelectorAll('#view-quotes .filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        quotesFilter = chip.dataset.qstatus;
+        renderQuotesTable();
+    });
+});
+
+async function loadQuotes() {
+    try {
+        quotesCache = await api('/api/quotes');
+        const total = quotesCache.reduce((s, q) => s + (q.total || 0), 0);
+        const paid = quotesCache.filter(q => q.status === 'paid').reduce((s, q) => s + (q.total || 0), 0);
+        const pending = quotesCache.filter(q => q.status !== 'paid').reduce((s, q) => s + (q.total || 0), 0);
+        document.getElementById('quotesTotalAll').textContent = total.toFixed(2) + ' €';
+        document.getElementById('quotesTotalPaid').textContent = paid.toFixed(2) + ' €';
+        document.getElementById('quotesTotalPending').textContent = pending.toFixed(2) + ' €';
+        renderQuotesTable();
+    } catch (e) { toast(e.message); }
+}
+
+function renderQuotesTable() {
+    const wrap = document.getElementById('quotesTableWrap');
+    const list = quotesFilter ? quotesCache.filter(q => q.status === quotesFilter) : quotesCache;
+    if (!list.length) { wrap.innerHTML = emptyStateHTML('Aucun devis pour le moment.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Client</th><th>Montant</th><th>Statut</th><th>Créé le</th></tr></thead>
+            <tbody>
+                ${list.map(q => `
+                    <tr onclick="openQuoteDrawer(${q.id})">
+                        <td>${escapeHtml(q.clientName || q.clientEmail)}</td>
+                        <td class="cell-muted">${(q.total || 0).toFixed(2)} €</td>
+                        <td><span class="badge ${q.status === 'paid' ? 'won' : q.status === 'sent' ? 'contacted' : 'new'}">${q.status === 'paid' ? 'Payé' : q.status === 'sent' ? 'Envoyé' : 'Brouillon'}</span></td>
+                        <td class="cell-muted">${formatDate(q.created_at)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function quoteItemRowHTML(item = {}) {
+    return `
+        <div class="quote-item-row" style="display:flex; gap:0.5rem; margin-bottom:0.5rem; align-items:center;">
+            <input type="text" class="qi-desc" placeholder="Prestation" value="${escapeAttr(item.desc || '')}" style="flex:2; padding:0.5rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:0.82rem;">
+            <input type="number" class="qi-qty" placeholder="Qté" value="${item.qty || 1}" min="0" style="width:60px; padding:0.5rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:0.82rem;">
+            <input type="number" class="qi-price" placeholder="Prix €" value="${item.price || ''}" min="0" step="0.01" style="width:90px; padding:0.5rem; border:1px solid var(--border); border-radius:7px; background:var(--bg); color:var(--text); font-size:0.82rem;">
+            <button type="button" class="danger qi-remove" style="width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:var(--bg); color:var(--text-muted);">✕</button>
+        </div>
+    `;
+}
+
+function attachQuoteItemEvents(wrap) {
+    wrap.querySelectorAll('.qi-remove').forEach(btn => btn.onclick = () => btn.closest('.quote-item-row').remove());
+}
+
+function openQuoteDrawer(id) {
+    const q = id ? quotesCache.find(x => x.id === id) : null;
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${q ? 'Devis #' + q.id : 'Nouveau devis'}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-field"><label>Nom du client</label><input type="text" id="qClientName" value="${escapeAttr(q?.clientName || '')}"></div>
+        <div class="drawer-field"><label>Email *</label><input type="email" id="qClientEmail" value="${escapeAttr(q?.clientEmail || '')}"></div>
+        <div class="drawer-field">
+            <label>Prestations</label>
+            <div id="quoteItemsWrap">${(q?.items?.length ? q.items : [{}]).map(quoteItemRowHTML).join('')}</div>
+            <button type="button" class="reply-template-btn" id="addQuoteItemBtn">+ Ligne</button>
+        </div>
+        <div class="drawer-field"><label>Notes</label><textarea id="qNotes" placeholder="Conditions, délais...">${escapeHtml(q?.notes || '')}</textarea></div>
+        <div class="drawer-actions">
+            <button class="btn-secondary" onclick="saveQuote(${q ? q.id : 'null'})">Enregistrer</button>
+            ${q ? `<button class="btn-danger" onclick="deleteQuote(${q.id})">Supprimer</button>` : ''}
+        </div>
+        ${q ? `
+        <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border); flex-wrap:wrap;">
+            <button class="btn-primary" onclick="sendQuote(${q.id})">✉️ Envoyer au client</button>
+            <button class="btn-secondary" onclick="window.open(API_BASE + '/api/quotes/${q.id}/view?print=1', '_blank')">🖨️ Voir / Imprimer</button>
+            ${q.status !== 'paid' ? `<button class="btn-secondary" onclick="markQuotePaid(${q.id})">✓ Marquer payé</button>` : ''}
+        </div>` : ''}
+    `;
+    openDrawer();
+    document.getElementById('addQuoteItemBtn').onclick = () => {
+        const wrap = document.getElementById('quoteItemsWrap');
+        wrap.insertAdjacentHTML('beforeend', quoteItemRowHTML());
+        attachQuoteItemEvents(wrap);
+    };
+    attachQuoteItemEvents(document.getElementById('quoteItemsWrap'));
+}
+
+function collectQuoteItems() {
+    return Array.from(document.querySelectorAll('#quoteItemsWrap .quote-item-row')).map(row => ({
+        desc: row.querySelector('.qi-desc').value,
+        qty: Number(row.querySelector('.qi-qty').value) || 0,
+        price: Number(row.querySelector('.qi-price').value) || 0,
+    })).filter(i => i.desc || i.price);
+}
+
+async function saveQuote(id) {
+    const clientEmail = document.getElementById('qClientEmail').value.trim();
+    if (!clientEmail) { toast("L'email du client est obligatoire."); return; }
+    const payload = {
+        clientName: document.getElementById('qClientName').value.trim(),
+        clientEmail,
+        items: collectQuoteItems(),
+        notes: document.getElementById('qNotes').value.trim(),
+    };
+    try {
+        if (id) await api('/api/quotes/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+        else await api('/api/quotes', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Devis enregistré ✅');
+        closeDrawer();
+        loadQuotes();
+    } catch (e) { toast(e.message); }
+}
+
+async function deleteQuote(id) {
+    if (!confirm('Supprimer ce devis ?')) return;
+    try { await api('/api/quotes/' + id, { method: 'DELETE' }); toast('Devis supprimé'); closeDrawer(); loadQuotes(); }
+    catch (e) { toast(e.message); }
+}
+
+async function sendQuote(id) {
+    try { await api('/api/quotes/' + id + '/send', { method: 'POST' }); toast('Devis envoyé au client ✅'); closeDrawer(); loadQuotes(); }
+    catch (e) { toast(e.message); }
+}
+
+async function markQuotePaid(id) {
+    try { await api('/api/quotes/' + id, { method: 'PATCH', body: JSON.stringify({ status: 'paid' }) }); toast('Marqué comme payé ✅'); closeDrawer(); loadQuotes(); }
+    catch (e) { toast(e.message); }
+}
+
+document.getElementById('addQuoteBtn').addEventListener('click', () => openQuoteDrawer(null));
+
+/* ============================================================
+   SUIVI DE PROJETS — kanban 4 étapes
+   ============================================================ */
+let projectsTrackCache = [];
+const PROJECT_STAGES_UI = [
+    { key: 'brief', label: 'Brief' },
+    { key: 'maquettes', label: 'Maquettes' },
+    { key: 'revisions', label: 'Révisions' },
+    { key: 'livre', label: 'Livré' },
+];
+
+async function loadProjectsTrack() {
+    try { projectsTrackCache = await api('/api/projects'); renderProjectsKanban(); }
+    catch (e) { toast(e.message); }
+}
+
+function renderProjectsKanban() {
+    const wrap = document.getElementById('projectsKanban');
+    wrap.innerHTML = PROJECT_STAGES_UI.map(stage => {
+        const items = projectsTrackCache.filter(p => p.stage === stage.key);
+        return `
+            <div class="kanban-col" data-stage="${stage.key}">
+                <div class="kanban-col-header"><span>${stage.label}</span><span class="kanban-col-count">${items.length}</span></div>
+                <div class="kanban-col-body" data-stage="${stage.key}">
+                    ${items.map(p => `
+                        <div class="kanban-card" draggable="true" data-id="${p.id}" onclick="openProjectTrackDrawer(${p.id})">
+                            <div class="kanban-card-title">${escapeHtml(p.name)}</div>
+                            <div class="kanban-card-meta">${escapeHtml(p.clientEmail)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+    attachKanbanDragEvents(wrap, async (id, newStage) => {
+        await api('/api/projects/' + id, { method: 'PATCH', body: JSON.stringify({ stage: newStage }) });
+        await loadProjectsTrack();
+    });
+}
+
+document.getElementById('addProjectTrackBtn').addEventListener('click', () => openProjectTrackDrawer(null));
+
+function openProjectTrackDrawer(id) {
+    const p = id ? projectsTrackCache.find(x => x.id === id) : null;
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${p ? p.name : 'Nouveau projet'}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-field"><label>Nom du projet *</label><input type="text" id="ptName" value="${escapeAttr(p?.name || '')}"></div>
+        <div class="drawer-field"><label>Email client *</label><input type="email" id="ptEmail" value="${escapeAttr(p?.clientEmail || '')}"></div>
+        <div class="drawer-field">
+            <label>Étape</label>
+            <select id="ptStage">
+                ${PROJECT_STAGES_UI.map(s => `<option value="${s.key}" ${p?.stage === s.key ? 'selected' : ''}>${s.label}</option>`).join('')}
+            </select>
+        </div>
+        <div class="drawer-field"><label>Notes</label><textarea id="ptNotes" placeholder="Détails, liens de fichiers...">${escapeHtml(p?.notes || '')}</textarea></div>
+        <div class="drawer-actions">
+            <button class="btn-secondary" onclick="saveProjectTrack(${p ? p.id : 'null'})">Enregistrer</button>
+            ${p ? `<button class="btn-danger" onclick="deleteProjectTrack(${p.id})">Supprimer</button>` : ''}
+        </div>
+    `;
+    openDrawer();
+}
+
+async function saveProjectTrack(id) {
+    const name = document.getElementById('ptName').value.trim();
+    const clientEmail = document.getElementById('ptEmail').value.trim();
+    if (!name || !clientEmail) { toast('Nom et email sont obligatoires.'); return; }
+    const payload = { name, clientEmail, stage: document.getElementById('ptStage').value, notes: document.getElementById('ptNotes').value.trim() };
+    try {
+        if (id) await api('/api/projects/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+        else await api('/api/projects', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Projet enregistré ✅');
+        closeDrawer();
+        loadProjectsTrack();
+    } catch (e) { toast(e.message); }
+}
+
+async function deleteProjectTrack(id) {
+    if (!confirm('Supprimer ce projet ?')) return;
+    try { await api('/api/projects/' + id, { method: 'DELETE' }); toast('Projet supprimé'); closeDrawer(); loadProjectsTrack(); }
+    catch (e) { toast(e.message); }
+}
+
+/* ============================================================
+   CALENDRIER DE CONTENU
+   ============================================================ */
+let calendarCache = [];
+const CONTENT_STATUS_LABELS = { idea: 'Idée', scheduled: 'Programmé', posted: 'Publié' };
+
+async function loadContentCalendar() {
+    try { calendarCache = await api('/api/content-calendar'); renderCalendarList(); }
+    catch (e) { toast(e.message); }
+}
+
+function renderCalendarList() {
+    const wrap = document.getElementById('calendarListWrap');
+    if (!calendarCache.length) { wrap.innerHTML = emptyStateHTML('Aucune idée de contenu pour le moment.'); return; }
+    wrap.innerHTML = calendarCache.map(c => `
+        <div class="edit-card" onclick="openCalendarDrawer(${c.id})" style="cursor:pointer;">
+            <div class="edit-card-fields">
+                <div class="edit-card-label">${c.date ? formatDate(c.date) : 'Date non définie'}</div>
+                <strong style="color:var(--text); font-size:0.95rem;">${escapeHtml(c.title)}</strong>
+                ${c.caption ? `<p class="cell-muted" style="font-size:0.8rem;">${escapeHtml(c.caption.slice(0, 80))}${c.caption.length > 80 ? '…' : ''}</p>` : ''}
+            </div>
+            <div class="edit-card-actions">
+                <span class="badge ${c.status === 'posted' ? 'won' : c.status === 'scheduled' ? 'contacted' : 'new'}">${CONTENT_STATUS_LABELS[c.status] || c.status}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+document.getElementById('addContentBtn').addEventListener('click', () => openCalendarDrawer(null));
+
+function openCalendarDrawer(id) {
+    const c = id ? calendarCache.find(x => x.id === id) : null;
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${c ? c.title : 'Nouvelle idée de post'}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-field"><label>Titre *</label><input type="text" id="ccTitle" value="${escapeAttr(c?.title || '')}" placeholder="Ex : Post Courtepaille"></div>
+        <div class="drawer-field"><label>Date prévue</label><input type="date" id="ccDate" value="${c?.date || ''}"></div>
+        <div class="drawer-field"><label>Légende / brouillon</label><textarea id="ccCaption" placeholder="Texte du post...">${escapeHtml(c?.caption || '')}</textarea></div>
+        <div class="drawer-field">
+            <label>Statut</label>
+            <select id="ccStatus">
+                ${Object.entries(CONTENT_STATUS_LABELS).map(([k, v]) => `<option value="${k}" ${c?.status === k ? 'selected' : ''}>${v}</option>`).join('')}
+            </select>
+        </div>
+        <div class="drawer-actions">
+            <button class="btn-secondary" onclick="saveCalendarItem(${c ? c.id : 'null'})">Enregistrer</button>
+            ${c ? `<button class="btn-danger" onclick="deleteCalendarItem(${c.id})">Supprimer</button>` : ''}
+        </div>
+    `;
+    openDrawer();
+}
+
+async function saveCalendarItem(id) {
+    const title = document.getElementById('ccTitle').value.trim();
+    if (!title) { toast('Le titre est obligatoire.'); return; }
+    const payload = {
+        title, date: document.getElementById('ccDate').value || null,
+        caption: document.getElementById('ccCaption').value.trim(),
+        status: document.getElementById('ccStatus').value,
+    };
+    try {
+        if (id) await api('/api/content-calendar/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+        else await api('/api/content-calendar', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Enregistré ✅');
+        closeDrawer();
+        loadContentCalendar();
+    } catch (e) { toast(e.message); }
+}
+
+async function deleteCalendarItem(id) {
+    if (!confirm('Supprimer cette idée de post ?')) return;
+    try { await api('/api/content-calendar/' + id, { method: 'DELETE' }); toast('Supprimé'); closeDrawer(); loadContentCalendar(); }
+    catch (e) { toast(e.message); }
+}
+
+/* ============================================================
+   SAUVEGARDE
+   ============================================================ */
+document.getElementById('backupBtn').addEventListener('click', async () => {
+    try {
+        const res = await fetch(API_BASE + '/api/admin/backup', { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) throw new Error('Échec de la sauvegarde');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `florianb-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast('Sauvegarde téléchargée ✅');
+    } catch (e) { toast(e.message); }
+});
+
 /* ---------------- COMMAND PALETTE ---------------- */
 const commands = [
     { label: 'Aller à Overview', icon: 'grid', action: () => switchView('overview') },
@@ -1525,6 +2032,9 @@ const commands = [
     { label: 'Aller à Projets', icon: 'grid', action: () => switchView('content-projects') },
     { label: 'Aller à Galeries des projets', icon: 'grid', action: () => switchView('content-project-galleries') },
     { label: 'Aller à FAQ', icon: 'grid', action: () => switchView('content-faq') },
+    { label: 'Aller à Devis & Factures', icon: 'grid', action: () => switchView('quotes') },
+    { label: 'Aller à Suivi de projets', icon: 'grid', action: () => switchView('projects') },
+    { label: 'Aller à Calendrier de contenu', icon: 'grid', action: () => switchView('calendar') },
     { label: 'Basculer le thème clair/sombre', icon: 'sun', action: () => document.getElementById('themeToggle').click() },
     { label: 'Rafraîchir les données', icon: 'refresh', action: () => switchView(currentView) },
     { label: 'Se déconnecter', icon: 'logout', action: logout },

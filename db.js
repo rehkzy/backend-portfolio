@@ -14,6 +14,9 @@ const DEFAULTS = {
     "leads": [],
     "appointments": [],
     "events": [],
+    "quotes": [],
+    "projects": [],
+    "contentCalendar": [],
     "site_content": {
         "hero": {
             "title": "Florian B",
