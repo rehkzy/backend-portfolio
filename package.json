@@ -1,7 +1,7 @@
 {
   "name": "florianb-dashboard-backend",
   "version": "1.0.0",
-  "description": "Backend + dashboard admin pour capturer les leads, RDV et évènements du site florian-b.fr",
+  "description": "Backend + dashboard admin pour florian-b.fr",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -10,13 +10,13 @@
     "hash-password": "node scripts/hash-password.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "lowdb": "^1.0.0"
   },
   "engines": {
     "node": ">=18"
