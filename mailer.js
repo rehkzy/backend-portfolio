@@ -13,8 +13,8 @@ function getTransporter() {
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) return null;
     transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: false, // TLS via STARTTLS sur le port 587
+        port: Number(process.env.SMTP_PORT) || 465,
+        secure: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) === 465 : true, // SSL/TLS sur le port 465 (standard OVH Zimbra)
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASSWORD,
