@@ -1,128 +1,122 @@
-# Backend Florian B. — Guide de déploiement Railway
+# Dashboard Florian B. — Backend + Admin
 
-## Ce que contient ce dossier
+Backend Node.js (Express + SQLite) qui capture tous les leads et demandes de RDV envoyés par l'assistant IA du site, et un dashboard d'administration (style Shopify) pour les consulter et les gérer.
 
-| Fichier | Rôle |
-|---|---|
-| `server.js` | Le serveur Node.js principal |
-| `db.js` | La base de données SQLite (leads, RDV, contenu du site) |
-| `public/index.html` | Le dashboard admin |
-| `scripts/hash-password.js` | Outil pour créer ton mot de passe |
-| `railway.json` | Config auto pour Railway |
-| `.env.example` | Template des variables d'environnement |
+## 1. Installation locale
 
----
-
-## Étape 1 — Préparer le mot de passe admin (sur ton Mac)
-
-Tu dois d'abord installer Node.js si ce n'est pas déjà fait :
-→ https://nodejs.org (télécharge la version LTS)
-
-Ensuite dans Terminal :
 ```bash
-cd /chemin/vers/ce/dossier
+cd backend
 npm install
-node scripts/hash-password.js
+cp .env.example .env
 ```
-Tape le mot de passe que tu veux utiliser pour te connecter au dashboard.
-**Copie le hash affiché** (commence par `$2b$...`), tu en auras besoin à l'étape 3.
 
----
+Générez le hash de votre mot de passe admin :
 
-## Étape 2 — Mettre le dossier sur GitHub
-
-1. Va sur https://github.com → connecte-toi (ou crée un compte gratuit)
-2. Clique **"New repository"** (bouton vert en haut à droite)
-3. Nomme-le `florianb-backend`, mets-le en **Private** ← important
-4. Clique **"Create repository"**
-5. Sur la page qui s'affiche, copie l'URL du repo (ex: `https://github.com/tonpseudo/florianb-backend`)
-
-Dans Terminal :
 ```bash
-cd /chemin/vers/ce/dossier
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/tonpseudo/florianb-backend
-git push -u origin main
+npm run hash-password -- "VotreMotDePasseSecurise"
 ```
 
-> ⚠️ Le fichier `.gitignore` est déjà configuré pour **ne jamais envoyer** ton `.env`, ta base de données ni tes uploads sur GitHub.
+Collez la ligne `ADMIN_PASSWORD_HASH=...` obtenue dans votre fichier `.env`, puis générez un `JWT_SECRET` aléatoire (n'importe quelle longue chaîne, ex: `openssl rand -hex 32`).
 
----
+Lancez le serveur :
 
-## Étape 3 — Déployer sur Railway
+```bash
+npm start
+```
 
-1. Va sur https://railway.app
-2. Clique **"Login"** → **"Login with GitHub"** → autorise Railway
-3. Clique **"New Project"**
-4. Clique **"Deploy from GitHub repo"**
-5. Sélectionne **`florianb-backend`**
-6. Railway détecte automatiquement que c'est du Node.js et lance le déploiement
+Le dashboard est accessible sur **http://localhost:4000/dashboard**
+L'API répond sur **http://localhost:4000/api/...**
 
-### Ajouter les variables d'environnement sur Railway
+## 2. Connecter le site au backend
 
-Une fois le projet créé, dans Railway :
-1. Clique sur ton service
-2. Onglet **"Variables"**
-3. Clique **"New Variable"** et ajoute ces 4 variables une par une :
+Une fois le backend déployé (étape 3), ouvrez `index.html` (le site), cherchez cette ligne dans le script de l'assistant IA :
 
-| Nom | Valeur |
-|---|---|
-| `JWT_SECRET` | N'importe quelle longue chaîne random, ex: `xK9p2mZ7qRtL3nP8wVcY` |
-| `ADMIN_PASSWORD_HASH` | Le hash copié à l'étape 1 (commence par `$2b$...`) |
-| `ALLOWED_ORIGIN` | `https://florian-b.fr,https://www.florian-b.fr` |
-| `PORT` | `4000` |
-
-4. Railway redémarre automatiquement le serveur.
-
-### Récupérer l'URL de ton backend
-
-Dans Railway, onglet **"Settings"** → section **"Networking"** → clique **"Generate Domain"**.
-Tu obtiens une URL du type : `https://florianb-backend-production.up.railway.app`
-
-**Garde cette URL**, tu en auras besoin à l'étape 4.
-
----
-
-## Étape 4 — Connecter le site à ce backend
-
-Dans ton fichier `index.html` du site, cherche cette ligne (~ligne 1533) :
 ```js
 const BACKEND_URL = '';
 ```
 
-Remplace par ton URL Railway :
+Remplacez-la par l'URL de votre backend déployé, par exemple :
+
 ```js
-const BACKEND_URL = 'https://florianb-backend-production.up.railway.app';
+const BACKEND_URL = 'https://florianb-backend.onrender.com';
 ```
 
-Upload ce `index.html` mis à jour dans `www/` via FileZilla. C'est tout.
+À partir de ce moment, chaque message de contact et chaque demande de RDV envoyés via le chat du site remontent automatiquement dans le dashboard — en plus de l'email envoyé par FormSubmit.
 
----
+## 3. Déploiement sur OVH — Hébergement Web Cloud (ton cas)
 
-## Accéder au dashboard
+Bonne nouvelle : l'Hébergement Web Cloud OVH supporte Node.js nativement via son "moteur d'exécution". Le stockage est persistant (contrairement à Render gratuit), donc ta base SQLite ne sera pas effacée entre deux redémarrages.
 
-→ `https://florianb-backend-production.up.railway.app/dashboard`
+**Recommandation** : héberge l'API sur un sous-domaine dédié, par exemple `api.florian-b.fr`, pendant que `florian-b.fr` reste ton site statique (`index.html`). C'est possible sur un seul et même hosting Web Cloud grâce à la fonctionnalité Multisite (chaque sous-domaine peut avoir son propre moteur d'exécution).
 
-Tu te connectes avec le mot de passe choisi à l'étape 1.
+### Étapes dans le Manager OVH
 
-Tu verras 3 sections :
-- **Leads / Rendez-vous** — les contacts reçus via le chat IA
-- **Contenu du site** — Hero, Projets, Galerie photo, FAQ (modifiable sans toucher au code)
+1. **Espace Web** → ton hébergement → onglet **Multisite** → **Ajouter un site**, renseigne `api.florian-b.fr` (ou crée d'abord l'enregistrement DNS du sous-domaine si ce n'est pas automatique).
+2. Sur ce site, va dans l'onglet **Moteurs d'exécution**, clique sur l'icône à droite → **Modifier**, et choisis le moteur **Node.js** (dernière version disponible, Node 18+).
+3. Renseigne :
+   - **Script de lancement de l'application** : `server.js`
+   - **Répertoire public** : `public`
+   - **Environnement** : `development` dans un premier temps (tu auras une page d'aide qui liste les erreurs/modules manquants), puis repasse en **`production`** une fois que tout fonctionne.
+4. Récupère tes identifiants **SSH** dans l'onglet **FTP-SSH**, puis connecte-toi :
+   ```bash
+   ssh tonlogin@ton-serveur.ovh.net -p <port>
+   ```
+5. Dépose les fichiers du dossier `backend/` (tout sauf `node_modules`) dans `www/` (ou le sous-dossier configuré pour `api.florian-b.fr` s'il y a plusieurs sites).
+6. Installe les dépendances avec le binaire npm spécifique à la version Node choisie (remplace `20` par ta version) :
+   ```bash
+   npm-node20 install
+   ```
+7. Crée le fichier `.env` directement sur le serveur (ne le mets jamais dans un repo public) avec `JWT_SECRET`, `ADMIN_PASSWORD_HASH` (généré en local avec `npm run hash-password`) et `ALLOWED_ORIGIN=https://florian-b.fr`.
+8. Dans le Manager, clique sur **Redémarrer** (onglet Multisite, icône à droite du site).
+9. Vérifie sur **Accès HTTP au cluster** (onglet Informations générales) si des erreurs de démarrage apparaissent (module manquant, fichier introuvable...).
+10. Une fois que ça tourne : `https://api.florian-b.fr/dashboard` = ton dashboard, `https://api.florian-b.fr/api/...` = ton API.
 
----
+Puis dans `index.html`, mets à jour :
+```js
+const BACKEND_URL = 'https://api.florian-b.fr';
+```
 
-## En local (pour tester avant de déployer)
+### Options de déploiement génériques (alternative)
 
+### Option simple — Render.com (gratuit pour démarrer)
+1. Créez un compte sur render.com, "New Web Service", connectez ce dossier `backend/` (via un repo Git).
+2. Build command : `npm install` — Start command : `npm start`
+3. Ajoutez les variables d'environnement (`JWT_SECRET`, `ADMIN_PASSWORD_HASH`, `ALLOWED_ORIGIN`) dans l'onglet Environment.
+4. ⚠️ Le plan gratuit de Render a un disque **éphémère** : la base SQLite sera réinitialisée à chaque redéploiement/redémarrage. Pour des données persistantes, ajoutez un "Persistent Disk" (payant, ~1$/mois) monté sur le dossier `backend/`, ou passez à l'option Railway ci-dessous.
+
+### Option recommandée pour la persistance — Railway.app
+Railway propose un volume persistant simple à attacher, même en petit budget. Déployez le dossier `backend/`, attachez un volume sur `/app/data`, et adaptez le chemin de la base dans `db.js` si besoin.
+
+### Option VPS (le plus fiable)
+Sur un petit VPS (OVH, Hetzner, DigitalOcean...) :
 ```bash
-# Copie le fichier d'environnement
-cp .env.example .env
-# Remplis .env avec tes vraies valeurs
-
-# Lance le serveur
-npm start
+git clone ... && cd backend
+npm install --production
+npm run hash-password -- "..."
+# configurez .env
+npm install -g pm2
+pm2 start server.js --name florianb-backend
+pm2 save && pm2 startup
 ```
+Mettez Nginx ou Caddy devant pour le HTTPS et pointez `ALLOWED_ORIGIN` vers votre domaine.
 
-Dashboard accessible sur : http://localhost:4000/dashboard
+## 4. Sécurité
+
+- Le dashboard n'a qu'un seul compte admin protégé par mot de passe hashé (bcrypt) + session JWT (7 jours).
+- Les routes `/api/leads` et `/api/appointments` en **POST** sont volontairement publiques (c'est le chat du site qui les appelle sans authentification) — mais en **GET/PATCH/DELETE** elles nécessitent le token admin.
+- Pensez à restreindre `ALLOWED_ORIGIN` à votre vrai domaine en production (pas `*`).
+- Le mot de passe n'est jamais stocké en clair, seulement son hash bcrypt.
+
+## 5. Ce que le dashboard affiche
+
+- **Overview** : nouveaux leads (7 jours), total leads, RDV en attente, taux de conversion, courbe des leads sur 30 jours, répartition par statut.
+- **Leads** : recherche, filtres par statut, panneau de détail avec changement de statut (Nouveau → Contacté → Gagné/Perdu) et notes internes.
+- **Rendez-vous** : mêmes fonctionnalités, statuts (En attente → Confirmé → Terminé/Annulé).
+- Thème clair/sombre, palette command (⌘K / Ctrl+K) pour naviguer au clavier.
+
+## 6. Étendre le système
+
+Le dashboard est volontairement en HTML/JS simple (pas de build step) pour rester facile à modifier. Pour ajouter une donnée :
+1. Ajoutez la colonne dans `db.js`
+2. Exposez-la dans la route correspondante de `server.js`
+3. Affichez-la dans `public/index.html`

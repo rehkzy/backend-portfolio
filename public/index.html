@@ -685,8 +685,34 @@ function openLeadDrawer(id) {
             <button class="btn-secondary" onclick="saveLead(${l.id})">Enregistrer</button>
             <button class="btn-danger" onclick="deleteLead(${l.id})">Supprimer</button>
         </div>
+        <div class="drawer-field" style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border);">
+            <label>✉️ Répondre par email</label>
+            <textarea id="replyMessage" placeholder="Bonjour, merci pour votre message..." style="min-height:120px;"></textarea>
+        </div>
+        <div class="drawer-actions">
+            <button class="btn-primary" id="sendReplyBtn" onclick="sendLeadReply(${l.id})">Envoyer la réponse</button>
+        </div>
     `;
     openDrawer();
+}
+
+async function sendLeadReply(id) {
+    const textarea = document.getElementById('replyMessage');
+    const message = textarea.value.trim();
+    if (!message) { toast("Écris un message avant d'envoyer."); return; }
+    const btn = document.getElementById('sendReplyBtn');
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours...';
+    try {
+        await api('/api/leads/' + id + '/reply', { method: 'POST', body: JSON.stringify({ message }) });
+        toast('Réponse envoyée ✅');
+        closeDrawer();
+        loadLeads();
+    } catch (e) {
+        toast(e.message);
+        btn.disabled = false;
+        btn.textContent = 'Envoyer la réponse';
+    }
 }
 
 async function saveLead(id) {
