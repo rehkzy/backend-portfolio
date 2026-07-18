@@ -182,7 +182,112 @@ const DEFAULTS = {
                 "cover": "trustify-logo-dark.svg",
                 "action": "window.open('https://trustify.best', '_blank', 'noopener,noreferrer')"
             }
+        ],
+    "projectGalleries": {
+    "courtepaille-modal": {
+        "title": "Courtepaille — Restaurant Branding",
+        "images": [
+            "Courtepaille1.webp",
+            "Courtepaille2.webp",
+            "Courtepaille3.webp",
+            "Courtepaille4.webp",
+            "Courtepaille5.webp",
+            "Courtepaille6.webp",
+            "Courtepaille7.webp",
+            "Courtepaille8.webp",
+            "Courtepaille9.webp",
+            "Courtepaille10.webp",
+            "Courtepaille11.webp",
+            "Courtepaille12.webp",
+            "Courtepaille13.webp",
+            "Courtepaille14.webp",
+            "Courtepaille15.webp"
         ]
+    },
+    "bnp-modal": {
+        "title": "BNP Paribas — Brand Evolution",
+        "images": [
+            "Branding BNP Paribas3.webp",
+            "Branding BNP Paribas1.webp",
+            "Branding BNP Paribas4.webp",
+            "Branding BNP Paribas2.webp",
+            "Branding BNP Paribas5.webp"
+        ]
+    },
+    "oofti-modal": {
+        "title": "oofti.fr — E-commerce Brand",
+        "images": [
+            "oofti.fr3.webp",
+            "oofti.fr1.webp",
+            "oofti.fr4.webp",
+            "oofti.fr2.webp",
+            "oofti.fr5.webp",
+            "oofti.fr6.webp"
+        ]
+    },
+    "basicfit-modal": {
+        "title": "BasicFit — Fitness Branding",
+        "images": [
+            "BasicFit3.webp",
+            "BasicFit1.webp",
+            "BasicFit2.webp",
+            "BasicFit4.webp",
+            "BasicFit5.webp"
+        ]
+    },
+    "finish-modal": {
+        "title": "Finish — Packaging Design",
+        "images": [
+            "Finish pack2.webp",
+            "Finish pack3.webp",
+            "Finish pack4.webp",
+            "Finish pack5.webp",
+            "Finish pack6.webp",
+            "Finish pack7.webp",
+            "Finish pack.webp",
+            "Finish pack8.webp",
+            "Finish pack9.webp",
+            "Finish pack1.webp"
+        ]
+    },
+    "mllepitch-modal": {
+        "title": "MllePitch — Campagne Urbaine",
+        "images": [
+            "MllePitch3.webp",
+            "MllePitch4.webp",
+            "MllePitch2.webp",
+            "MllePitch5.webp",
+            "MllePitch1.webp",
+            "MllePitch6.webp",
+            "MllePitch7.webp"
+        ]
+    },
+    "cover-modal": {
+        "title": "Cover Art — Direction Artistique",
+        "images": [
+            "Cover1.webp",
+            "Cover2.webp",
+            "Cover3.webp",
+            "Cover4.webp",
+            "Cover5.webp",
+            "BENEF - IA.jpg",
+            "Cover6.webp",
+            "Cover7.webp",
+            "Cover8.webp",
+            "Cover9.webp",
+            "Cover10.webp",
+            "Cover11.webp",
+            "Cover12.webp",
+            "Cover13.webp",
+            "Cover14.webp",
+            "Cover15.webp",
+            "Cover16.webp",
+            "modele-benef-vf.jpg",
+            "Cover17.webp",
+            "Cover18.webp"
+        ]
+    }
+}
     }
 };
 
