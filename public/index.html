@@ -158,6 +158,13 @@
     .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
     .gallery-item .gallery-item-remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.65); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; line-height: 1; }
     .gallery-item .gallery-item-order { position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 100px; }
+    .gallery-item img { cursor: pointer; transition: filter 0.15s; }
+    .gallery-item img:hover { filter: brightness(0.7); }
+    .gallery-item-replace-input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+    .gallery-item-move { position: absolute; top: 4px; left: 4px; display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; }
+    .gallery-item:hover .gallery-item-move { opacity: 1; }
+    .gallery-item-move button { width: 20px; height: 20px; border-radius: 5px; background: rgba(0,0,0,0.65); border: none; color: #fff; font-size: 0.85rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .gallery-item-move button:hover { background: var(--accent); }
     .empty-state svg { width: 40px; height: 40px; margin-bottom: 0.8rem; opacity: 0.4; }
     .empty-state p { font-size: 0.85rem; }
 
@@ -255,10 +262,6 @@
             <div class="nav-item" data-view="content-projects">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                 Projets
-            </div>
-            <div class="nav-item" data-view="content-gallery">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                Galerie photo
             </div>
             <div class="nav-item" data-view="content-project-galleries">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -392,22 +395,6 @@
             </div>
             <p class="cell-muted" style="margin-bottom:1rem;">Modifie le titre, le sous-titre et la couverture de chaque carte projet. Glisse pour réordonner. Les projets historiques (Courtepaille, BNP...) gardent leur galerie détaillée telle quelle — seule la carte d'aperçu est éditable ici.</p>
             <div id="projectsListWrap"></div>
-        </section>
-
-        <!-- CONTENU : GALERIE PHOTO -->
-        <section class="view" id="view-content-gallery">
-            <div class="topbar">
-                <h2>Galerie photo (Portfolio)</h2>
-                <div class="topbar-actions">
-                    <label class="btn-primary" style="width:auto; padding:0.6rem 1.2rem; cursor:pointer;">
-                        + Ajouter des photos
-                        <input type="file" id="galleryUploadInput" accept="image/*" multiple style="display:none;">
-                    </label>
-                    <button class="btn-primary" id="saveGalleryBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
-                </div>
-            </div>
-            <p class="cell-muted" style="margin-bottom:1rem;" id="galleryCount"></p>
-            <div id="galleryGridWrap" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:0.8rem;"></div>
         </section>
 
         <!-- CONTENU : GALERIES DES PROJETS -->
@@ -549,7 +536,6 @@ function switchView(view) {
     if (view === 'appointments') loadAppointments();
     if (view === 'content-hero') loadContentHero();
     if (view === 'content-projects') loadContentProjects();
-    if (view === 'content-gallery') loadContentGallery();
     if (view === 'content-project-galleries') loadProjectGalleries();
     if (view === 'content-faq') loadContentFaq();
 }
@@ -984,49 +970,7 @@ document.getElementById('saveProjectsBtn').addEventListener('click', async () =>
     } catch (e) { toast(e.message); }
 });
 
-/* ---- GALERIE PHOTO ---- */
-let galleryState = [];
-
-async function loadContentGallery() {
-    try {
-        const content = await fetchContent();
-        galleryState = [...(content.gallery || [])];
-        renderGalleryGrid();
-    } catch (e) { toast(e.message); }
-}
-
-function renderGalleryGrid() {
-    const wrap = document.getElementById('galleryGridWrap');
-    document.getElementById('galleryCount').textContent = `${galleryState.length} photo(s) dans la galerie Portfolio`;
-    if (!galleryState.length) { wrap.innerHTML = emptyStateHTML('Aucune photo. Ajoutes-en avec le bouton ci-dessus.'); return; }
-    wrap.innerHTML = galleryState.map((path, i) => `
-        <div class="gallery-item">
-            <img src="${resolveImgUrl(path)}" alt="">
-            <span class="gallery-item-order">${i + 1}</span>
-            <button class="gallery-item-remove" data-index="${i}">✕</button>
-        </div>
-    `).join('');
-    wrap.querySelectorAll('.gallery-item-remove').forEach(btn => {
-        btn.onclick = () => { galleryState.splice(Number(btn.dataset.index), 1); renderGalleryGrid(); };
-    });
-}
-
-document.getElementById('galleryUploadInput').addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files || []);
-    for (const file of files) {
-        try { galleryState.push(await uploadImage(file)); }
-        catch (err) { toast(err.message); }
-    }
-    renderGalleryGrid();
-    e.target.value = '';
-});
-
-document.getElementById('saveGalleryBtn').addEventListener('click', async () => {
-    try { await saveContent({ gallery: galleryState }); }
-    catch (e) { toast(e.message); }
-});
-
-/* ---- GALERIES DES PROJETS (une galerie par modale) ---- */
+/* ---- GALERIES DES PROJETS (une galerie par modale, Portfolio inclus) ---- */
 let projGalleryState = [];
 let currentProjModalId = null;
 
@@ -1035,10 +979,11 @@ async function loadProjectGalleries() {
         const content = await fetchContent();
         const galleries = content.projectGalleries || {};
         const select = document.getElementById('projGallerySelect');
+        const previousValue = select.value;
         select.innerHTML = Object.entries(galleries).map(([id, g]) =>
             `<option value="${id}">${g.title || id}</option>`
         ).join('');
-        if (!select.value && select.options.length) select.selectedIndex = 0;
+        select.value = previousValue && galleries[previousValue] ? previousValue : select.options[0]?.value;
         currentProjModalId = select.value;
         projGalleryState = [...(galleries[currentProjModalId]?.images || [])];
         renderProjGalleryGrid();
@@ -1055,14 +1000,50 @@ function renderProjGalleryGrid() {
     document.getElementById('projGalleryCount').textContent = `${projGalleryState.length} photo(s) dans cette galerie`;
     if (!projGalleryState.length) { wrap.innerHTML = emptyStateHTML('Aucune photo pour ce projet.'); return; }
     wrap.innerHTML = projGalleryState.map((path, i) => `
-        <div class="gallery-item">
-            <img src="${resolveImgUrl(path)}" alt="">
+        <div class="gallery-item" data-index="${i}">
+            <img src="${resolveImgUrl(path)}" alt="" title="Cliquer pour remplacer cette photo">
+            <input type="file" accept="image/*" class="gallery-item-replace-input" data-index="${i}">
             <span class="gallery-item-order">${i + 1}</span>
+            <div class="gallery-item-move">
+                <button class="gallery-item-move-left" data-index="${i}" title="Déplacer avant">‹</button>
+                <button class="gallery-item-move-right" data-index="${i}" title="Déplacer après">›</button>
+            </div>
             <button class="gallery-item-remove" data-index="${i}">✕</button>
         </div>
     `).join('');
+
     wrap.querySelectorAll('.gallery-item-remove').forEach(btn => {
         btn.onclick = () => { projGalleryState.splice(Number(btn.dataset.index), 1); renderProjGalleryGrid(); };
+    });
+    wrap.querySelectorAll('.gallery-item-move-left').forEach(btn => {
+        btn.onclick = () => {
+            const i = Number(btn.dataset.index);
+            if (i === 0) return;
+            [projGalleryState[i - 1], projGalleryState[i]] = [projGalleryState[i], projGalleryState[i - 1]];
+            renderProjGalleryGrid();
+        };
+    });
+    wrap.querySelectorAll('.gallery-item-move-right').forEach(btn => {
+        btn.onclick = () => {
+            const i = Number(btn.dataset.index);
+            if (i === projGalleryState.length - 1) return;
+            [projGalleryState[i], projGalleryState[i + 1]] = [projGalleryState[i + 1], projGalleryState[i]];
+            renderProjGalleryGrid();
+        };
+    });
+    wrap.querySelectorAll('.gallery-item img').forEach(img => {
+        img.onclick = () => img.nextElementSibling.click(); // ouvre l'input file caché juste après
+    });
+    wrap.querySelectorAll('.gallery-item-replace-input').forEach(input => {
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const url = await uploadImage(file);
+                projGalleryState[Number(input.dataset.index)] = url;
+                renderProjGalleryGrid();
+            } catch (err) { toast(err.message); }
+        };
     });
 }
 
@@ -1085,6 +1066,7 @@ document.getElementById('saveProjGalleryBtn').addEventListener('click', async ()
             images: projGalleryState,
         };
         await saveContent({ projectGalleries: galleries });
+        toast('Galerie enregistrée — visible immédiatement sur le site ✅');
     } catch (e) { toast(e.message); }
 });
 
@@ -1151,7 +1133,7 @@ const commands = [
     { label: 'Aller à Rendez-vous', icon: 'calendar', action: () => switchView('appointments') },
     { label: 'Aller à Hero', icon: 'grid', action: () => switchView('content-hero') },
     { label: 'Aller à Projets', icon: 'grid', action: () => switchView('content-projects') },
-    { label: 'Aller à Galerie photo', icon: 'grid', action: () => switchView('content-gallery') },
+    { label: 'Aller à Galeries des projets', icon: 'grid', action: () => switchView('content-project-galleries') },
     { label: 'Aller à FAQ', icon: 'grid', action: () => switchView('content-faq') },
     { label: 'Basculer le thème clair/sombre', icon: 'sun', action: () => document.getElementById('themeToggle').click() },
     { label: 'Rafraîchir les données', icon: 'refresh', action: () => switchView(currentView) },
