@@ -120,3 +120,58 @@ Le dashboard est volontairement en HTML/JS simple (pas de build step) pour reste
 1. Ajoutez la colonne dans `db.js`
 2. Exposez-la dans la route correspondante de `server.js`
 3. Affichez-la dans `public/index.html`
+
+---
+
+## Google Analytics en direct dans le dashboard
+
+Pour voir tes statistiques (visiteurs en temps réel, sessions, pages vues...) directement dans l'onglet **Analytics** du dashboard, il faut créer un accès API séparé du Measurement ID classique.
+
+### Étape 1 — Créer un projet Google Cloud
+
+1. Va sur https://console.cloud.google.com
+2. En haut, clique **"Sélectionner un projet"** → **"Nouveau projet"**
+3. Nomme-le (ex: `florianb-analytics`) → **Créer**
+
+### Étape 2 — Activer l'API
+
+1. Toujours dans Google Cloud Console, menu ☰ → **"API et services"** → **"Bibliothèque"**
+2. Cherche **"Google Analytics Data API"** → clique dessus → **"Activer"**
+
+### Étape 3 — Créer un compte de service
+
+1. Menu ☰ → **"API et services"** → **"Identifiants"**
+2. **"Créer des identifiants"** → **"Compte de service"**
+3. Donne-lui un nom (ex: `dashboard-reader`) → **"Créer et continuer"** → **"OK"** (pas besoin de rôle particulier)
+4. Une fois créé, clique dessus → onglet **"Clés"** → **"Ajouter une clé"** → **"Créer une clé"** → format **JSON** → **"Créer"**
+5. Un fichier `.json` se télécharge — garde-le précieusement, tu en as besoin juste après
+
+### Étape 4 — Donner l'accès à ce compte de service dans Google Analytics
+
+1. Ouvre le fichier JSON téléchargé, repère la ligne `"client_email"` (ex: `dashboard-reader@florianb-analytics.iam.gserviceaccount.com`)
+2. Va sur https://analytics.google.com → icône ⚙️ **Admin** (en bas à gauche)
+3. Colonne **"Propriété"** → **"Gestion des accès à la propriété"**
+4. **"+"** (en haut à droite) → **"Ajouter des utilisateurs"**
+5. Colle l'email du compte de service → rôle **"Lecteur"** → **Ajouter**
+
+### Étape 5 — Récupérer ton Property ID
+
+1. Toujours dans Admin → colonne **"Propriété"** → **"Informations sur la propriété"**
+2. Copie le nombre à côté de **"ID DE PROPRIÉTÉ"** (différent du Measurement ID `G-XXXX`, c'est un nombre du type `123456789`)
+
+### Étape 6 — Configurer Railway
+
+Dans Railway → Variables, ajoute :
+
+| Nom | Valeur |
+|---|---|
+| `GA_PROPERTY_ID` | le nombre récupéré à l'étape 5 |
+| `GA_SERVICE_ACCOUNT_JSON` | le contenu du fichier JSON, encodé en base64 (voir ci-dessous) |
+
+**Pour encoder le JSON en base64**, ouvre le Terminal sur ton Mac et tape (remplace le chemin par l'emplacement réel du fichier téléchargé) :
+```bash
+base64 -i ~/Downloads/florianb-analytics-xxxxx.json | tr -d '\n'
+```
+Copie tout le résultat (une longue chaîne de caractères) et colle-le comme valeur de `GA_SERVICE_ACCOUNT_JSON` dans Railway.
+
+Une fois ces deux variables ajoutées, Railway redémarre automatiquement et l'onglet **Analytics** du dashboard affiche les vraies statistiques, avec le nombre de visiteurs actifs qui se rafraîchit toutes les 15 secondes.

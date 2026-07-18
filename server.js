@@ -8,6 +8,7 @@ const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
 const mailer = require('./mailer');
+const analytics = require('./analytics');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -236,6 +237,30 @@ app.post('/api/admin/upload', auth, upload.single('image'), (req, res) => {
 });
 
 app.get('/', (req, res) => res.redirect('/dashboard'));
+/* ============================================================
+   GOOGLE ANALYTICS — statistiques en direct dans le dashboard
+   ============================================================ */
+app.get('/api/analytics/realtime', auth, async (req, res) => {
+    if (!analytics.isConfigured()) return res.json({ configured: false });
+    try {
+        res.json(await analytics.getRealtimeUsers());
+    } catch (err) {
+        console.error('Erreur GA realtime:', err.message);
+        res.status(500).json({ error: 'Erreur Google Analytics : ' + err.message });
+    }
+});
+
+app.get('/api/analytics/overview', auth, async (req, res) => {
+    if (!analytics.isConfigured()) return res.json({ configured: false });
+    try {
+        const days = Number(req.query.days) || 28;
+        res.json(await analytics.getOverview(days));
+    } catch (err) {
+        console.error('Erreur GA overview:', err.message);
+        res.status(500).json({ error: 'Erreur Google Analytics : ' + err.message });
+    }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => console.log(`✅ Backend Florian B. sur http://localhost:${PORT}`));

@@ -102,6 +102,11 @@
     /* ============ KPI CARDS ============ */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
     .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem 1.3rem; box-shadow: var(--shadow); }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); } 50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34,197,94,0); } }
+    .ga-list-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .ga-list-row:last-child { border-bottom: none; }
+    .ga-list-row .label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+    .ga-list-row .value { font-weight: 700; }
     .kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
     .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; }
     .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
@@ -239,6 +244,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
                 Overview
             </div>
+            <div class="nav-item" data-view="analytics">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                Analytics
+                <span class="badge" id="realtimeBadge" style="display:none; background:#22c55e;"></span>
+            </div>
         </div>
 
         <div class="nav-group">
@@ -327,6 +337,79 @@
                 <div class="panel">
                     <h3>Répartition par statut</h3>
                     <div id="statusBreakdown"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ANALYTICS -->
+        <section class="view" id="view-analytics">
+            <div class="topbar">
+                <h2>Analytics</h2>
+                <div class="topbar-actions">
+                    <select id="analyticsDaysSelect" style="padding:0.5rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+                        <option value="7">7 derniers jours</option>
+                        <option value="28" selected>28 derniers jours</option>
+                        <option value="90">90 derniers jours</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="analyticsNotConfigured" style="display:none;" class="panel">
+                <h3>Google Analytics non connecté</h3>
+                <p class="cell-muted">Ajoute <code>GA_PROPERTY_ID</code> et <code>GA_SERVICE_ACCOUNT_JSON</code> dans les variables Railway pour activer les statistiques en direct. Voir le README pour la procédure.</p>
+            </div>
+
+            <div id="analyticsContent" style="display:none;">
+                <div class="kpi-grid">
+                    <div class="kpi-card hero" style="position:relative;">
+                        <div class="kpi-label">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:6px; animation:pulseDot 1.6s infinite;"></span>
+                            Visiteurs actifs maintenant
+                        </div>
+                        <div class="kpi-value" id="gaRealtimeUsers">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Visiteurs (période)</div>
+                        <div class="kpi-value" id="gaUsers">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Sessions</div>
+                        <div class="kpi-value" id="gaSessions">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Pages vues</div>
+                        <div class="kpi-value" id="gaPageviews">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Durée moy. session</div>
+                        <div class="kpi-value" id="gaAvgDuration">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Taux de rebond</div>
+                        <div class="kpi-value" id="gaBounce">—</div>
+                    </div>
+                </div>
+
+                <div class="panel-grid">
+                    <div class="panel">
+                        <h3>Visiteurs & sessions</h3>
+                        <canvas id="gaChart" height="90"></canvas>
+                    </div>
+                    <div class="panel">
+                        <h3>Sources de trafic</h3>
+                        <div id="gaSources"></div>
+                    </div>
+                </div>
+
+                <div class="panel-grid">
+                    <div class="panel">
+                        <h3>Pages les plus vues</h3>
+                        <div id="gaTopPages"></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Appareils</h3>
+                        <div id="gaDevices"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -464,6 +547,8 @@ let currentView = 'overview';
 let leadsCache = [];
 let apptCache = [];
 let leadsChartInstance = null;
+let gaChartInstance = null;
+let gaRealtimeInterval = null;
 
 /* ---------------- API HELPERS ---------------- */
 async function api(path, opts = {}) {
@@ -537,6 +622,7 @@ function switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
     if (view === 'overview') loadOverview();
+    if (view === 'analytics') loadAnalytics();
     if (view === 'leads') loadLeads();
     if (view === 'appointments') loadAppointments();
     if (view === 'content-hero') loadContentHero();
@@ -548,6 +634,104 @@ function switchView(view) {
 document.getElementById('refreshBtn').addEventListener('click', () => switchView(currentView));
 
 /* ---------------- OVERVIEW ---------------- */
+/* ---------------- ANALYTICS (Google Analytics en direct) ---------------- */
+document.getElementById('analyticsDaysSelect').addEventListener('change', () => loadAnalytics());
+
+async function loadAnalytics() {
+    const days = document.getElementById('analyticsDaysSelect').value;
+    try {
+        const overview = await api('/api/analytics/overview?days=' + days);
+        if (!overview.configured) {
+            document.getElementById('analyticsNotConfigured').style.display = 'block';
+            document.getElementById('analyticsContent').style.display = 'none';
+            return;
+        }
+        document.getElementById('analyticsNotConfigured').style.display = 'none';
+        document.getElementById('analyticsContent').style.display = 'block';
+
+        document.getElementById('gaUsers').textContent = overview.totals.activeUsers.toLocaleString('fr-FR');
+        document.getElementById('gaSessions').textContent = overview.totals.sessions.toLocaleString('fr-FR');
+        document.getElementById('gaPageviews').textContent = overview.totals.pageViews.toLocaleString('fr-FR');
+        document.getElementById('gaAvgDuration').textContent = formatDuration(overview.totals.avgSessionDuration);
+        document.getElementById('gaBounce').textContent = Math.round(overview.totals.bounceRate * 100) + '%';
+
+        renderGaChart(overview.byDay);
+        renderGaList('gaSources', overview.sources.map(s => ({ label: channelLabel(s.channel), value: s.sessions })));
+        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views })));
+        renderGaList('gaDevices', overview.devices.map(d => ({ label: deviceLabel(d.device), value: d.users })));
+
+        refreshRealtime();
+        if (gaRealtimeInterval) clearInterval(gaRealtimeInterval);
+        gaRealtimeInterval = setInterval(refreshRealtime, 15000); // toutes les 15s
+    } catch (e) { toast(e.message); }
+}
+
+async function refreshRealtime() {
+    try {
+        const rt = await api('/api/analytics/realtime');
+        if (!rt.configured) return;
+        document.getElementById('gaRealtimeUsers').textContent = rt.activeUsers;
+        const badge = document.getElementById('realtimeBadge');
+        if (rt.activeUsers > 0) { badge.textContent = rt.activeUsers; badge.style.display = 'inline-block'; }
+        else { badge.style.display = 'none'; }
+    } catch (e) { /* silencieux, on ne spam pas de toast toutes les 15s */ }
+}
+
+// on arrête le polling temps réel si on quitte la vue Analytics, pour ne pas tourner pour rien
+const originalSwitchView = switchView;
+switchView = function (view) {
+    if (view !== 'analytics' && gaRealtimeInterval) { clearInterval(gaRealtimeInterval); gaRealtimeInterval = null; }
+    originalSwitchView(view);
+};
+
+function renderGaChart(byDay) {
+    const ctx = document.getElementById('gaChart').getContext('2d');
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const textColor = isDark ? '#96969e' : '#6b6b74';
+    if (gaChartInstance) gaChartInstance.destroy();
+    gaChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: byDay.map(r => `${r.date.slice(6, 8)}/${r.date.slice(4, 6)}`),
+            datasets: [
+                { label: 'Visiteurs', data: byDay.map(r => r.users), borderColor: '#da2c48', backgroundColor: 'rgba(218,44,72,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+                { label: 'Sessions', data: byDay.map(r => r.sessions), borderColor: '#8b8b93', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [4, 4] },
+            ],
+        },
+        options: {
+            plugins: { legend: { display: true, labels: { color: textColor, boxWidth: 12, font: { size: 11 } } } },
+            scales: {
+                x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
+                y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true },
+            },
+        },
+    });
+}
+
+function renderGaList(elId, items) {
+    const wrap = document.getElementById(elId);
+    if (!items.length) { wrap.innerHTML = '<p class="cell-muted">Pas encore de données.</p>'; return; }
+    wrap.innerHTML = items.map(i => `
+        <div class="ga-list-row"><span class="label">${escapeHtml(i.label)}</span><span class="value">${i.value.toLocaleString('fr-FR')}</span></div>
+    `).join('');
+}
+
+function formatDuration(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return `${m}m ${s}s`;
+}
+
+function channelLabel(channel) {
+    const map = { 'Direct': 'Direct', 'Organic Search': 'Recherche Google', 'Referral': 'Sites référents', 'Organic Social': 'Réseaux sociaux', 'Paid Search': 'Publicité', 'Email': 'Email', 'Unassigned': 'Non attribué' };
+    return map[channel] || channel;
+}
+function deviceLabel(device) {
+    const map = { mobile: '📱 Mobile', desktop: '💻 Ordinateur', tablet: '📱 Tablette' };
+    return map[device] || device;
+}
+
 async function loadOverview() {
     try {
         const s = await api('/api/stats');
