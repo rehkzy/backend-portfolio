@@ -9,39 +9,39 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
     :root {
-        --accent: #da2c48;
-        --accent-2: #ff7a3d;
-        --bg: #f6f6f7;
+        --accent: #b8253e;
+        --accent-2: #b8253e;
+        --bg: #f7f7f6;
         --surface: #ffffff;
-        --border: #e3e3e5;
-        --text: #1a1a1e;
-        --text-muted: #6b6b74;
-        --radius: 12px;
-        --radius-lg: 16px;
-        --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+        --border: #e4e4e2;
+        --text: #17171a;
+        --text-muted: #6c6c72;
+        --radius: 8px;
+        --radius-lg: 10px;
+        --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 8px rgba(0,0,0,0.03);
         --font-display: 'Syne', sans-serif;
         --font-body: 'Inter', sans-serif;
-        --ease: cubic-bezier(0.16, 1, 0.3, 1);
-        --success: #12805c;
-        --success-bg: #e3f6ed;
-        --warning: #92650a;
-        --warning-bg: #fdf3d8;
-        --danger: #d0261e;
-        --danger-bg: #fde9e8;
-        --info: #2a5ab0;
-        --info-bg: #e8eefb;
+        --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        --success: #276749;
+        --success-bg: #e7f3ec;
+        --warning: #8a5a10;
+        --warning-bg: #faf1e0;
+        --danger: #b3261e;
+        --danger-bg: #fbe9e8;
+        --info: #35548f;
+        --info-bg: #eaeef7;
     }
     [data-theme="dark"] {
-        --bg: #0e0e10;
-        --surface: #17171a;
-        --border: #2a2a2e;
-        --text: #f4f4f5;
-        --text-muted: #96969e;
-        --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
-        --success-bg: rgba(18,128,92,0.15);
-        --warning-bg: rgba(146,101,10,0.18);
-        --danger-bg: rgba(208,38,30,0.18);
-        --info-bg: rgba(42,90,176,0.18);
+        --bg: #101012;
+        --surface: #18181b;
+        --border: #29292d;
+        --text: #f2f2f3;
+        --text-muted: #93939a;
+        --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 10px rgba(0,0,0,0.3);
+        --success-bg: rgba(39,103,73,0.18);
+        --warning-bg: rgba(138,90,16,0.2);
+        --danger-bg: rgba(179,38,30,0.2);
+        --info-bg: rgba(53,84,143,0.2);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: var(--font-body); background: var(--bg); color: var(--text); transition: background 0.3s var(--ease), color 0.3s var(--ease); }
@@ -51,7 +51,7 @@
     input, textarea, select { font-family: inherit; }
 
     /* ============ LOGIN ============ */
-    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, rgba(218,44,72,0.08), transparent 60%), var(--bg); }
+    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, rgba(184,37,62,0.08), transparent 60%), var(--bg); }
     .login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; box-shadow: var(--shadow); }
     .login-logo { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; margin-bottom: 1.2rem; }
     .login-card h1 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; margin-bottom: 0.3rem; }
@@ -61,7 +61,7 @@
     .field input { width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
     .field input:focus { border-color: var(--accent); }
     .btn-primary { width: 100%; padding: 0.75rem; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 700; font-size: 0.88rem; transition: transform 0.2s, box-shadow 0.2s; }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(218,44,72,0.3); }
+    .btn-primary:hover { filter: brightness(1.08); }
     .login-error { background: var(--danger-bg); color: var(--danger); padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
 
     /* ============ SHELL ============ */
@@ -115,7 +115,7 @@
     .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; }
     .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
     .kpi-delta.up { color: var(--success); }
-    .kpi-card.hero { grid-column: span 2; background: linear-gradient(135deg, rgba(218,44,72,0.06), rgba(255,122,61,0.03)); border-color: rgba(218,44,72,0.2); }
+    .kpi-card.hero { grid-column: span 2; background: rgba(184,37,62,0.045); border-color: rgba(184,37,62,0.18); }
 
     /* ============ PANELS / CHARTS ============ */
     .panel-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; margin-bottom: 1.6rem; }
@@ -147,11 +147,11 @@
     .kanban-col-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 0.8rem; padding: 0 0.2rem; }
     .kanban-col-count { background: var(--bg); border-radius: 100px; padding: 0.1rem 0.5rem; font-size: 0.7rem; }
     .kanban-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.8rem; margin-bottom: 0.6rem; cursor: grab; transition: 0.15s; font-size: 0.82rem; }
-    .kanban-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .kanban-card:hover { border-color: var(--accent); }
     .kanban-card.dragging { opacity: 0.4; }
     .kanban-card-title { font-weight: 700; margin-bottom: 0.2rem; }
     .kanban-card-meta { color: var(--text-muted); font-size: 0.72rem; }
-    .kanban-col.drag-over { background: rgba(218,44,72,0.06); border-color: var(--accent); }
+    .kanban-col.drag-over { background: rgba(184,37,62,0.06); border-color: var(--accent); }
     @media (max-width: 900px) { .kanban-board { grid-template-columns: minmax(240px, 1fr); grid-auto-flow: column; } }
 
     /* ============ AUTOCOMPLETE CLIENT ============ */
@@ -170,7 +170,7 @@
     .project-picker { position: relative; }
     .project-picker-trigger { display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; transition: 0.15s; }
     .project-picker-trigger:hover { border-color: var(--accent); }
-    .project-picker-trigger.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(218,44,72,0.12); }
+    .project-picker-trigger.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(184,37,62,0.12); }
     .project-picker-thumb { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: var(--bg); flex-shrink: 0; border: 1px solid var(--border); }
     .project-picker-label { flex: 1; font-size: 0.86rem; font-weight: 600; text-align: left; }
     .project-picker-chevron { width: 16px; height: 16px; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
@@ -179,7 +179,7 @@
     .project-picker-panel.active { display: block; }
     .project-picker-option { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.6rem; border-radius: 8px; cursor: pointer; transition: 0.12s; }
     .project-picker-option:hover { background: var(--bg); }
-    .project-picker-option.selected { background: rgba(218,44,72,0.08); }
+    .project-picker-option.selected { background: rgba(184,37,62,0.08); }
     .project-picker-option img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--bg); border: 1px solid var(--border); flex-shrink: 0; }
     .project-picker-option-name { font-size: 0.85rem; font-weight: 600; }
     .project-picker-option-count { font-size: 0.7rem; color: var(--text-muted); }
@@ -297,8 +297,8 @@
 
         .data-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .data-table { min-width: 640px; }
-        #leadsTableWrap, #apptTableWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        #leadsTableWrap .data-table, #apptTableWrap .data-table { min-width: 640px; }
+        #leadsTableWrap, #apptTableWrap, #quotesTableWrap, #invoicesTableWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        #leadsTableWrap .data-table, #apptTableWrap .data-table, #quotesTableWrap .data-table, #invoicesTableWrap .data-table { min-width: 560px; }
 
         .drawer { width: 100vw; }
 
@@ -307,12 +307,22 @@
 
         .edit-card { flex-direction: column; }
         .edit-card-actions { flex-direction: row; }
+
+        #resumeColumns { grid-template-columns: 1fr !important; gap: 2rem !important; }
+
+        .quote-item-row { flex-wrap: wrap; }
+        .quote-item-row .qi-desc { flex: 1 1 100% !important; }
+        .quote-item-row .qi-qty { flex: 1; width: auto !important; }
+        .quote-item-row .qi-price { flex: 1; width: auto !important; }
+
+        .project-picker-panel, .autocomplete-dropdown { max-height: 200px; }
     }
 
     @media (max-width: 480px) {
         .kpi-grid { grid-template-columns: 1fr; }
         .kpi-card.hero { grid-column: span 1; }
         .login-card { padding: 1.8rem 1.4rem; }
+        .kanban-col { min-width: 78vw; }
     }
 </style>
 </head>
@@ -425,6 +435,22 @@
             <div class="nav-item" data-view="content-faq">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
                 FAQ
+            </div>
+            <div class="nav-item" data-view="content-about">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+                À propos
+            </div>
+            <div class="nav-item" data-view="content-resume">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                Parcours
+            </div>
+            <div class="nav-item" data-view="content-contact">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                Contact & Réseaux
+            </div>
+            <div class="nav-item" data-view="content-seo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                SEO
             </div>
         </div>
 
@@ -688,6 +714,85 @@
             <div id="faqListWrap"></div>
         </section>
 
+        <!-- CONTENU : À PROPOS -->
+        <section class="view" id="view-content-about">
+            <div class="topbar">
+                <h2>À propos</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="saveAboutBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                </div>
+            </div>
+            <div class="panel" style="max-width:620px;">
+                <div class="drawer-field"><label>Eyebrow (petit texte au-dessus du titre)</label><input type="text" id="aboutEyebrow"></div>
+                <div class="drawer-field"><label>Titre</label><input type="text" id="aboutTitle"></div>
+                <div class="drawer-field"><label>Texte principal</label><textarea id="aboutLead" style="min-height:120px;"></textarea></div>
+                <div class="drawer-field"><label>Signature</label><input type="text" id="aboutSignoff"></div>
+                <p class="cell-muted">C'est le texte affiché dans la section "Derrière l'écran" du site, à côté du bloc assistant IA.</p>
+            </div>
+        </section>
+
+        <!-- CONTENU : PARCOURS -->
+        <section class="view" id="view-content-resume">
+            <div class="topbar">
+                <h2>Parcours</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="saveResumeBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                </div>
+            </div>
+            <div class="panel" style="max-width:620px; margin-bottom:1.2rem;">
+                <div class="drawer-field"><label>Compétences (liste séparée par des virgules)</label><textarea id="resumeSkills" style="min-height:80px;"></textarea></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;" id="resumeColumns">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                        <h3 style="font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Expériences</h3>
+                        <button class="reply-template-btn" id="addExperienceBtn">+ Ajouter</button>
+                    </div>
+                    <div id="experiencesListWrap"></div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                        <h3 style="font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Formations</h3>
+                        <button class="reply-template-btn" id="addFormationBtn">+ Ajouter</button>
+                    </div>
+                    <div id="formationsListWrap"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTENU : CONTACT & RÉSEAUX -->
+        <section class="view" id="view-content-contact">
+            <div class="topbar">
+                <h2>Contact & Réseaux</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="saveContactBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                </div>
+            </div>
+            <div class="panel" style="max-width:520px;">
+                <div class="drawer-field"><label>Email de contact affiché sur le site</label><input type="email" id="contactEmail"></div>
+                <div class="drawer-field"><label>Lien Instagram</label><input type="text" id="contactInstaUrl"></div>
+                <div class="drawer-field"><label>Pseudo Instagram affiché</label><input type="text" id="contactInstaHandle"></div>
+                <div class="drawer-field"><label>Lien LinkedIn</label><input type="text" id="contactLinkedinUrl"></div>
+                <div class="drawer-field"><label>Nom affiché sur LinkedIn</label><input type="text" id="contactLinkedinName"></div>
+                <p class="cell-muted">⚠️ L'email d'envoi des devis/factures/emails automatiques reste celui configuré dans Railway (SMTP_USER) — ceci ne change que ce qui est affiché publiquement sur le site.</p>
+            </div>
+        </section>
+
+        <!-- CONTENU : SEO -->
+        <section class="view" id="view-content-seo">
+            <div class="topbar">
+                <h2>SEO</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="saveSeoBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                </div>
+            </div>
+            <div class="panel" style="max-width:560px;">
+                <div class="drawer-field"><label>Titre de la page (onglet navigateur + Google)</label><input type="text" id="seoTitle"></div>
+                <div class="drawer-field"><label>Description (affichée sous le titre dans Google)</label><textarea id="seoDescription" style="min-height:90px;"></textarea></div>
+                <p class="cell-muted">Idéal : titre &lt; 60 caractères, description entre 120 et 160 caractères.</p>
+            </div>
+        </section>
+
         <!-- DEVIS & FACTURES -->
         <section class="view" id="view-quotes">
             <div class="topbar">
@@ -916,6 +1021,10 @@ function switchView(view) {
     if (view === 'content-projects') loadContentProjects();
     if (view === 'content-project-galleries') loadProjectGalleries();
     if (view === 'content-faq') loadContentFaq();
+    if (view === 'content-about') loadContentAbout();
+    if (view === 'content-resume') loadContentResume();
+    if (view === 'content-contact') loadContentContact();
+    if (view === 'content-seo') loadContentSeo();
     if (view === 'quotes') loadQuotes();
     if (view === 'invoices') loadInvoices();
     if (view === 'business-settings') loadBusinessSettings();
@@ -1002,7 +1111,7 @@ function renderGaChart(byDay) {
         data: {
             labels: byDay.map(r => `${r.date.slice(6, 8)}/${r.date.slice(4, 6)}`),
             datasets: [
-                { label: 'Visiteurs', data: byDay.map(r => r.users), borderColor: '#da2c48', backgroundColor: 'rgba(218,44,72,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+                { label: 'Visiteurs', data: byDay.map(r => r.users), borderColor: '#b8253e', backgroundColor: 'rgba(184,37,62,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
                 { label: 'Sessions', data: byDay.map(r => r.sessions), borderColor: '#8b8b93', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [4, 4] },
             ],
         },
@@ -1084,8 +1193,8 @@ function renderLeadsChart(byDay) {
             labels: byDay.map(r => r.d.slice(5)),
             datasets: [{
                 data: byDay.map(r => r.c),
-                borderColor: '#da2c48',
-                backgroundColor: 'rgba(218,44,72,0.08)',
+                borderColor: '#b8253e',
+                backgroundColor: 'rgba(184,37,62,0.08)',
                 fill: true,
                 tension: 0.35,
                 pointRadius: 0,
@@ -2422,6 +2531,141 @@ async function convertQuoteToInvoice(quoteId) {
     } catch (e) { toast(e.message); }
 }
 
+/* ============================================================
+   CONTENU : À PROPOS
+   ============================================================ */
+async function loadContentAbout() {
+    try {
+        const content = await fetchContent();
+        const a = content.about || {};
+        document.getElementById('aboutEyebrow').value = a.eyebrow || '';
+        document.getElementById('aboutTitle').value = a.title || '';
+        document.getElementById('aboutLead').value = a.lead || '';
+        document.getElementById('aboutSignoff').value = a.signoff || '';
+    } catch (e) { toast(e.message); }
+}
+document.getElementById('saveAboutBtn').addEventListener('click', async () => {
+    try {
+        await saveContent({ about: {
+            eyebrow: document.getElementById('aboutEyebrow').value,
+            title: document.getElementById('aboutTitle').value,
+            lead: document.getElementById('aboutLead').value,
+            signoff: document.getElementById('aboutSignoff').value,
+        } });
+    } catch (e) { toast(e.message); }
+});
+
+/* ============================================================
+   CONTENU : PARCOURS
+   ============================================================ */
+function experienceCardHTML(item = {}) {
+    return `
+        <div class="edit-card-fields" style="margin-bottom:0.6rem;">
+            <input type="text" class="exp-period" placeholder="Période (ex: 2024 — AUJOURD'HUI)" value="${escapeAttr(item.period || '')}">
+            <input type="text" class="exp-role" placeholder="Poste" value="${escapeAttr(item.role || '')}">
+            <input type="text" class="exp-company" placeholder="Entreprise | Ville" value="${escapeAttr(item.company || '')}">
+        </div>
+    `;
+}
+function formationCardHTML(item = {}) {
+    return `
+        <div class="edit-card-fields" style="margin-bottom:0.6rem;">
+            <input type="text" class="form-period" placeholder="Période" value="${escapeAttr(item.period || '')}">
+            <input type="text" class="form-title" placeholder="Diplôme" value="${escapeAttr(item.title || '')}">
+            <input type="text" class="form-school" placeholder="École | Mention" value="${escapeAttr(item.school || '')}">
+        </div>
+    `;
+}
+function addResumeCard(wrapId, html, removeLabel) {
+    const wrap = document.getElementById(wrapId);
+    if (wrap.querySelector('.empty-state')) wrap.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'edit-card';
+    card.innerHTML = `<div style="flex:1;">${html}</div><div class="edit-card-actions"><button class="danger remove-resume-item" title="${removeLabel}">✕</button></div>`;
+    wrap.appendChild(card);
+    card.querySelector('.remove-resume-item').onclick = () => card.remove();
+}
+
+async function loadContentResume() {
+    try {
+        const content = await fetchContent();
+        const r = content.resume || {};
+        document.getElementById('resumeSkills').value = r.skills || '';
+        const expWrap = document.getElementById('experiencesListWrap');
+        expWrap.innerHTML = '';
+        (r.experiences || []).forEach(item => addResumeCard('experiencesListWrap', experienceCardHTML(item), 'Retirer cette expérience'));
+        if (!r.experiences?.length) expWrap.innerHTML = emptyStateHTML('Aucune expérience.');
+        const formWrap = document.getElementById('formationsListWrap');
+        formWrap.innerHTML = '';
+        (r.formations || []).forEach(item => addResumeCard('formationsListWrap', formationCardHTML(item), 'Retirer cette formation'));
+        if (!r.formations?.length) formWrap.innerHTML = emptyStateHTML('Aucune formation.');
+    } catch (e) { toast(e.message); }
+}
+document.getElementById('addExperienceBtn').addEventListener('click', () => addResumeCard('experiencesListWrap', experienceCardHTML(), 'Retirer cette expérience'));
+document.getElementById('addFormationBtn').addEventListener('click', () => addResumeCard('formationsListWrap', formationCardHTML(), 'Retirer cette formation'));
+
+document.getElementById('saveResumeBtn').addEventListener('click', async () => {
+    try {
+        const experiences = Array.from(document.querySelectorAll('#experiencesListWrap .edit-card')).map(card => ({
+            period: card.querySelector('.exp-period').value,
+            role: card.querySelector('.exp-role').value,
+            company: card.querySelector('.exp-company').value,
+        }));
+        const formations = Array.from(document.querySelectorAll('#formationsListWrap .edit-card')).map(card => ({
+            period: card.querySelector('.form-period').value,
+            title: card.querySelector('.form-title').value,
+            school: card.querySelector('.form-school').value,
+        }));
+        await saveContent({ resume: { experiences, formations, skills: document.getElementById('resumeSkills').value } });
+    } catch (e) { toast(e.message); }
+});
+
+/* ============================================================
+   CONTENU : CONTACT & RÉSEAUX
+   ============================================================ */
+async function loadContentContact() {
+    try {
+        const content = await fetchContent();
+        const c = content.contact || {};
+        document.getElementById('contactEmail').value = c.email || '';
+        document.getElementById('contactInstaUrl').value = c.instagramUrl || '';
+        document.getElementById('contactInstaHandle').value = c.instagramHandle || '';
+        document.getElementById('contactLinkedinUrl').value = c.linkedinUrl || '';
+        document.getElementById('contactLinkedinName').value = c.linkedinName || '';
+    } catch (e) { toast(e.message); }
+}
+document.getElementById('saveContactBtn').addEventListener('click', async () => {
+    try {
+        await saveContent({ contact: {
+            email: document.getElementById('contactEmail').value,
+            instagramUrl: document.getElementById('contactInstaUrl').value,
+            instagramHandle: document.getElementById('contactInstaHandle').value,
+            linkedinUrl: document.getElementById('contactLinkedinUrl').value,
+            linkedinName: document.getElementById('contactLinkedinName').value,
+        } });
+    } catch (e) { toast(e.message); }
+});
+
+/* ============================================================
+   CONTENU : SEO
+   ============================================================ */
+async function loadContentSeo() {
+    try {
+        const content = await fetchContent();
+        const s = content.seo || {};
+        document.getElementById('seoTitle').value = s.title || '';
+        document.getElementById('seoDescription').value = s.description || '';
+    } catch (e) { toast(e.message); }
+}
+document.getElementById('saveSeoBtn').addEventListener('click', async () => {
+    try {
+        await saveContent({ seo: {
+            title: document.getElementById('seoTitle').value,
+            description: document.getElementById('seoDescription').value,
+        } });
+    } catch (e) { toast(e.message); }
+});
+
 /* ---------------- COMMAND PALETTE ---------------- */
 const commands = [
     { label: 'Aller à Overview', icon: 'grid', action: () => switchView('overview') },
@@ -2431,6 +2675,10 @@ const commands = [
     { label: 'Aller à Projets', icon: 'grid', action: () => switchView('content-projects') },
     { label: 'Aller à Galeries des projets', icon: 'grid', action: () => switchView('content-project-galleries') },
     { label: 'Aller à FAQ', icon: 'grid', action: () => switchView('content-faq') },
+    { label: 'Aller à À propos', icon: 'grid', action: () => switchView('content-about') },
+    { label: 'Aller à Parcours', icon: 'grid', action: () => switchView('content-resume') },
+    { label: 'Aller à Contact & Réseaux', icon: 'grid', action: () => switchView('content-contact') },
+    { label: 'Aller à SEO', icon: 'grid', action: () => switchView('content-seo') },
     { label: 'Aller à Devis & Factures', icon: 'grid', action: () => switchView('quotes') },
     { label: 'Aller à Suivi de projets', icon: 'grid', action: () => switchView('projects') },
     { label: 'Aller à Factures', icon: 'grid', action: () => switchView('invoices') },

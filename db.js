@@ -16,6 +16,75 @@ const DEFAULTS = {
     "events": [],
     "quotes": [],
     "invoices": [],
+    "about": {
+    "eyebrow": "Derrière l'écran",
+    "title": "Florian, avant d'être un portfolio",
+    "lead": "Graphiste et directeur artistique basé à Paris. Je crois qu'une identité visuelle doit durer, pas juste faire de l'effet le temps d'un scroll. Alors avant de dessiner quoi que ce soit, je prends le temps de vous écouter vraiment. Pas de brief coché à la va-vite, une vraie conversation, entre nous.",
+    "signoff": "Florian B."
+},
+    "resume": {
+    "experiences": [
+        {
+            "period": "OCTOBRE 2024 — AUJOURD'HUI",
+            "role": "Graphiste",
+            "company": "oofti.fr | Montreuil"
+        },
+        {
+            "period": "AVRIL 2020 — AUJOURD'HUI",
+            "role": "Fondateur / CM",
+            "company": "DailyRapFrance | Neuilly-Plaisance"
+        },
+        {
+            "period": "SEPTEMBRE 2023 — FÉVRIER 2024",
+            "role": "Chef de Projet",
+            "company": "Instincts Productions | Paris"
+        },
+        {
+            "period": "SEPTEMBRE 2022 — AOÛT 2023",
+            "role": "Graphiste",
+            "company": "SIM Consulting | Bry-sur-Marne"
+        },
+        {
+            "period": "NOVEMBRE 2020 — JANVIER 2021",
+            "role": "Assistant Créateur e-learning",
+            "company": "Total Energies | La Défense"
+        },
+        {
+            "period": "JANVIER 2020",
+            "role": "Assistant DA",
+            "company": "Publicis Groupe | Paris"
+        },
+        {
+            "period": "JUIN 2019 — JUILLET 2019",
+            "role": "Assistant sublimation 3D",
+            "company": "Pacific Colour | Bonneuil-sur-Marne"
+        }
+    ],
+    "formations": [
+        {
+            "period": "2021 — 2024",
+            "title": "Bachelor Design graphique",
+            "school": "MJM Graphic Design | Mention Très Bien"
+        },
+        {
+            "period": "2018 — 2021",
+            "title": "Bac Pro Visuelle",
+            "school": "Claude Nicolas Ledoux | Mention Bien"
+        }
+    ],
+    "skills": "Branding, Communication Digitale, Communication Print, Community Management, Design Thinking, Direction Artistique, Esprit critique, Intelligence Artificielle, Montage Vidéo, Motion Design, Mise en page, Photographie, Tournage vidéo, UI/UX Design"
+},
+    "contact": {
+    "email": "contact@florian-b.fr",
+    "instagramUrl": "https://www.instagram.com/florian.b93tsz",
+    "instagramHandle": "@florian.b93tsz",
+    "linkedinUrl": "https://www.linkedin.com/in/florian-bonnet-b82018198/",
+    "linkedinName": "Florian Bonnet"
+},
+    "seo": {
+    "title": "Florian B. | Graphiste & Directeur Artistique freelance à Paris",
+    "description": "Branding, UI/UX Design, communication digitale et print. Découvrez les projets de Florian Bonnet, graphiste et DA basé à Paris."
+},
     "businessSettings": {
         "legalName": "Florian Bonnet",
         "address": "",
