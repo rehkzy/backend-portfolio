@@ -221,6 +221,14 @@
     .goal-progress-fill { height: 100%; background: var(--accent); border-radius: 100px; transition: width 0.4s var(--ease); }
     .goal-progress-fill.complete { background: var(--success); }
 
+    .geo-map-wrap { width: 100%; border-radius: var(--radius); overflow: hidden; background: var(--bg); }
+    #gaWorldMap { width: 100%; height: auto; display: block; }
+    .geo-continent { fill: var(--border); }
+    [data-theme="dark"] .geo-continent { fill: #232327; }
+    .geo-bubble { fill: var(--accent); fill-opacity: 0.55; stroke: var(--accent); stroke-width: 1; cursor: pointer; transition: fill-opacity 0.15s; }
+    .geo-bubble:hover { fill-opacity: 0.85; }
+    .geo-bubble-label { font-size: 9px; fill: var(--text-muted); font-family: var(--font-body); pointer-events: none; }
+
     /* ============ ÉDITEURS DE CONTENU ============ */
     .edit-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.2rem; margin-bottom: 0.8rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: var(--shadow); }
     .edit-card-thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--bg); flex-shrink: 0; border: 1px solid var(--border); }
@@ -640,13 +648,38 @@
                             <div id="gaBrowsers"></div>
                         </div>
                         <div class="panel">
-                            <h3>Pays</h3>
-                            <div id="gaGeo"></div>
+                            <h3>Systèmes d'exploitation</h3>
+                            <div id="gaOS"></div>
+                        </div>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Langues</h3>
+                            <div id="gaLanguages"></div>
+                        </div>
+                        <div class="panel">
+                            <h3>Trafic par jour de la semaine</h3>
+                            <canvas id="gaDayOfWeekChart" height="90"></canvas>
                         </div>
                     </div>
                     <div class="panel">
-                        <h3>Villes</h3>
-                        <div id="gaCities"></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                            <h3 style="margin:0;">🌍 D'où viennent tes visiteurs</h3>
+                            <span class="cell-muted" style="font-size:0.75rem;">taille = nombre de visiteurs</span>
+                        </div>
+                        <div class="geo-map-wrap">
+                            <svg id="gaWorldMap" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </div>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Pays</h3>
+                            <div id="gaGeo"></div>
+                        </div>
+                        <div class="panel">
+                            <h3>Villes</h3>
+                            <div id="gaCities"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -1030,14 +1063,26 @@ let gaRealtimeInterval = null;
 
 /* ---------------- API HELPERS ---------------- */
 async function api(path, opts = {}) {
-    const res = await fetch(API_BASE + path, {
-        ...opts,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}),
-            ...(opts.headers || {}),
-        },
-    });
+    const controller = new AbortController();
+    const timeoutMs = opts.timeoutMs || 25000; // 25s par défaut, un peu plus que le timeout serveur SMTP
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    let res;
+    try {
+        res = await fetch(API_BASE + path, {
+            ...opts,
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}),
+                ...(opts.headers || {}),
+            },
+        });
+    } catch (err) {
+        if (err.name === 'AbortError') throw new Error("Délai dépassé — le serveur met trop de temps à répondre. Réessaie dans un instant.");
+        throw new Error('Impossible de contacter le serveur (connexion réseau ?)');
+    } finally {
+        clearTimeout(timeoutId);
+    }
     if (res.status === 401) { logout(); throw new Error('Session expirée'); }
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Erreur API'); }
     return res.status === 204 ? null : res.json();
@@ -1204,6 +1249,10 @@ async function loadAnalytics() {
         renderGaList('gaBrowsers', overview.browsers.map(b => ({ label: b.browser, value: b.users })));
         renderGaList('gaGeo', overview.geo.map(g => ({ label: g.country, value: g.users })));
         renderGaList('gaCities', overview.cities.map(c => ({ label: c.city, value: c.users })));
+        renderGaList('gaOS', overview.operatingSystems.map(o => ({ label: o.os, value: o.users })));
+        renderGaList('gaLanguages', overview.languages.map(l => ({ label: languageLabel(l.language), value: l.users })));
+        renderWorldMap(overview.geo, overview.cities);
+        renderDayOfWeekChart(overview.dayOfWeek);
         renderGaList('gaNewVsReturning', overview.newVsReturning.map(n => ({ label: n.type === 'new' ? 'Nouveaux visiteurs' : 'Visiteurs récurrents', value: n.users })));
 
         refreshRealtime();
@@ -1288,6 +1337,84 @@ function renderHourlyChart(hourly) {
     });
 }
 
+/* ---- CARTE DU MONDE (pays / villes des visiteurs) ---- */
+// Coordonnées approximatives (latitude, longitude) des pays et grandes villes
+// les plus courants dans un trafic web francophone/international.
+const COUNTRY_COORDS = {
+    "France": [46.6, 2.2], "United States": [39.8, -98.6], "United Kingdom": [54.0, -2.0],
+    "Germany": [51.2, 10.4], "Spain": [40.5, -3.7], "Italy": [42.8, 12.6], "Belgium": [50.5, 4.5],
+    "Switzerland": [46.8, 8.2], "Canada": [56.1, -106.3], "Netherlands": [52.1, 5.3],
+    "Portugal": [39.4, -8.2], "Morocco": [31.8, -7.1], "Algeria": [28.0, 1.7], "Tunisia": [33.9, 9.5],
+    "Senegal": [14.5, -14.5], "Ivory Coast": [7.5, -5.5], "Côte d'Ivoire": [7.5, -5.5],
+    "Cameroon": [3.8, 12.4], "Democratic Republic of the Congo": [-4.0, 21.8], "Mali": [17.6, -4.0],
+    "Luxembourg": [49.8, 6.1], "Ireland": [53.4, -8.2], "Poland": [51.9, 19.1], "Austria": [47.5, 14.6],
+    "Sweden": [60.1, 18.6], "Norway": [60.5, 8.5], "Denmark": [56.3, 9.5], "Finland": [61.9, 25.7],
+    "Greece": [39.1, 21.8], "Romania": [45.9, 25.0], "Czechia": [49.8, 15.5], "Brazil": [-14.2, -51.9],
+    "Mexico": [23.6, -102.5], "Argentina": [-38.4, -63.6], "Japan": [36.2, 138.3], "China": [35.9, 104.2],
+    "India": [20.6, 78.9], "Australia": [-25.3, 133.8], "Russia": [61.5, 105.3], "Turkey": [38.9, 35.2],
+    "United Arab Emirates": [23.4, 53.8], "Israel": [31.0, 34.9], "South Korea": [35.9, 127.8],
+    "Vietnam": [14.1, 108.3], "Thailand": [15.9, 100.9], "Singapore": [1.35, 103.8],
+    "South Africa": [-30.6, 22.9], "Egypt": [26.8, 30.8], "Nigeria": [9.1, 8.7], "Kenya": [-0.02, 37.9],
+    "New Zealand": [-40.9, 174.9], "Ukraine": [48.4, 31.2], "Hungary": [47.2, 19.5], "Croatia": [45.1, 15.2],
+    "Qatar": [25.3, 51.2], "Saudi Arabia": [23.9, 45.1], "Lebanon": [33.9, 35.9], "Haiti": [18.97, -72.29],
+};
+const CITY_COORDS = {
+    "Paris": [48.86, 2.35], "Montreuil": [48.86, 2.44], "Marseille": [43.30, 5.37], "Lyon": [45.76, 4.83],
+    "Toulouse": [43.60, 1.44], "Nice": [43.71, 7.26], "Nantes": [47.22, -1.55], "Bordeaux": [44.84, -0.58],
+    "Lille": [50.63, 3.06], "Strasbourg": [48.58, 7.75], "Montpellier": [43.61, 3.88], "Rennes": [48.11, -1.68],
+    "Reims": [49.26, 4.03], "Le Havre": [49.49, 0.11], "Saint-Étienne": [45.43, 4.39], "Toulon": [43.12, 5.93],
+    "Grenoble": [45.19, 5.72], "Dijon": [47.32, 5.04], "Angers": [47.47, -0.55], "Nîmes": [43.84, 4.36],
+    "London": [51.51, -0.13], "New York": [40.71, -74.01], "Los Angeles": [34.05, -118.24],
+    "Brussels": [50.85, 4.35], "Geneva": [46.20, 6.14], "Zurich": [47.37, 8.54], "Berlin": [52.52, 13.40],
+    "Madrid": [40.42, -3.70], "Barcelona": [41.39, 2.17], "Rome": [41.90, 12.50], "Milan": [45.46, 9.19],
+    "Amsterdam": [52.37, 4.90], "Lisbon": [38.72, -9.14], "Montreal": [45.50, -73.57], "Toronto": [43.65, -79.38],
+    "Casablanca": [33.57, -7.59], "Rabat": [34.02, -6.83], "Tunis": [36.81, 10.18], "Algiers": [36.75, 3.06],
+    "Dakar": [14.72, -17.47], "Abidjan": [5.36, -4.01], "Douala": [4.05, 9.77], "Kinshasa": [-4.44, 15.27],
+    "Luxembourg City": [49.61, 6.13], "Dublin": [53.35, -6.26], "Vienna": [48.21, 16.37],
+    "Stockholm": [59.33, 18.06], "Copenhagen": [55.68, 12.57], "Athens": [37.98, 23.73],
+    "Tokyo": [35.68, 139.69], "Dubai": [25.20, 55.27], "Singapore": [1.35, 103.82],
+    "Sydney": [-33.87, 151.21], "São Paulo": [-23.55, -46.63], "Mexico City": [19.43, -99.13],
+};
+
+// Fond de carte abstrait (silhouettes simplifiées des continents, pas un tracé géographique précis)
+const WORLD_BLOBS = [
+    { cx: 222, cy: 125, rx: 95, ry: 100 },  // Amérique du Nord
+    { cx: 333, cy: 300, rx: 55, ry: 110 },  // Amérique du Sud
+    { cx: 542, cy: 106, rx: 55, ry: 48 },   // Europe
+    { cx: 556, cy: 250, rx: 70, ry: 115 },  // Afrique
+    { cx: 780, cy: 125, rx: 165, ry: 110 }, // Asie
+    { cx: 875, cy: 320, rx: 60, ry: 45 },   // Océanie
+];
+
+function projectLatLng(lat, lng) {
+    return { x: (lng + 180) / 360 * 1000, y: (90 - lat) / 180 * 500 };
+}
+
+function renderWorldMap(geo, cities) {
+    const svg = document.getElementById('gaWorldMap');
+    let html = WORLD_BLOBS.map(b => `<ellipse class="geo-continent" cx="${b.cx}" cy="${b.cy}" rx="${b.rx}" ry="${b.ry}"/>`).join('');
+
+    const maxCountryUsers = Math.max(1, ...geo.map(g => g.users));
+    geo.forEach(g => {
+        const coords = COUNTRY_COORDS[g.country];
+        if (!coords) return;
+        const { x, y } = projectLatLng(coords[0], coords[1]);
+        const r = 4 + (g.users / maxCountryUsers) * 22;
+        html += `<circle class="geo-bubble" cx="${x}" cy="${y}" r="${r}"><title>${escapeHtml(g.country)} — ${g.users} visiteur(s)</title></circle>`;
+    });
+
+    const maxCityUsers = Math.max(1, ...cities.map(c => c.users));
+    cities.forEach(c => {
+        const coords = CITY_COORDS[c.city];
+        if (!coords) return;
+        const { x, y } = projectLatLng(coords[0], coords[1]);
+        const r = 2 + (c.users / maxCityUsers) * 6;
+        html += `<circle class="geo-bubble" cx="${x}" cy="${y}" r="${r}" style="fill:#fff; fill-opacity:0.9; stroke:var(--accent);"><title>${escapeHtml(c.city)} — ${c.users} visiteur(s)</title></circle>`;
+    });
+
+    svg.innerHTML = html;
+}
+
 function renderGaList(elId, items) {
     const wrap = document.getElementById(elId);
     if (!items.length) { wrap.innerHTML = '<p class="cell-muted">Pas encore de données.</p>'; return; }
@@ -1312,6 +1439,33 @@ function channelLabel(channel) {
 function deviceLabel(device) {
     const map = { mobile: '📱 Mobile', desktop: '💻 Ordinateur', tablet: '📱 Tablette' };
     return map[device] || device;
+}
+
+function languageLabel(code) {
+    const map = { 'fr-fr': '🇫🇷 Français', 'fr': '🇫🇷 Français', 'en-us': '🇺🇸 Anglais (US)', 'en-gb': '🇬🇧 Anglais (UK)', 'en': '🇬🇧 Anglais', 'es-es': '🇪🇸 Espagnol', 'es': '🇪🇸 Espagnol', 'de-de': '🇩🇪 Allemand', 'de': '🇩🇪 Allemand', 'it-it': '🇮🇹 Italien', 'it': '🇮🇹 Italien', 'pt-pt': '🇵🇹 Portugais', 'pt-br': '🇧🇷 Portugais (BR)', 'ar': '🇸🇦 Arabe', 'nl-nl': '🇳🇱 Néerlandais', 'zh-cn': '🇨🇳 Chinois' };
+    return map[(code || '').toLowerCase()] || code;
+}
+
+let gaDowChartInstance = null;
+function renderDayOfWeekChart(dayOfWeek) {
+    const ctx = document.getElementById('gaDayOfWeekChart').getContext('2d');
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const textColor = isDark ? '#96969e' : '#6b6b74';
+    const labels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']; // GA4 : 0=dimanche
+    const data = Array.from({ length: 7 }, (_, d) => dayOfWeek.find(r => r.day === d)?.sessions || 0);
+    if (gaDowChartInstance) gaDowChartInstance.destroy();
+    gaDowChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Sessions', data, backgroundColor: 'rgba(218,44,72,0.55)', borderRadius: 6 }] },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+                y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true },
+            },
+        },
+    });
 }
 
 /* ---- OBJECTIFS ---- */
@@ -1653,7 +1807,7 @@ async function sendLeadReply(id) {
     btn.disabled = true;
     btn.textContent = 'Envoi en cours...';
     try {
-        await api('/api/leads/' + id + '/reply', { method: 'POST', body: JSON.stringify({ message }) });
+        await api('/api/leads/' + id + '/reply', { method: 'POST', body: JSON.stringify({ message }), timeoutMs: 30000 });
         toast('Réponse envoyée ✅');
         closeDrawer();
         loadLeads();
@@ -2446,7 +2600,7 @@ async function deleteQuote(id) {
 }
 
 async function sendQuote(id) {
-    try { await api('/api/quotes/' + id + '/send', { method: 'POST' }); toast('Devis envoyé au client ✅'); closeDrawer(); loadQuotes(); }
+    try { await api('/api/quotes/' + id + '/send', { method: 'POST', timeoutMs: 30000 }); toast('Devis envoyé au client ✅'); closeDrawer(); loadQuotes(); }
     catch (e) { toast(e.message); }
 }
 
@@ -2898,7 +3052,7 @@ async function deleteInvoice(id) {
 }
 
 async function sendInvoice(id) {
-    try { await api('/api/invoices/' + id + '/send', { method: 'POST' }); toast('Facture envoyée au client ✅'); closeDrawer(); loadInvoices(); }
+    try { await api('/api/invoices/' + id + '/send', { method: 'POST', timeoutMs: 30000 }); toast('Facture envoyée au client ✅'); closeDrawer(); loadInvoices(); }
     catch (e) { toast(e.message); }
 }
 

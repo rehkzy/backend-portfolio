@@ -171,6 +171,32 @@ async function getOverview(days = 28) {
         orderBys: [{ dimension: { dimensionName: 'hour' } }],
     });
 
+    const [dayOfWeek] = await c.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [currentRange],
+        dimensions: [{ name: 'dayOfWeek' }],
+        metrics: [{ name: 'sessions' }],
+        orderBys: [{ dimension: { dimensionName: 'dayOfWeek' } }],
+    });
+
+    const [operatingSystems] = await c.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [currentRange],
+        dimensions: [{ name: 'operatingSystem' }],
+        metrics: [{ name: 'activeUsers' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+        limit: 6,
+    });
+
+    const [languages] = await c.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [currentRange],
+        dimensions: [{ name: 'language' }],
+        metrics: [{ name: 'activeUsers' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+        limit: 6,
+    });
+
     const currentRow = summary.rows?.[0]?.metricValues || [];
     const previousRow = summary.rows?.[1]?.metricValues || [];
 
@@ -233,6 +259,9 @@ async function getOverview(days = 28) {
         cities: (cities.rows || []).map(r => ({ city: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
         newVsReturning: (newVsReturning.rows || []).map(r => ({ type: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
         hourly: (hourly.rows || []).map(r => ({ hour: Number(r.dimensionValues[0].value), sessions: Number(r.metricValues[0].value) })),
+        dayOfWeek: (dayOfWeek.rows || []).map(r => ({ day: Number(r.dimensionValues[0].value), sessions: Number(r.metricValues[0].value) })),
+        operatingSystems: (operatingSystems.rows || []).map(r => ({ os: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
+        languages: (languages.rows || []).map(r => ({ language: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
     };
 }
 

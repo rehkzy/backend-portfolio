@@ -19,6 +19,9 @@ function getTransporter() {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASSWORD,
         },
+        connectionTimeout: 10000, // 10s max pour établir la connexion
+        greetingTimeout: 10000,   // 10s max pour la poignée de main SMTP
+        socketTimeout: 15000,     // 15s max pour l'envoi lui-même
     });
     return transporter;
 }
@@ -30,17 +33,26 @@ async function sendMail({ to, subject, html, replyTo }) {
         return { sent: false, reason: 'smtp_not_configured' };
     }
     try {
-        await t.sendMail({
-            from: `"Florian B." <${process.env.SMTP_USER}>`,
-            to,
-            subject,
-            html,
-            replyTo: replyTo || undefined,
-        });
+        // Filet de sécurité supplémentaire : si malgré les timeouts du transporteur
+        // l'envoi ne répond toujours pas sous 20s, on abandonne proprement plutôt
+        // que de bloquer la requête indéfiniment.
+        await Promise.race([
+            t.sendMail({
+                from: `"Florian B." <${process.env.SMTP_USER}>`,
+                to,
+                subject,
+                html,
+                replyTo: replyTo || undefined,
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Délai dépassé (20s) — le serveur SMTP ne répond pas')), 20000)),
+        ]);
         return { sent: true };
     } catch (err) {
         console.error('❌ Échec envoi email:', err.message);
-        return { sent: false, reason: err.message };
+        let reason = err.message;
+        if (err.code === 'EAUTH') reason = 'Authentification SMTP refusée — vérifie SMTP_USER et SMTP_PASSWORD';
+        if (err.code === 'ECONNECTION' || err.code === 'ETIMEDOUT') reason = 'Connexion au serveur SMTP impossible — vérifie SMTP_HOST et SMTP_PORT';
+        return { sent: false, reason };
     }
 }
 
