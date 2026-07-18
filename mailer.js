@@ -246,6 +246,81 @@ function quoteHtmlPage(quote) {
 </html>`;
 }
 
+// ---- Facture officielle (avec mentions légales) ----
+function invoiceHtmlPage(invoice, business = {}) {
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Facture ${invoice.invoiceNumber} — ${invoice.clientName || ''}</title>
+<style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #da2c48; padding-bottom:20px; margin-bottom:30px; }
+    .logo { font-family: Georgia, serif; font-weight:700; font-size:24px; }
+    .logo span { color:#da2c48; }
+    .meta { text-align:right; font-size:13px; color:#666; }
+    .parties { display:flex; justify-content:space-between; gap:40px; margin-bottom:30px; }
+    .parties > div { flex:1; font-size:13px; }
+    .parties h4 { font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#999; margin-bottom:6px; }
+    .total-row { text-align:right; font-size:22px; font-weight:700; margin-top:16px; }
+    .status { display:inline-block; padding:4px 12px; border-radius:100px; font-size:12px; font-weight:700; text-transform:uppercase; }
+    .legal { margin-top:50px; padding-top:20px; border-top:1px solid #eee; font-size:11px; color:#999; line-height:1.6; }
+    @media print { body { margin: 0; } }
+</style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">FLORIAN B<span>.</span></div>
+        <div class="meta">
+            Facture n°${invoice.invoiceNumber}<br>
+            Émise le ${new Date(invoice.issue_date).toLocaleDateString('fr-FR')}<br>
+            <span class="status" style="background:#f0f0f0;">${invoice.status === 'paid' ? 'Payée' : invoice.status === 'sent' ? 'Envoyée' : 'Brouillon'}</span>
+        </div>
+    </div>
+    <div class="parties">
+        <div>
+            <h4>Émetteur</h4>
+            <strong>${business.legalName || 'Florian Bonnet'}</strong><br>
+            ${business.address ? business.address.replace(/\n/g, '<br>') + '<br>' : ''}
+            ${business.siret ? `SIRET : ${business.siret}<br>` : ''}
+            ${business.vatMention || ''}
+        </div>
+        <div>
+            <h4>Client</h4>
+            <strong>${invoice.clientName || ''}</strong><br>
+            ${invoice.clientEmail}<br>
+            ${invoice.clientAddress ? invoice.clientAddress.replace(/\n/g, '<br>') : ''}
+        </div>
+    </div>
+    ${quoteItemsHtml(invoice.items, false)}
+    <div class="total-row">Total ${business.vatMention ? '' : 'TTC'} : ${(invoice.total || 0).toFixed(2)} €</div>
+    ${invoice.notes ? `<p style="margin-top:24px; color:#666; font-style:italic;">${invoice.notes}</p>` : ''}
+    <div class="legal">
+        ${business.iban ? `IBAN pour règlement : ${business.iban}<br><br>` : ''}
+        ${business.paymentTerms || ''}
+    </div>
+    <p style="margin-top:20px; font-size:12px; color:#999;">${business.legalName || 'Florian Bonnet'} — Graphiste & Directeur Artistique, Paris — florian-b.fr</p>
+    <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
+</body>
+</html>`;
+}
+
+function invoiceEmail(invoice, business = {}) {
+    return {
+        to: invoice.clientEmail,
+        subject: `Facture ${invoice.invoiceNumber} — Florian B.`,
+        html: brandEmailWrapper(`
+            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Facture n°${invoice.invoiceNumber}</p>
+            <p style="margin:0 0 16px;">Bonjour ${invoice.clientName || ''},</p>
+            <p style="margin:0 0 16px;">Veuillez trouver ci-joint le détail de la facture pour votre projet :</p>
+            ${quoteItemsHtml(invoice.items, true)}
+            <p style="text-align:right; font-size:18px; font-weight:700; color:#fff; margin:16px 0;">Total : ${(invoice.total || 0).toFixed(2)} €</p>
+            ${business.iban ? `<p style="margin:16px 0; color:#bbb; font-size:13px;">IBAN pour règlement : ${business.iban}</p>` : ''}
+            <p style="margin:24px 0 0;">Merci de votre confiance.<br><strong style="color:#fff;">${business.legalName || 'Florian B.'}</strong></p>
+        `, { preheader: `Facture ${invoice.invoiceNumber} - Total ${(invoice.total || 0).toFixed(2)} €` }),
+    };
+}
+
 // ---- Rapport mensuel ----
 function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
     const monthName = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -274,5 +349,7 @@ module.exports = {
     leadReplyEmail,
     quoteEmail,
     quoteHtmlPage,
+    invoiceHtmlPage,
+    invoiceEmail,
     monthlyReportEmail,
 };

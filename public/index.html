@@ -153,6 +153,38 @@
     .kanban-card-meta { color: var(--text-muted); font-size: 0.72rem; }
     .kanban-col.drag-over { background: rgba(218,44,72,0.06); border-color: var(--accent); }
     @media (max-width: 900px) { .kanban-board { grid-template-columns: minmax(240px, 1fr); grid-auto-flow: column; } }
+
+    /* ============ AUTOCOMPLETE CLIENT ============ */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.14); max-height: 240px; overflow-y: auto; z-index: 50; display: none; }
+    .autocomplete-dropdown.active { display: block; }
+    .autocomplete-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.8rem; cursor: pointer; transition: 0.12s; }
+    .autocomplete-item:hover, .autocomplete-item.highlighted { background: var(--bg); }
+    .autocomplete-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
+    .autocomplete-item-text { min-width: 0; flex: 1; }
+    .autocomplete-item-name { font-size: 0.82rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .autocomplete-item-email { font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .autocomplete-empty { padding: 0.8rem; font-size: 0.78rem; color: var(--text-muted); text-align: center; }
+
+    /* ============ SÉLECTEUR DE PROJET (galeries) ============ */
+    .project-picker { position: relative; }
+    .project-picker-trigger { display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; transition: 0.15s; }
+    .project-picker-trigger:hover { border-color: var(--accent); }
+    .project-picker-trigger.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(218,44,72,0.12); }
+    .project-picker-thumb { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: var(--bg); flex-shrink: 0; border: 1px solid var(--border); }
+    .project-picker-label { flex: 1; font-size: 0.86rem; font-weight: 600; text-align: left; }
+    .project-picker-chevron { width: 16px; height: 16px; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+    .project-picker-trigger.open .project-picker-chevron { transform: rotate(180deg); }
+    .project-picker-panel { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.16); z-index: 60; padding: 0.5rem; display: none; max-height: 320px; overflow-y: auto; }
+    .project-picker-panel.active { display: block; }
+    .project-picker-option { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.6rem; border-radius: 8px; cursor: pointer; transition: 0.12s; }
+    .project-picker-option:hover { background: var(--bg); }
+    .project-picker-option.selected { background: rgba(218,44,72,0.08); }
+    .project-picker-option img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--bg); border: 1px solid var(--border); flex-shrink: 0; }
+    .project-picker-option-name { font-size: 0.85rem; font-weight: 600; }
+    .project-picker-option-count { font-size: 0.7rem; color: var(--text-muted); }
+    .project-picker-check { margin-left: auto; width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; visibility: hidden; }
+    .project-picker-option.selected .project-picker-check { visibility: visible; }
     .filter-chip.active { background: var(--text); color: var(--surface); border-color: var(--text); }
 
     .data-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
@@ -348,7 +380,11 @@
             <div class="nav-group-label">Business</div>
             <div class="nav-item" data-view="quotes">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
-                Devis & Factures
+                Devis
+            </div>
+            <div class="nav-item" data-view="invoices">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h12M6 12h8M6 16h4"/></svg>
+                Factures
             </div>
             <div class="nav-item" data-view="projects">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
@@ -361,6 +397,14 @@
             <div class="nav-item" data-view="calendar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
                 Calendrier de contenu
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Paramètres</div>
+            <div class="nav-item" data-view="business-settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Mon entreprise
             </div>
         </div>
 
@@ -618,7 +662,14 @@
             <div class="panel" style="max-width:420px; margin-bottom:1.2rem;">
                 <div class="drawer-field">
                     <label>Choisir un projet</label>
-                    <select id="projGallerySelect" style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:0.9rem;"></select>
+                    <div class="project-picker" id="projGalleryPicker">
+                        <button type="button" class="project-picker-trigger" id="projGalleryPickerTrigger">
+                            <img class="project-picker-thumb" id="projGalleryPickerThumb" src="" alt="">
+                            <span class="project-picker-label" id="projGalleryPickerLabel">Choisir un projet…</span>
+                            <svg class="project-picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="project-picker-panel" id="projGalleryPickerPanel"></div>
+                    </div>
                 </div>
             </div>
             <p class="cell-muted" style="margin-bottom:1rem;" id="projGalleryCount"></p>
@@ -640,7 +691,7 @@
         <!-- DEVIS & FACTURES -->
         <section class="view" id="view-quotes">
             <div class="topbar">
-                <h2>Devis & Factures</h2>
+                <h2>Devis</h2>
                 <div class="topbar-actions">
                     <button class="btn-primary" id="addQuoteBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouveau devis</button>
                 </div>
@@ -666,6 +717,56 @@
                 </div>
             </div>
             <div id="quotesTableWrap"></div>
+        </section>
+
+        <!-- FACTURES OFFICIELLES -->
+        <section class="view" id="view-invoices">
+            <div class="topbar">
+                <h2>Factures</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="addInvoiceBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouvelle facture</button>
+                </div>
+            </div>
+            <div class="toolbar">
+                <button class="filter-chip active" data-istatus="">Toutes</button>
+                <button class="filter-chip" data-istatus="draft">Brouillon</button>
+                <button class="filter-chip" data-istatus="sent">Envoyée</button>
+                <button class="filter-chip" data-istatus="paid">Payée</button>
+            </div>
+            <div class="kpi-grid" style="margin-bottom:1.2rem;">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total facturé</div>
+                    <div class="kpi-value" id="invoicesTotalAll">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Encaissé</div>
+                    <div class="kpi-value" id="invoicesTotalPaid">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">En attente</div>
+                    <div class="kpi-value" id="invoicesTotalPending">—</div>
+                </div>
+            </div>
+            <div id="invoicesTableWrap"></div>
+        </section>
+
+        <!-- PARAMÈTRES ENTREPRISE -->
+        <section class="view" id="view-business-settings">
+            <div class="topbar">
+                <h2>Mon entreprise</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="saveBusinessBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                </div>
+            </div>
+            <p class="cell-muted" style="margin-bottom:1.2rem;">Ces informations apparaissent automatiquement sur tes factures officielles (obligatoire légalement).</p>
+            <div class="panel" style="max-width:560px;">
+                <div class="drawer-field"><label>Nom / raison sociale</label><input type="text" id="bsLegalName" placeholder="Florian Bonnet"></div>
+                <div class="drawer-field"><label>Adresse</label><textarea id="bsAddress" placeholder="Adresse complète, code postal, ville"></textarea></div>
+                <div class="drawer-field"><label>N° SIRET</label><input type="text" id="bsSiret" placeholder="123 456 789 00012"></div>
+                <div class="drawer-field"><label>Mention TVA</label><input type="text" id="bsVatMention" placeholder="TVA non applicable, art. 293 B du CGI"></div>
+                <div class="drawer-field"><label>IBAN (pour règlement)</label><input type="text" id="bsIban" placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"></div>
+                <div class="drawer-field"><label>Conditions de paiement</label><textarea id="bsPaymentTerms" placeholder="Modalités, pénalités de retard..."></textarea></div>
+            </div>
         </section>
 
         <!-- SUIVI DE PROJETS -->
@@ -771,6 +872,7 @@ async function boot() {
     document.getElementById('app').classList.add('active');
     loadOverview();
     updateLastRefreshLabel();
+    api('/api/leads').then(data => { leadsCache = data; }).catch(() => {}); // alimente l'autocomplete client
 }
 
 /* ---------------- THEME ---------------- */
@@ -815,6 +917,8 @@ function switchView(view) {
     if (view === 'content-project-galleries') loadProjectGalleries();
     if (view === 'content-faq') loadContentFaq();
     if (view === 'quotes') loadQuotes();
+    if (view === 'invoices') loadInvoices();
+    if (view === 'business-settings') loadBusinessSettings();
     if (view === 'projects') loadProjectsTrack();
     if (view === 'calendar') loadContentCalendar();
 }
@@ -1477,26 +1581,64 @@ document.getElementById('saveProjectsBtn').addEventListener('click', async () =>
 let projGalleryState = [];
 let currentProjModalId = null;
 
+let galleriesCacheForPicker = {};
+
 async function loadProjectGalleries() {
     try {
         const content = await fetchContent();
-        const galleries = content.projectGalleries || {};
-        const select = document.getElementById('projGallerySelect');
-        const previousValue = select.value;
-        select.innerHTML = Object.entries(galleries).map(([id, g]) =>
-            `<option value="${id}">${g.title || id}</option>`
-        ).join('');
-        select.value = previousValue && galleries[previousValue] ? previousValue : select.options[0]?.value;
-        currentProjModalId = select.value;
-        projGalleryState = [...(galleries[currentProjModalId]?.images || [])];
-        renderProjGalleryGrid();
-        select.onchange = () => {
-            currentProjModalId = select.value;
-            projGalleryState = [...(galleries[currentProjModalId]?.images || [])];
-            renderProjGalleryGrid();
-        };
+        galleriesCacheForPicker = content.projectGalleries || {};
+        const ids = Object.keys(galleriesCacheForPicker);
+        if (!currentProjModalId || !galleriesCacheForPicker[currentProjModalId]) {
+            currentProjModalId = ids[0];
+        }
+        renderProjectPicker();
+        selectProjectForGallery(currentProjModalId);
     } catch (e) { toast(e.message); }
 }
+
+function renderProjectPicker() {
+    const panel = document.getElementById('projGalleryPickerPanel');
+    panel.innerHTML = Object.entries(galleriesCacheForPicker).map(([id, g]) => `
+        <div class="project-picker-option ${id === currentProjModalId ? 'selected' : ''}" data-id="${id}">
+            <img src="${g.images?.[0] ? resolveImgUrl(g.images[0]) : ''}" alt="">
+            <div>
+                <div class="project-picker-option-name">${escapeHtml(g.title || id)}</div>
+                <div class="project-picker-option-count">${(g.images || []).length} photo(s)</div>
+            </div>
+            <svg class="project-picker-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+    `).join('');
+    panel.querySelectorAll('.project-picker-option').forEach(opt => {
+        opt.onclick = () => { selectProjectForGallery(opt.dataset.id); closeProjectPicker(); };
+    });
+}
+
+function selectProjectForGallery(id) {
+    currentProjModalId = id;
+    const g = galleriesCacheForPicker[id];
+    document.getElementById('projGalleryPickerLabel').textContent = g?.title || id || 'Choisir un projet…';
+    document.getElementById('projGalleryPickerThumb').src = g?.images?.[0] ? resolveImgUrl(g.images[0]) : '';
+    projGalleryState = [...(g?.images || [])];
+    renderProjGalleryGrid();
+    renderProjectPicker();
+}
+
+function openProjectPicker() {
+    document.getElementById('projGalleryPickerPanel').classList.add('active');
+    document.getElementById('projGalleryPickerTrigger').classList.add('open');
+}
+function closeProjectPicker() {
+    document.getElementById('projGalleryPickerPanel').classList.remove('active');
+    document.getElementById('projGalleryPickerTrigger').classList.remove('open');
+}
+document.getElementById('projGalleryPickerTrigger').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const panel = document.getElementById('projGalleryPickerPanel');
+    panel.classList.contains('active') ? closeProjectPicker() : openProjectPicker();
+});
+document.addEventListener('click', (e) => {
+    if (!document.getElementById('projGalleryPicker').contains(e.target)) closeProjectPicker();
+});
 
 function renderProjGalleryGrid() {
     const wrap = document.getElementById('projGalleryGridWrap');
@@ -1768,8 +1910,16 @@ function openQuoteDrawer(id) {
             <h3>${q ? 'Devis #' + q.id : 'Nouveau devis'}</h3>
             <button class="drawer-close" onclick="closeDrawer()">✕</button>
         </div>
-        <div class="drawer-field"><label>Nom du client</label><input type="text" id="qClientName" value="${escapeAttr(q?.clientName || '')}"></div>
-        <div class="drawer-field"><label>Email *</label><input type="email" id="qClientEmail" value="${escapeAttr(q?.clientEmail || '')}"></div>
+        <div class="drawer-field autocomplete-wrap">
+            <label>Nom du client</label>
+            <input type="text" id="qClientName" value="${escapeAttr(q?.clientName || '')}" autocomplete="off">
+            <div class="autocomplete-dropdown" id="qClientNameDropdown"></div>
+        </div>
+        <div class="drawer-field autocomplete-wrap">
+            <label>Email *</label>
+            <input type="email" id="qClientEmail" value="${escapeAttr(q?.clientEmail || '')}" autocomplete="off">
+            <div class="autocomplete-dropdown" id="qClientEmailDropdown"></div>
+        </div>
         <div class="drawer-field">
             <label>Prestations</label>
             <div id="quoteItemsWrap">${(q?.items?.length ? q.items : [{}]).map(quoteItemRowHTML).join('')}</div>
@@ -1785,6 +1935,7 @@ function openQuoteDrawer(id) {
             <button class="btn-primary" onclick="sendQuote(${q.id})">✉️ Envoyer au client</button>
             <button class="btn-secondary" onclick="window.open(API_BASE + '/api/quotes/${q.id}/view?print=1', '_blank')">🖨️ Voir / Imprimer</button>
             ${q.status !== 'paid' ? `<button class="btn-secondary" onclick="markQuotePaid(${q.id})">✓ Marquer payé</button>` : ''}
+            <button class="btn-secondary" onclick="convertQuoteToInvoice(${q.id})">📄 Convertir en facture</button>
         </div>` : ''}
     `;
     openDrawer();
@@ -1794,6 +1945,7 @@ function openQuoteDrawer(id) {
         attachQuoteItemEvents(wrap);
     };
     attachQuoteItemEvents(document.getElementById('quoteItemsWrap'));
+    attachClientAutocomplete('qClientName', 'qClientEmail', 'qClientNameDropdown', 'qClientEmailDropdown');
 }
 
 function collectQuoteItems() {
@@ -2023,6 +2175,253 @@ document.getElementById('backupBtn').addEventListener('click', async () => {
     } catch (e) { toast(e.message); }
 });
 
+/* ============================================================
+   AUTOCOMPLETE CLIENT — suggère les contacts déjà connus
+   (à partir des leads) en tapant nom ou email.
+   ============================================================ */
+function getKnownClients() {
+    const seen = new Map();
+    (leadsCache || []).forEach(l => {
+        if (l.email && !seen.has(l.email)) seen.set(l.email, { name: l.name || '', email: l.email });
+    });
+    return Array.from(seen.values());
+}
+
+function clientInitials(client) {
+    const source = client.name || client.email || '?';
+    return source.trim().slice(0, 2).toUpperCase();
+}
+
+function attachClientAutocomplete(nameInputId, emailInputId, nameDropdownId, emailDropdownId) {
+    const nameInput = document.getElementById(nameInputId);
+    const emailInput = document.getElementById(emailInputId);
+    const nameDropdown = document.getElementById(nameDropdownId);
+    const emailDropdown = document.getElementById(emailDropdownId);
+    if (!nameInput || !emailInput) return;
+
+    function renderDropdown(dropdown, query) {
+        const clients = getKnownClients();
+        const q = query.trim().toLowerCase();
+        const matches = q ? clients.filter(c => (c.name || '').toLowerCase().includes(q) || c.email.toLowerCase().includes(q)) : clients;
+        if (!matches.length) {
+            dropdown.innerHTML = `<div class="autocomplete-empty">${clients.length ? 'Aucun contact ne correspond' : 'Aucun contact enregistré pour le moment'}</div>`;
+        } else {
+            dropdown.innerHTML = matches.slice(0, 8).map(c => `
+                <div class="autocomplete-item" data-name="${escapeAttr(c.name)}" data-email="${escapeAttr(c.email)}">
+                    <div class="autocomplete-avatar">${clientInitials(c)}</div>
+                    <div class="autocomplete-item-text">
+                        <div class="autocomplete-item-name">${escapeHtml(c.name || c.email)}</div>
+                        ${c.name ? `<div class="autocomplete-item-email">${escapeHtml(c.email)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.onclick = () => {
+                    nameInput.value = item.dataset.name;
+                    emailInput.value = item.dataset.email;
+                    closeAllAutocomplete();
+                };
+            });
+        }
+        dropdown.classList.add('active');
+    }
+
+    function closeAllAutocomplete() {
+        nameDropdown.classList.remove('active');
+        emailDropdown.classList.remove('active');
+    }
+
+    nameInput.addEventListener('focus', () => renderDropdown(nameDropdown, nameInput.value));
+    nameInput.addEventListener('input', () => renderDropdown(nameDropdown, nameInput.value));
+    emailInput.addEventListener('focus', () => renderDropdown(emailDropdown, emailInput.value));
+    emailInput.addEventListener('input', () => renderDropdown(emailDropdown, emailInput.value));
+
+    document.addEventListener('click', (e) => {
+        if (!nameInput.contains(e.target) && !nameDropdown.contains(e.target) && !emailInput.contains(e.target) && !emailDropdown.contains(e.target)) {
+            closeAllAutocomplete();
+        }
+    });
+}
+
+/* ============================================================
+   PARAMÈTRES ENTREPRISE
+   ============================================================ */
+async function loadBusinessSettings() {
+    try {
+        const b = await api('/api/business-settings');
+        document.getElementById('bsLegalName').value = b.legalName || '';
+        document.getElementById('bsAddress').value = b.address || '';
+        document.getElementById('bsSiret').value = b.siret || '';
+        document.getElementById('bsVatMention').value = b.vatMention || '';
+        document.getElementById('bsIban').value = b.iban || '';
+        document.getElementById('bsPaymentTerms').value = b.paymentTerms || '';
+    } catch (e) { toast(e.message); }
+}
+
+document.getElementById('saveBusinessBtn').addEventListener('click', async () => {
+    try {
+        await api('/api/business-settings', { method: 'PUT', body: JSON.stringify({
+            legalName: document.getElementById('bsLegalName').value.trim(),
+            address: document.getElementById('bsAddress').value.trim(),
+            siret: document.getElementById('bsSiret').value.trim(),
+            vatMention: document.getElementById('bsVatMention').value.trim(),
+            iban: document.getElementById('bsIban').value.trim(),
+            paymentTerms: document.getElementById('bsPaymentTerms').value.trim(),
+        }) });
+        toast('Informations enregistrées ✅');
+    } catch (e) { toast(e.message); }
+});
+
+/* ============================================================
+   FACTURES OFFICIELLES
+   ============================================================ */
+let invoicesCache = [];
+let invoicesFilter = '';
+
+document.querySelectorAll('#view-invoices .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        document.querySelectorAll('#view-invoices .filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        invoicesFilter = chip.dataset.istatus;
+        renderInvoicesTable();
+    });
+});
+
+async function loadInvoices() {
+    try {
+        invoicesCache = await api('/api/invoices');
+        const total = invoicesCache.reduce((s, i) => s + (i.total || 0), 0);
+        const paid = invoicesCache.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0);
+        const pending = invoicesCache.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.total || 0), 0);
+        document.getElementById('invoicesTotalAll').textContent = total.toFixed(2) + ' €';
+        document.getElementById('invoicesTotalPaid').textContent = paid.toFixed(2) + ' €';
+        document.getElementById('invoicesTotalPending').textContent = pending.toFixed(2) + ' €';
+        renderInvoicesTable();
+    } catch (e) { toast(e.message); }
+}
+
+function renderInvoicesTable() {
+    const wrap = document.getElementById('invoicesTableWrap');
+    const list = invoicesFilter ? invoicesCache.filter(i => i.status === invoicesFilter) : invoicesCache;
+    if (!list.length) { wrap.innerHTML = emptyStateHTML('Aucune facture pour le moment.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>N°</th><th>Client</th><th>Montant</th><th>Statut</th><th>Émise le</th></tr></thead>
+            <tbody>
+                ${list.map(i => `
+                    <tr onclick="openInvoiceDrawer(${i.id})">
+                        <td class="cell-muted">${i.invoiceNumber}</td>
+                        <td>${escapeHtml(i.clientName || i.clientEmail)}</td>
+                        <td class="cell-muted">${(i.total || 0).toFixed(2)} €</td>
+                        <td><span class="badge ${i.status === 'paid' ? 'won' : i.status === 'sent' ? 'contacted' : 'new'}">${i.status === 'paid' ? 'Payée' : i.status === 'sent' ? 'Envoyée' : 'Brouillon'}</span></td>
+                        <td class="cell-muted">${formatDate(i.issue_date)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function openInvoiceDrawer(id) {
+    const inv = id ? invoicesCache.find(x => x.id === id) : null;
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${inv ? 'Facture ' + inv.invoiceNumber : 'Nouvelle facture'}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-field autocomplete-wrap">
+            <label>Nom du client</label>
+            <input type="text" id="iClientName" value="${escapeAttr(inv?.clientName || '')}" autocomplete="off">
+            <div class="autocomplete-dropdown" id="iClientNameDropdown"></div>
+        </div>
+        <div class="drawer-field autocomplete-wrap">
+            <label>Email *</label>
+            <input type="email" id="iClientEmail" value="${escapeAttr(inv?.clientEmail || '')}" autocomplete="off">
+            <div class="autocomplete-dropdown" id="iClientEmailDropdown"></div>
+        </div>
+        <div class="drawer-field"><label>Adresse du client</label><textarea id="iClientAddress" placeholder="Adresse de facturation">${escapeHtml(inv?.clientAddress || '')}</textarea></div>
+        <div class="drawer-field">
+            <label>Prestations</label>
+            <div id="invoiceItemsWrap">${(inv?.items?.length ? inv.items : [{}]).map(quoteItemRowHTML).join('')}</div>
+            <button type="button" class="reply-template-btn" id="addInvoiceItemBtn">+ Ligne</button>
+        </div>
+        <div class="drawer-field"><label>Notes</label><textarea id="iNotes" placeholder="Précisions...">${escapeHtml(inv?.notes || '')}</textarea></div>
+        <div class="drawer-actions">
+            <button class="btn-secondary" onclick="saveInvoice(${inv ? inv.id : 'null'})">Enregistrer</button>
+            ${inv ? `<button class="btn-danger" onclick="deleteInvoice(${inv.id})">Supprimer</button>` : ''}
+        </div>
+        ${inv ? `
+        <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border); flex-wrap:wrap;">
+            <button class="btn-primary" onclick="sendInvoice(${inv.id})">✉️ Envoyer au client</button>
+            <button class="btn-secondary" onclick="window.open(API_BASE + '/api/invoices/${inv.id}/view?print=1', '_blank')">🖨️ Voir / Imprimer</button>
+            ${inv.status !== 'paid' ? `<button class="btn-secondary" onclick="markInvoicePaid(${inv.id})">✓ Marquer payée</button>` : ''}
+        </div>` : ''}
+    `;
+    openDrawer();
+    document.getElementById('addInvoiceItemBtn').onclick = () => {
+        const wrap = document.getElementById('invoiceItemsWrap');
+        wrap.insertAdjacentHTML('beforeend', quoteItemRowHTML());
+        attachQuoteItemEvents(wrap);
+    };
+    attachQuoteItemEvents(document.getElementById('invoiceItemsWrap'));
+    attachClientAutocomplete('iClientName', 'iClientEmail', 'iClientNameDropdown', 'iClientEmailDropdown');
+}
+
+function collectInvoiceItems() {
+    return Array.from(document.querySelectorAll('#invoiceItemsWrap .quote-item-row')).map(row => ({
+        desc: row.querySelector('.qi-desc').value,
+        qty: Number(row.querySelector('.qi-qty').value) || 0,
+        price: Number(row.querySelector('.qi-price').value) || 0,
+    })).filter(i => i.desc || i.price);
+}
+
+async function saveInvoice(id) {
+    const clientEmail = document.getElementById('iClientEmail').value.trim();
+    if (!clientEmail) { toast("L'email du client est obligatoire."); return; }
+    const payload = {
+        clientName: document.getElementById('iClientName').value.trim(),
+        clientEmail,
+        clientAddress: document.getElementById('iClientAddress').value.trim(),
+        items: collectInvoiceItems(),
+        notes: document.getElementById('iNotes').value.trim(),
+    };
+    try {
+        if (id) await api('/api/invoices/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+        else await api('/api/invoices', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Facture enregistrée ✅');
+        closeDrawer();
+        loadInvoices();
+    } catch (e) { toast(e.message); }
+}
+
+async function deleteInvoice(id) {
+    if (!confirm('Supprimer cette facture ?')) return;
+    try { await api('/api/invoices/' + id, { method: 'DELETE' }); toast('Facture supprimée'); closeDrawer(); loadInvoices(); }
+    catch (e) { toast(e.message); }
+}
+
+async function sendInvoice(id) {
+    try { await api('/api/invoices/' + id + '/send', { method: 'POST' }); toast('Facture envoyée au client ✅'); closeDrawer(); loadInvoices(); }
+    catch (e) { toast(e.message); }
+}
+
+async function markInvoicePaid(id) {
+    try { await api('/api/invoices/' + id, { method: 'PATCH', body: JSON.stringify({ status: 'paid' }) }); toast('Marquée comme payée ✅'); closeDrawer(); loadInvoices(); }
+    catch (e) { toast(e.message); }
+}
+
+document.getElementById('addInvoiceBtn').addEventListener('click', () => openInvoiceDrawer(null));
+
+// Convertir un devis en facture officielle, depuis le drawer du devis
+async function convertQuoteToInvoice(quoteId) {
+    try {
+        const invoice = await api('/api/quotes/' + quoteId + '/convert-to-invoice', { method: 'POST' });
+        toast(`Facture ${invoice.invoiceNumber} créée ✅`);
+        closeDrawer();
+        switchView('invoices');
+    } catch (e) { toast(e.message); }
+}
+
 /* ---------------- COMMAND PALETTE ---------------- */
 const commands = [
     { label: 'Aller à Overview', icon: 'grid', action: () => switchView('overview') },
@@ -2034,6 +2433,8 @@ const commands = [
     { label: 'Aller à FAQ', icon: 'grid', action: () => switchView('content-faq') },
     { label: 'Aller à Devis & Factures', icon: 'grid', action: () => switchView('quotes') },
     { label: 'Aller à Suivi de projets', icon: 'grid', action: () => switchView('projects') },
+    { label: 'Aller à Factures', icon: 'grid', action: () => switchView('invoices') },
+    { label: 'Aller à Mon entreprise', icon: 'grid', action: () => switchView('business-settings') },
     { label: 'Aller à Calendrier de contenu', icon: 'grid', action: () => switchView('calendar') },
     { label: 'Basculer le thème clair/sombre', icon: 'sun', action: () => document.getElementById('themeToggle').click() },
     { label: 'Rafraîchir les données', icon: 'refresh', action: () => switchView(currentView) },

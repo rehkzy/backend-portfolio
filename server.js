@@ -330,6 +330,105 @@ app.post('/api/quotes/:id/send', auth, async (req, res) => {
 });
 
 /* ============================================================
+   PARAMÈTRES ENTREPRISE — utilisés sur les factures officielles
+   ============================================================ */
+app.get('/api/business-settings', auth, (req, res) => {
+    res.json(db.get('businessSettings').value());
+});
+
+app.put('/api/business-settings', auth, (req, res) => {
+    db.set('businessSettings', req.body || {}).write();
+    res.json({ ok: true });
+});
+
+/* ============================================================
+   FACTURES OFFICIELLES — numérotation séquentielle légale
+   ============================================================ */
+function nextInvoiceNumber() {
+    const year = new Date().getFullYear();
+    const invoices = db.get('invoices').value();
+    const countThisYear = invoices.filter(i => (i.invoiceNumber || '').startsWith(`FA-${year}-`)).length;
+    return `FA-${year}-${String(countThisYear + 1).padStart(3, '0')}`;
+}
+
+app.get('/api/invoices', auth, (req, res) => {
+    res.json([...db.get('invoices').value()].reverse());
+});
+
+app.post('/api/invoices', auth, (req, res) => {
+    const { clientName, clientEmail, clientAddress, items, notes, quoteId } = req.body || {};
+    if (!clientEmail) return res.status(400).json({ error: 'clientEmail requis' });
+    const invoice = {
+        id: nextId('invoices'), created_at: now(), invoiceNumber: nextInvoiceNumber(),
+        quoteId: quoteId || null,
+        clientName: clientName || '', clientEmail, clientAddress: clientAddress || '',
+        items: Array.isArray(items) ? items : [],
+        notes: notes || '', status: 'draft', issue_date: now(), sent_at: null, paid_at: null,
+    };
+    invoice.total = computeQuoteTotal(invoice.items);
+    db.get('invoices').push(invoice).write();
+    res.status(201).json(invoice);
+});
+
+// Convertir un devis existant en facture officielle (reprend les lignes, numéro séquentiel généré)
+app.post('/api/quotes/:id/convert-to-invoice', auth, (req, res) => {
+    const quote = db.get('quotes').find({ id: Number(req.params.id) }).value();
+    if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
+    const invoice = {
+        id: nextId('invoices'), created_at: now(), invoiceNumber: nextInvoiceNumber(),
+        quoteId: quote.id,
+        clientName: quote.clientName, clientEmail: quote.clientEmail, clientAddress: '',
+        items: quote.items, total: quote.total,
+        notes: quote.notes || '', status: 'draft', issue_date: now(), sent_at: null, paid_at: null,
+    };
+    db.get('invoices').push(invoice).write();
+    res.status(201).json(invoice);
+});
+
+app.patch('/api/invoices/:id', auth, (req, res) => {
+    const id = Number(req.params.id);
+    const inv = db.get('invoices').find({ id });
+    if (!inv.value()) return res.status(404).json({ error: 'Facture introuvable' });
+    const { clientName, clientEmail, clientAddress, items, notes, status } = req.body || {};
+    const patch = {};
+    if (clientName !== undefined) patch.clientName = clientName;
+    if (clientEmail !== undefined) patch.clientEmail = clientEmail;
+    if (clientAddress !== undefined) patch.clientAddress = clientAddress;
+    if (notes !== undefined) patch.notes = notes;
+    if (status !== undefined) {
+        patch.status = status;
+        if (status === 'paid') patch.paid_at = now();
+    }
+    if (items !== undefined) { patch.items = items; patch.total = computeQuoteTotal(items); }
+    inv.assign(patch).write();
+    res.json({ ok: true });
+});
+
+app.delete('/api/invoices/:id', auth, (req, res) => {
+    db.get('invoices').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+app.get('/api/invoices/:id/view', auth, (req, res) => {
+    const invoice = db.get('invoices').find({ id: Number(req.params.id) }).value();
+    if (!invoice) return res.status(404).send('Facture introuvable');
+    const business = db.get('businessSettings').value();
+    res.set('Content-Type', 'text/html');
+    res.send(mailer.invoiceHtmlPage(invoice, business));
+});
+
+app.post('/api/invoices/:id/send', auth, async (req, res) => {
+    const id = Number(req.params.id);
+    const invoice = db.get('invoices').find({ id }).value();
+    if (!invoice) return res.status(404).json({ error: 'Facture introuvable' });
+    const business = db.get('businessSettings').value();
+    const result = await mailer.sendMail(mailer.invoiceEmail(invoice, business));
+    if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
+    db.get('invoices').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
+    res.json({ ok: true });
+});
+
+/* ============================================================
    SUIVI DE PROJET CLIENT (post-vente)
    ============================================================ */
 const PROJECT_STAGES = ['brief', 'maquettes', 'revisions', 'livre'];
