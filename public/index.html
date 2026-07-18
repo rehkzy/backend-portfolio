@@ -862,8 +862,32 @@ function openApptDrawer(id) {
             <button class="btn-secondary" onclick="saveAppt(${a.id})">Enregistrer</button>
             <button class="btn-danger" onclick="deleteAppt(${a.id})">Supprimer</button>
         </div>
+        <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border);">
+            <button class="btn-primary" id="addToLeadsBtn" onclick="addApptToLeads(${a.id})">+ Ajouter aux leads</button>
+        </div>
     `;
     openDrawer();
+}
+
+async function addApptToLeads(id) {
+    const a = apptCache.find(x => x.id === id);
+    if (!a) return;
+    const btn = document.getElementById('addToLeadsBtn');
+    btn.disabled = true;
+    btn.textContent = 'Ajout en cours...';
+    try {
+        await api('/api/admin/leads', { method: 'POST', body: JSON.stringify({
+            email: a.email,
+            message: `Demande de RDV : ${a.subject || ''} — ${a.date_text || ''} ${a.time_text || ''}`.trim(),
+            source: 'rdv',
+        }) });
+        toast('Ajouté aux leads ✅');
+        btn.textContent = '✓ Ajouté aux leads';
+    } catch (e) {
+        toast(e.message);
+        btn.disabled = false;
+        btn.textContent = '+ Ajouter aux leads';
+    }
 }
 
 async function saveAppt(id) {
