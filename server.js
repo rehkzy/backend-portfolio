@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
+const mailer = require('./mailer');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -60,20 +61,26 @@ app.get('/api/auth/me', auth, (req, res) => res.json({ ok: true, role: req.user.
 /* ============================================================
    INGESTION PUBLIQUE — appelée par le chat widget du site
    ============================================================ */
-app.post('/api/leads', (req, res) => {
+app.post('/api/leads', async (req, res) => {
     const { name, email, message, source } = req.body || {};
     if (!email || !message) return res.status(400).json({ error: 'email et message requis' });
     const lead = { id: nextId('leads'), created_at: now(), name: name || null, email, message, source: source || 'chat', status: 'new', notes: '' };
     db.get('leads').push(lead).write();
-    res.status(201).json({ id: lead.id });
+    res.status(201).json({ id: lead.id }); // on répond tout de suite, les emails partent en arrière-plan
+
+    mailer.sendMail(mailer.leadConfirmationEmail(lead)).catch(() => {});
+    mailer.sendMail(mailer.leadNotificationEmail(lead)).catch(() => {});
 });
 
-app.post('/api/appointments', (req, res) => {
+app.post('/api/appointments', async (req, res) => {
     const { date_text, time_text, subject, email } = req.body || {};
     if (!email || !subject) return res.status(400).json({ error: 'email et subject requis' });
     const appt = { id: nextId('appointments'), created_at: now(), date_text: date_text || null, time_text: time_text || null, subject, email, status: 'pending', notes: '' };
     db.get('appointments').push(appt).write();
     res.status(201).json({ id: appt.id });
+
+    mailer.sendMail(mailer.appointmentConfirmationEmail(appt)).catch(() => {});
+    mailer.sendMail(mailer.appointmentNotificationEmail(appt)).catch(() => {});
 });
 
 app.post('/api/events', (req, res) => {
@@ -138,6 +145,29 @@ app.patch('/api/leads/:id', auth, (req, res) => {
 
 app.delete('/api/leads/:id', auth, (req, res) => {
     db.get('leads').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+// Répondre à un lead directement depuis le dashboard
+app.post('/api/leads/:id/reply', auth, async (req, res) => {
+    const id = Number(req.params.id);
+    const { message } = req.body || {};
+    if (!message) return res.status(400).json({ error: 'message requis' });
+    const lead = db.get('leads').find({ id }).value();
+    if (!lead) return res.status(404).json({ error: 'Lead introuvable' });
+
+    const result = await mailer.sendMail({
+        to: lead.email,
+        subject: 'Re : votre message — Florian B.',
+        html: `<div style="font-family: sans-serif; max-width: 480px; margin:0 auto; color:#1a1a1a;">
+            <p>${message.replace(/\n/g, '<br>')}</p>
+            <p style="margin-top:2rem;">Florian B.<br>Graphiste & Directeur Artistique</p>
+        </div>`,
+        replyTo: process.env.SMTP_USER,
+    });
+    if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
+
+    db.get('leads').find({ id }).assign({ status: 'contacted' }).write();
     res.json({ ok: true });
 });
 
