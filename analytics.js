@@ -16,7 +16,14 @@ function getClient() {
     const { GA_PROPERTY_ID, GA_SERVICE_ACCOUNT_JSON } = process.env;
     if (!GA_PROPERTY_ID || !GA_SERVICE_ACCOUNT_JSON) return null;
     try {
-        const credentialsJson = Buffer.from(GA_SERVICE_ACCOUNT_JSON, 'base64').toString('utf-8');
+        const raw = GA_SERVICE_ACCOUNT_JSON.trim();
+        // Accepte soit le JSON collé directement, soit une version encodée en base64
+        let credentialsJson;
+        if (raw.startsWith('{')) {
+            credentialsJson = raw;
+        } else {
+            credentialsJson = Buffer.from(raw, 'base64').toString('utf-8');
+        }
         const credentials = JSON.parse(credentialsJson);
         client = new BetaAnalyticsDataClient({ credentials });
         propertyId = GA_PROPERTY_ID;
