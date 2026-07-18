@@ -122,6 +122,8 @@
     .search-box svg { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
     .search-box input { border: none; background: none; outline: none; color: var(--text); font-size: 0.85rem; width: 100%; }
     .filter-chip { padding: 0.5rem 0.9rem; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); font-size: 0.78rem; font-weight: 600; color: var(--text-muted); transition: 0.2s; }
+    .reply-template-btn { padding: 0.4rem 0.8rem; border-radius: 100px; border: 1px solid var(--border); background: var(--bg); font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: 0.15s; }
+    .reply-template-btn:hover { border-color: var(--accent); color: var(--text); }
     .filter-chip.active { background: var(--text); color: var(--surface); border-color: var(--text); }
 
     .data-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
@@ -333,6 +335,9 @@
         <section class="view" id="view-leads">
             <div class="topbar">
                 <h2>Leads</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="addLeadBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Ajouter un lead</button>
+                </div>
             </div>
             <div class="toolbar">
                 <div class="search-box">
@@ -687,14 +692,33 @@ function openLeadDrawer(id) {
         </div>
         <div class="drawer-field" style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border);">
             <label>✉️ Répondre par email</label>
-            <textarea id="replyMessage" placeholder="Bonjour, merci pour votre message..." style="min-height:120px;"></textarea>
+            <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+                <button type="button" class="reply-template-btn" data-template="merci">Accusé de réception</button>
+                <button type="button" class="reply-template-btn" data-template="devis">Devis à venir</button>
+                <button type="button" class="reply-template-btn" data-template="rdv">Proposer un RDV</button>
+                <button type="button" class="reply-template-btn" data-template="indispo">Actuellement complet</button>
+            </div>
+            <textarea id="replyMessage" placeholder="Bonjour, merci pour votre message..." style="min-height:140px;"></textarea>
+            <p class="cell-muted" style="margin-top:0.5rem; font-size:0.75rem;">✨ Mis en forme automatiquement avec le design du site (fond sombre, rouge, logo) — tu n'as qu'à écrire le texte.</p>
         </div>
         <div class="drawer-actions">
             <button class="btn-primary" id="sendReplyBtn" onclick="sendLeadReply(${l.id})">Envoyer la réponse</button>
         </div>
     `;
     openDrawer();
+    document.querySelectorAll('.reply-template-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.getElementById('replyMessage').value = REPLY_TEMPLATES[btn.dataset.template](l);
+        };
+    });
 }
+
+const REPLY_TEMPLATES = {
+    merci: (l) => `Bonjour ${l.name || ''},\n\nMerci pour votre message ! Je l'ai bien reçu et je reviens vers vous rapidement avec une réponse détaillée.\n\nÀ très vite,`,
+    devis: (l) => `Bonjour ${l.name || ''},\n\nMerci pour votre message. Votre projet m'intéresse beaucoup, je vous prépare un devis personnalisé et je vous le fais parvenir sous 2-3 jours.\n\nN'hésitez pas si vous avez des précisions à ajouter d'ici là.\n\nÀ très vite,`,
+    rdv: (l) => `Bonjour ${l.name || ''},\n\nMerci pour votre message. Je pense qu'un échange rapide serait le plus efficace pour bien cerner votre projet.\n\nÊtes-vous disponible cette semaine pour un appel de 15-20 minutes ? Dites-moi vos disponibilités.\n\nÀ très vite,`,
+    indispo: (l) => `Bonjour ${l.name || ''},\n\nMerci beaucoup pour votre message et l'intérêt porté à mon travail. Mon planning est actuellement complet, mais je serais ravi d'échanger sur votre projet pour une prochaine disponibilité.\n\nÀ très vite,`,
+};
 
 async function sendLeadReply(id) {
     const textarea = document.getElementById('replyMessage');
@@ -713,6 +737,48 @@ async function sendLeadReply(id) {
         btn.disabled = false;
         btn.textContent = 'Envoyer la réponse';
     }
+}
+
+/* ---- Ajout manuel d'un lead ---- */
+document.getElementById('addLeadBtn').addEventListener('click', () => {
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>Ajouter un lead</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-field"><label>Nom</label><input type="text" id="newLeadName" placeholder="Nom du contact"></div>
+        <div class="drawer-field"><label>Email *</label><input type="email" id="newLeadEmail" placeholder="email@exemple.com"></div>
+        <div class="drawer-field"><label>Message / contexte</label><textarea id="newLeadMessage" placeholder="Ce dont vous avez parlé..."></textarea></div>
+        <div class="drawer-field">
+            <label>Origine</label>
+            <select id="newLeadSource">
+                <option value="manuel">Autre / manuel</option>
+                <option value="téléphone">Téléphone</option>
+                <option value="instagram">Instagram</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="en personne">Rencontre en personne</option>
+                <option value="email">Email direct</option>
+            </select>
+        </div>
+        <div class="drawer-actions">
+            <button class="btn-primary" onclick="createManualLead()">Ajouter</button>
+        </div>
+    `;
+    openDrawer();
+});
+
+async function createManualLead() {
+    const name = document.getElementById('newLeadName').value.trim();
+    const email = document.getElementById('newLeadEmail').value.trim();
+    const message = document.getElementById('newLeadMessage').value.trim();
+    const source = document.getElementById('newLeadSource').value;
+    if (!email) { toast('L\u2019email est obligatoire.'); return; }
+    try {
+        await api('/api/admin/leads', { method: 'POST', body: JSON.stringify({ name, email, message, source }) });
+        toast('Lead ajouté ✅');
+        closeDrawer();
+        loadLeads();
+    } catch (e) { toast(e.message); }
 }
 
 async function saveLead(id) {

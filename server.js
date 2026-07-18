@@ -148,6 +148,19 @@ app.delete('/api/leads/:id', auth, (req, res) => {
     res.json({ ok: true });
 });
 
+// Ajout manuel d'un lead depuis le dashboard (contact reçu par téléphone, Instagram, en personne...)
+app.post('/api/admin/leads', auth, (req, res) => {
+    const { name, email, message, source, status } = req.body || {};
+    if (!email) return res.status(400).json({ error: 'email requis' });
+    const lead = {
+        id: nextId('leads'), created_at: now(),
+        name: name || null, email, message: message || '',
+        source: source || 'manuel', status: status || 'new', notes: '',
+    };
+    db.get('leads').push(lead).write();
+    res.status(201).json({ id: lead.id });
+});
+
 // Répondre à un lead directement depuis le dashboard
 app.post('/api/leads/:id/reply', auth, async (req, res) => {
     const id = Number(req.params.id);
@@ -156,15 +169,7 @@ app.post('/api/leads/:id/reply', auth, async (req, res) => {
     const lead = db.get('leads').find({ id }).value();
     if (!lead) return res.status(404).json({ error: 'Lead introuvable' });
 
-    const result = await mailer.sendMail({
-        to: lead.email,
-        subject: 'Re : votre message — Florian B.',
-        html: `<div style="font-family: sans-serif; max-width: 480px; margin:0 auto; color:#1a1a1a;">
-            <p>${message.replace(/\n/g, '<br>')}</p>
-            <p style="margin-top:2rem;">Florian B.<br>Graphiste & Directeur Artistique</p>
-        </div>`,
-        replyTo: process.env.SMTP_USER,
-    });
+    const result = await mailer.sendMail(mailer.leadReplyEmail(lead, message));
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
 
     db.get('leads').find({ id }).assign({ status: 'contacted' }).write();
