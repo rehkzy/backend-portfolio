@@ -337,7 +337,7 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
    INGESTION PUBLIQUE — appelée par le chat widget du site
    ============================================================ */
 app.post('/api/leads', async (req, res) => {
-    const { name, email, message, source } = req.body || {};
+    const { name, email, message, source, budget } = req.body || {};
     if (!email || !message) return res.status(400).json({ error: 'email et message requis' });
 
     // Tracking visiteur — tout ce qu'on peut récupérer
@@ -366,7 +366,7 @@ app.post('/api/leads', async (req, res) => {
     const lead = {
         id: nextId('leads'), created_at: now(),
         name: name || null, email, message,
-        source: source || 'chat', status: 'new', notes: '',
+        source: source || 'chat', status: 'new', notes: '', budget: budget || null,
         tracking,
     };
     db.get('leads').push(lead).write();
@@ -591,11 +591,12 @@ app.get('/api/appointments', auth, (req, res) => {
 
 app.patch('/api/appointments/:id', auth, canWrite, (req, res) => {
     const id = Number(req.params.id);
-    const { status, notes } = req.body || {};
+    const { status, notes, confirmedDate } = req.body || {};
     const appt = db.get('appointments').find({ id });
     if (!appt.value()) return res.status(404).json({ error: 'RDV introuvable' });
     if (status) appt.assign({ status }).write();
     if (notes !== undefined) appt.assign({ notes }).write();
+    if (confirmedDate !== undefined) appt.assign({ confirmedDate }).write();
     res.json({ ok: true });
 });
 
@@ -747,6 +748,41 @@ app.post('/api/admin/upload', auth, canWrite, upload.single('image'), (req, res)
     res.status(201).json({ filename: req.file.filename, url: `/uploads/${req.file.filename}` });
 });
 
+/* ============================================================
+   BIBLIOTHÈQUE DE VISUELS — centralise les images uploadées
+   ============================================================ */
+function findUsedFilenames() {
+    // Cherche toutes les occurrences de noms de fichiers dans le contenu du site
+    // (hero, cartes projets, galeries) pour repérer les images encore utilisées.
+    const content = JSON.stringify(db.get('site_content').value());
+    return content;
+}
+
+app.get('/api/admin/uploads', auth, (req, res) => {
+    const usedContent = findUsedFilenames();
+    const files = fs.readdirSync(UPLOADS_DIR)
+        .filter(f => f !== '.gitkeep' && !f.startsWith('.'))
+        .map(f => {
+            const stat = fs.statSync(path.join(UPLOADS_DIR, f));
+            return {
+                filename: f, url: `/uploads/${f}`,
+                size: stat.size, uploadedAt: stat.birthtime || stat.mtime,
+                inUse: usedContent.includes(f),
+            };
+        })
+        .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    res.json(files);
+});
+
+app.delete('/api/admin/uploads/:filename', auth, canWrite, (req, res) => {
+    const filename = path.basename(req.params.filename); // évite toute tentative de traversée de dossier
+    const filePath = path.join(UPLOADS_DIR, filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fichier introuvable' });
+    fs.unlinkSync(filePath);
+    logTeamAction(req, 'upload_deleted', `Image supprimée : ${filename}`);
+    res.json({ ok: true });
+});
+
 app.get('/', (req, res) => res.redirect('/dashboard'));
 /* ============================================================
    GOOGLE ANALYTICS — statistiques en direct dans le dashboard
@@ -875,6 +911,12 @@ function computeQuoteTotal(items) {
     return (items || []).reduce((sum, i) => sum + (Number(i.qty) || 0) * (Number(i.price) || 0), 0);
 }
 
+// Token signé (non devinable) pour le lien "J'accepte ce devis" envoyé par email —
+// pas besoin de compte client, le lien seul fait foi.
+function quoteAcceptToken(id) {
+    return crypto.createHmac('sha256', JWT_SECRET).update('quote-accept-' + id).digest('hex').slice(0, 32);
+}
+
 app.get('/api/quotes', auth, (req, res) => {
     res.json([...db.get('quotes').value()].reverse());
 });
@@ -937,11 +979,48 @@ app.post('/api/quotes/:id/send', auth, adminOnly, async (req, res) => {
     const id = Number(req.params.id);
     const quote = db.get('quotes').find({ id }).value();
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
-    const result = await mailer.sendMail(mailer.quoteEmail(quote));
+    const result = await mailer.sendMail(mailer.quoteEmail(quote, quoteAcceptToken(id)));
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('quotes').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
     logTeamAction(req, 'quote_sent', `Devis #${id} envoyé par email à ${quote.clientEmail}`, id);
     res.json({ ok: true });
+});
+
+// Lien "J'accepte ce devis" cliqué depuis l'email client — pas d'authentification (le token
+// signé en tient lieu), convertit automatiquement le devis en facture officielle.
+app.get('/api/quotes/:id/accept', async (req, res) => {
+    const id = Number(req.params.id);
+    const token = req.query.token || '';
+    const quote = db.get('quotes').find({ id }).value();
+    const simplePage = (title, message, ok) => `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title>
+        <style>body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:2rem;text-align:center;}
+        .box{max-width:440px;}h1{color:${ok ? '#22c55e' : '#ff2f76'};font-size:1.3rem;}p{color:#aaa;line-height:1.6;}</style></head>
+        <body><div class="box"><h1>${title}</h1><p>${message}</p></div></body></html>`;
+
+    if (!quote) return res.status(404).send(simplePage('Devis introuvable', "Ce lien n'est plus valide.", false));
+    if (token !== quoteAcceptToken(id)) return res.status(403).send(simplePage('Lien invalide', "Ce lien d'acceptation n'est pas valide.", false));
+    if (quote.status === 'accepted' || quote.status === 'paid') {
+        return res.send(simplePage('Déjà accepté', 'Ce devis a déjà été accepté — Florian a bien reçu la confirmation, aucune action supplémentaire nécessaire.', true));
+    }
+
+    const delayDays = Number(db.get('businessSettings').value()?.paymentDelayDays) || 30;
+    const invoice = {
+        id: nextId('invoices'), created_at: now(), invoiceNumber: nextInvoiceNumber(),
+        quoteId: quote.id,
+        clientName: quote.clientName, clientEmail: quote.clientEmail, clientAddress: '',
+        items: quote.items, total: quote.total,
+        notes: quote.notes || '', status: 'draft', issue_date: now(),
+        dueDate: new Date(Date.now() + delayDays * 86400000).toISOString(),
+        sent_at: null, paid_at: null, lastReminderAt: null,
+    };
+    db.get('invoices').push(invoice).write();
+    db.get('quotes').find({ id }).assign({ status: 'accepted', accepted_at: now() }).write();
+    touchClient(quote.clientEmail, quote.clientName);
+
+    // Notifie Florian — la facture reste en brouillon, à lui de vérifier puis de l'envoyer
+    mailer.sendMail(mailer.quoteAcceptedEmail(quote, invoice)).catch(() => {});
+
+    res.send(simplePage('Devis accepté ✅', `Merci ! Votre acceptation a bien été transmise à Florian. Il finalise votre facture (n°${invoice.invoiceNumber}) et revient vers vous rapidement.`, true));
 });
 
 /* ============================================================
@@ -1104,6 +1183,7 @@ app.post('/api/invoices/:id/remind', auth, adminOnly, async (req, res) => {
 
 app.get('/api/treasury', auth, (req, res) => {
     const invoices = db.get('invoices').value();
+    const expenses = db.get('expenses').value();
     const invoicedTotal = invoices.reduce((s, i) => s + (i.total || 0), 0);
     const paidTotal = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0);
     const pendingTotal = invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.total || 0), 0);
@@ -1121,11 +1201,94 @@ app.get('/api/treasury', auth, (req, res) => {
     });
 
     const { quotesToRemind, invoicesOverdue } = getSuggestedReminders();
+
+    // Objectifs de CA — progression du mois et de l'année en cours
+    const business = db.get('businessSettings').value() || {};
+    const thisMonthKey = new Date().toISOString().slice(0, 7);
+    const thisYear = new Date().getFullYear();
+    const revenueThisMonth = invoices.filter(i => i.status === 'paid' && i.paid_at?.startsWith(thisMonthKey)).reduce((s, i) => s + (i.total || 0), 0);
+    const revenueThisYear = invoices.filter(i => i.status === 'paid' && i.paid_at && new Date(i.paid_at).getFullYear() === thisYear).reduce((s, i) => s + (i.total || 0), 0);
+
+    // Dépenses — total du mois et de l'année en cours, pour calculer un résultat net
+    const expensesThisMonth = expenses.filter(e => (e.date || '').startsWith(thisMonthKey)).reduce((s, e) => s + (e.amount || 0), 0);
+    const expensesThisYear = expenses.filter(e => e.date && new Date(e.date).getFullYear() === thisYear).reduce((s, e) => s + (e.amount || 0), 0);
+    const expensesTotal = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+
     res.json({
         invoicedTotal, paidTotal, pendingTotal,
         monthly: Object.entries(monthly).map(([month, total]) => ({ month, total })),
         reminders: { quotesToRemind, invoicesOverdue, count: quotesToRemind.length + invoicesOverdue.length },
+        goals: {
+            monthly: Number(business.revenueGoalMonthly) || 0, annual: Number(business.revenueGoalAnnual) || 0,
+            revenueThisMonth, revenueThisYear,
+        },
+        expenses: { total: expensesTotal, thisMonth: expensesThisMonth, thisYear: expensesThisYear },
+        netResultThisMonth: revenueThisMonth - expensesThisMonth,
+        netResultThisYear: revenueThisYear - expensesThisYear,
     });
+});
+
+/* ============================================================
+   DÉPENSES — pour calculer un résultat net, pas juste le CA
+   ============================================================ */
+app.get('/api/expenses', auth, (req, res) => {
+    res.json([...db.get('expenses').value()].reverse());
+});
+
+app.post('/api/expenses', auth, adminOnly, (req, res) => {
+    const { label, amount, category, date } = req.body || {};
+    if (!label || amount === undefined) return res.status(400).json({ error: 'label et amount requis' });
+    const expense = {
+        id: nextId('expenses'), created_at: now(),
+        label, amount: Number(amount) || 0,
+        category: category || 'autre', date: date || now().slice(0, 10),
+    };
+    db.get('expenses').push(expense).write();
+    logTeamAction(req, 'expense_created', `Dépense ajoutée : ${label} (${expense.amount.toFixed(2)} €)`, expense.id);
+    res.status(201).json(expense);
+});
+
+app.patch('/api/expenses/:id', auth, adminOnly, (req, res) => {
+    const id = Number(req.params.id);
+    const exp = db.get('expenses').find({ id });
+    if (!exp.value()) return res.status(404).json({ error: 'Dépense introuvable' });
+    const { label, amount, category, date } = req.body || {};
+    const patch = {};
+    if (label !== undefined) patch.label = label;
+    if (amount !== undefined) patch.amount = Number(amount) || 0;
+    if (category !== undefined) patch.category = category;
+    if (date !== undefined) patch.date = date;
+    exp.assign(patch).write();
+    res.json({ ok: true });
+});
+
+app.delete('/api/expenses/:id', auth, adminOnly, (req, res) => {
+    db.get('expenses').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+/* ============================================================
+   EXPORT COMPTABLE — CSV des factures d'une année, prêt pour le comptable
+   ============================================================ */
+function csvEscape(val) {
+    const s = String(val ?? '');
+    return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+app.get('/api/invoices/export', auth, adminOnly, (req, res) => {
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const invoices = db.get('invoices').value()
+        .filter(i => new Date(i.issue_date).getFullYear() === year)
+        .sort((a, b) => a.invoiceNumber.localeCompare(b.invoiceNumber));
+    const header = ['Numéro', 'Date émission', 'Client', 'Email', 'Montant', 'Statut', 'Date paiement', 'Échéance'];
+    const rows = invoices.map(i => [
+        i.invoiceNumber, (i.issue_date || '').slice(0, 10), i.clientName || '', i.clientEmail,
+        (i.total || 0).toFixed(2), i.status, i.paid_at ? i.paid_at.slice(0, 10) : '', i.dueDate ? i.dueDate.slice(0, 10) : '',
+    ]);
+    const csv = [header, ...rows].map(r => r.map(csvEscape).join(';')).join('\n');
+    res.set('Content-Disposition', `attachment; filename="factures-${year}.csv"`);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.send('\uFEFF' + csv); // BOM pour un affichage correct des accents dans Excel
 });
 
 /* ============================================================
@@ -1175,11 +1338,12 @@ app.get('/api/content-calendar', auth, (req, res) => {
 });
 
 app.post('/api/content-calendar', auth, canWrite, (req, res) => {
-    const { title, date, caption, status } = req.body || {};
+    const { title, date, caption, status, platform } = req.body || {};
     if (!title) return res.status(400).json({ error: 'title requis' });
     const item = {
         id: nextId('contentCalendar'), created_at: now(),
         title, date: date || null, caption: caption || '', status: status || 'idea',
+        platform: platform || 'instagram',
     };
     db.get('contentCalendar').push(item).write();
     res.status(201).json(item);
@@ -1189,12 +1353,13 @@ app.patch('/api/content-calendar/:id', auth, canWrite, (req, res) => {
     const id = Number(req.params.id);
     const item = db.get('contentCalendar').find({ id });
     if (!item.value()) return res.status(404).json({ error: 'Introuvable' });
-    const { title, date, caption, status } = req.body || {};
+    const { title, date, caption, status, platform } = req.body || {};
     const patch = {};
     if (title !== undefined) patch.title = title;
     if (date !== undefined) patch.date = date;
     if (caption !== undefined) patch.caption = caption;
     if (status !== undefined) patch.status = status;
+    if (platform !== undefined) patch.platform = platform;
     item.assign(patch).write();
     res.json({ ok: true });
 });
@@ -1288,6 +1453,22 @@ cron.schedule('0 9 * * *', async () => {
         console.log(`💌 Digest relances : ${quotesToRemind.length} devis, ${invoicesOverdue.length} factures`);
         await mailer.sendMail(mailer.remindersDigestEmail({ quotesToRemind, invoicesOverdue }));
     } catch (err) { console.error('Erreur digest relances:', err.message); }
+}, { timezone: 'Europe/Paris' });
+
+// Rappel de RDV 24h avant — vérifié toutes les heures pour couvrir tous les horaires de RDV
+cron.schedule('0 * * * *', async () => {
+    try {
+        const appts = db.get('appointments').value();
+        const in23to25h = appts.filter(a => {
+            if (a.status !== 'confirmed' || !a.confirmedDate || a.reminderSentAt) return false;
+            const hoursUntil = (new Date(a.confirmedDate) - Date.now()) / 3600000;
+            return hoursUntil > 23 && hoursUntil <= 25; // fenêtre d'1h autour de "24h avant", vu le cron horaire
+        });
+        for (const appt of in23to25h) {
+            const result = await mailer.sendMail(mailer.appointmentReminderEmail(appt));
+            if (result.sent) db.get('appointments').find({ id: appt.id }).assign({ reminderSentAt: now() }).write();
+        }
+    } catch (err) { console.error('Erreur rappels RDV:', err.message); }
 }, { timezone: 'Europe/Paris' });
 
 app.listen(PORT, () => console.log(`✅ Backend Florian B. sur http://localhost:${PORT}`));

@@ -352,6 +352,7 @@ function leadNotificationEmail(lead) {
                 ['Nom', lead.name || '—'],
                 ['Email', lead.email],
                 ['Source', lead.source || '—'],
+                ['Budget indiqué', lead.budget || '—'],
                 ['Reçu le', new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })],
             ])}
             ${emailQuote(lead.message)}
@@ -378,6 +379,23 @@ function appointmentConfirmationEmail(appt) {
             <p style="margin:0;font-size:13px;color:${C.textDim};">Un email de confirmation suivra dès que le créneau est validé de mon côté.</p>
             ${emailSignature()}
         `, { preheader: 'Votre demande de rendez-vous a bien été reçue.' }),
+    };
+}
+
+/* — 3bis. Rappel RDV 24h avant (client) — */
+function appointmentReminderEmail(appt) {
+    const dateLabel = appt.confirmedDate
+        ? new Date(appt.confirmedDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+        : `${appt.date_text || ''} à ${appt.time_text || ''}`;
+    return {
+        to: appt.email,
+        subject: `Rappel — RDV demain avec Florian B.`,
+        html: emailWrapper(`
+            ${emailTitle('À demain !')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Petit rappel : votre rendez-vous avec Florian est prévu <strong style="color:${C.white};">${dateLabel}</strong>, au sujet de « ${appt.subject || ''} ».</p>
+            <p style="margin:0;font-size:14px;color:${C.textMuted};">Un empêchement ? Répondez directement à cet email pour le décaler.</p>
+            ${emailSignature()}
+        `, { preheader: `Rappel RDV — ${dateLabel}` }),
     };
 }
 
@@ -440,7 +458,10 @@ function teamInviteEmail(user, inviteToken) {
 }
 
 /* — 7. Devis client — */
-function quoteEmail(quote) {
+function quoteEmail(quote, acceptToken = null) {
+    const acceptUrl = acceptToken
+        ? `${process.env.DASHBOARD_URL || ''}/api/quotes/${quote.id}/accept?token=${acceptToken}`
+        : null;
     return {
         to: quote.clientEmail,
         subject: `Devis — ${quote.clientName || 'Votre projet'} — Florian B.`,
@@ -451,9 +472,25 @@ function quoteEmail(quote) {
             ${quoteTotalRow(quote.total, true)}
             ${quote.notes ? `${emailDivider()}<p style="margin:0;font-size:14px;color:${C.textMuted};font-style:italic;">${quote.notes}</p>` : ''}
             ${emailDivider()}
+            ${acceptUrl ? `${emailCTA("✅ J'accepte ce devis", acceptUrl)}<p style="margin:16px 0 0;font-size:12px;color:${C.textDim};">En cliquant, votre facture est générée automatiquement — Florian revient vers vous pour la suite.</p>` : ''}
+            ${emailDivider()}
             <p style="margin:0;font-size:14px;color:${C.textMuted};">Des questions ? Répondez directement à cet email, je suis là.</p>
             ${emailSignature()}
         `, { preheader: `Devis — Total ${(quote.total||0).toFixed(2)} €` }),
+    };
+}
+
+/* — 7bis. Devis accepté par le client (interne) — */
+function quoteAcceptedEmail(quote, invoice) {
+    const dashUrl = (process.env.DASHBOARD_URL || 'https://florian-b.fr') + '/dashboard';
+    return {
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
+        subject: `🎉 Devis accepté — ${quote.clientName || quote.clientEmail}`,
+        html: emailWrapper(`
+            ${emailTitle('Un client a accepté son devis !')}
+            <p style="margin:0 0 24px;color:${C.textMuted};"><strong style="color:${C.white};">${quote.clientName || quote.clientEmail}</strong> a accepté le devis de ${(quote.total||0).toFixed(2)} €. Une facture (${invoice.invoiceNumber}) a été créée automatiquement en brouillon — vérifie-la puis envoie-la depuis le dashboard.</p>
+            ${emailCTA('Voir la facture', dashUrl)}
+        `, { preheader: `${quote.clientName || quote.clientEmail} a accepté son devis` }),
     };
 }
 
@@ -747,10 +784,12 @@ module.exports = {
     leadConfirmationEmail,
     leadNotificationEmail,
     appointmentConfirmationEmail,
+    appointmentReminderEmail,
     appointmentNotificationEmail,
     leadReplyEmail,
     teamInviteEmail,
     quoteEmail,
+    quoteAcceptedEmail,
     quoteReminderEmail,
     invoiceReminderEmail,
     remindersDigestEmail,
