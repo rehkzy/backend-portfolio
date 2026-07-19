@@ -475,6 +475,59 @@ function invoiceEmail(invoice, business = {}) {
     };
 }
 
+/* — 8bis. Relance devis (client) — */
+function quoteReminderEmail(quote) {
+    return {
+        to: quote.clientEmail,
+        subject: `Petit rappel — votre devis — Florian B.`,
+        html: emailWrapper(`
+            ${emailTitle('Toujours partant(e) ?')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${quote.clientName || ''},<br>Je me permets de revenir vers vous au sujet du devis envoyé récemment — il reste disponible si vous souhaitez donner suite.</p>
+            ${quoteItemsHtml(quote.items, true)}
+            ${quoteTotalRow(quote.total, true)}
+            ${emailDivider()}
+            <p style="margin:0;font-size:14px;color:${C.textMuted};">Une question, un ajustement à faire ? Répondez directement à cet email.</p>
+            ${emailSignature()}
+        `, { preheader: `Relance devis — Total ${(quote.total||0).toFixed(2)} €` }),
+    };
+}
+
+/* — 8ter. Relance facture impayée (client) — */
+function invoiceReminderEmail(invoice, business = {}) {
+    return {
+        to: invoice.clientEmail,
+        subject: `Rappel — Facture ${invoice.invoiceNumber} en attente de règlement`,
+        html: emailWrapper(`
+            ${emailTitle('Facture en attente')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${invoice.clientName || ''},<br>Sauf erreur de ma part, la facture n°${invoice.invoiceNumber} n'a pas encore été réglée. Voici son détail :</p>
+            ${quoteItemsHtml(invoice.items, true)}
+            ${quoteTotalRow(invoice.total, true)}
+            ${business.iban ? `${emailDivider()}<p style="margin:0;font-size:13px;color:${C.textMuted};">Règlement par virement :<br><strong style="color:${C.white};font-family:monospace;">${business.iban}</strong></p>` : ''}
+            ${emailDivider()}
+            <p style="margin:0;font-size:14px;color:${C.textMuted};">Si le règlement a déjà été effectué, merci de ne pas tenir compte de ce message.</p>
+            ${emailSignature(business.legalName || 'Florian B.')}
+        `, { preheader: `Rappel facture ${invoice.invoiceNumber} — ${(invoice.total||0).toFixed(2)} €` }),
+    };
+}
+
+/* — 8quater. Digest quotidien des relances suggérées (interne) — */
+function remindersDigestEmail({ quotesToRemind, invoicesOverdue }) {
+    const dashUrl = (process.env.DASHBOARD_URL || 'https://florian-b.fr') + '/dashboard';
+    const rows = [];
+    quotesToRemind.forEach(q => rows.push([`Devis — ${q.clientName || q.clientEmail}`, `${(q.total||0).toFixed(2)} € · envoyé le ${new Date(q.sent_at).toLocaleDateString('fr-FR')}`]));
+    invoicesOverdue.forEach(i => rows.push([`Facture ${i.invoiceNumber} — ${i.clientName || i.clientEmail}`, `${(i.total||0).toFixed(2)} € · échue le ${new Date(i.dueDate).toLocaleDateString('fr-FR')}`]));
+    return {
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
+        subject: `À relancer aujourd'hui — ${rows.length} élément${rows.length > 1 ? 's' : ''}`,
+        html: emailWrapper(`
+            ${emailTitle('Tes relances du jour')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">${quotesToRemind.length} devis sans réponse depuis plus de 5 jours et ${invoicesOverdue.length} facture(s) en retard de paiement.</p>
+            ${emailDataBlock(rows)}
+            ${emailCTA('Ouvrir le dashboard', dashUrl)}
+        `, { preheader: `${rows.length} relance(s) suggérée(s)` }),
+    };
+}
+
 /* — 9. Rapport mensuel (interne) — */
 function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
     const monthName = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -698,6 +751,9 @@ module.exports = {
     leadReplyEmail,
     teamInviteEmail,
     quoteEmail,
+    quoteReminderEmail,
+    invoiceReminderEmail,
+    remindersDigestEmail,
     quoteHtmlPage,
     invoiceHtmlPage,
     invoiceEmail,

@@ -518,6 +518,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 Activité
             </div>
+            <div class="nav-item" data-view="clients">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Clients
+            </div>
         </div>
 
         <div class="nav-group">
@@ -533,6 +537,11 @@
             <div class="nav-item" data-view="projects" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 Suivi de projets
+            </div>
+            <div class="nav-item" data-view="treasury" data-role="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Trésorerie
+                <span class="badge" id="treasuryBadge" style="display:none;"></span>
             </div>
         </div>
 
@@ -1141,6 +1150,17 @@
             <div id="quotesTableWrap"></div>
         </section>
 
+        <!-- CLIENTS — FICHE UNIFIÉE -->
+        <section class="view" id="view-clients">
+            <div class="topbar">
+                <h2>Clients</h2>
+            </div>
+            <div class="toolbar">
+                <input type="text" id="clientsSearchInput" placeholder="Rechercher un client (nom, email, tag)..." style="flex:1; min-width:200px; padding:0.55rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+            </div>
+            <div id="clientsTableWrap"></div>
+        </section>
+
         <!-- FACTURES OFFICIELLES -->
         <section class="view" id="view-invoices">
             <div class="topbar">
@@ -1200,6 +1220,33 @@
                 </div>
             </div>
             <div class="kanban-board" id="projectsKanban"></div>
+        </section>
+
+        <!-- TRÉSORERIE -->
+        <section class="view" id="view-treasury">
+            <div class="topbar">
+                <h2>Trésorerie</h2>
+            </div>
+            <div class="kpi-grid" style="margin-bottom:1.2rem;">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total facturé</div>
+                    <div class="kpi-value" id="treasuryInvoiced">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Encaissé</div>
+                    <div class="kpi-value" id="treasuryPaid">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">En attente</div>
+                    <div class="kpi-value" id="treasuryPending">—</div>
+                </div>
+            </div>
+            <div class="panel" style="margin-bottom:1.2rem;">
+                <h3 style="margin:0 0 1rem;">Encaissements — 12 derniers mois</h3>
+                <canvas id="treasuryChart" height="90"></canvas>
+            </div>
+            <h3 style="margin:0 0 0.8rem;font-size:0.95rem;">À relancer</h3>
+            <div id="treasuryRemindersWrap"></div>
         </section>
 
         <!-- CALENDRIER DE CONTENU -->
@@ -1380,6 +1427,7 @@ async function boot() {
     loadOverview();
     updateLastRefreshLabel();
     api('/api/leads').then(data => { leadsCache = data; }).catch(() => {}); // alimente l'autocomplete client
+    if (CURRENT_USER.role === 'admin') loadTreasuryBadgeOnly();
 }
 
 /* ---------------- INVITATION (nouveau membre définit son mot de passe) ---------------- */
@@ -1472,6 +1520,8 @@ function switchView(view) {
     if (view === 'leads') loadLeads();
     if (view === 'appointments') loadAppointments();
     if (view === 'events') loadEvents();
+    if (view === 'clients') loadClients();
+    if (view === 'treasury') loadTreasury();
     if (view === 'content-hero') loadContentHero();
     if (view === 'content-projects') loadContentProjects();
     if (view === 'content-project-galleries') loadProjectGalleries();
@@ -3162,6 +3212,188 @@ document.querySelectorAll('#view-quotes .filter-chip').forEach(chip => {
         renderQuotesTable();
     });
 });
+
+/* ============================================================
+   CLIENTS — fiche unifiée
+   ============================================================ */
+let clientsCache = [];
+let clientsSearch = '';
+
+async function loadClients() {
+    try {
+        clientsCache = await api('/api/clients');
+        renderClientsTable();
+    } catch (e) { toast(e.message); }
+}
+
+function renderClientsTable() {
+    const wrap = document.getElementById('clientsTableWrap');
+    let list = clientsCache;
+    if (clientsSearch) {
+        const q = clientsSearch.toLowerCase();
+        list = list.filter(c => [c.name, c.email, ...(c.tags || [])].some(f => f && f.toLowerCase().includes(q)));
+    }
+    if (!list.length) { wrap.innerHTML = emptyStateHTML('Aucun client pour le moment.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Client</th><th>Tags</th><th>Leads</th><th>Devis</th><th>Factures</th><th>Encaissé</th><th>Dernière activité</th></tr></thead>
+            <tbody>
+                ${list.map(c => `
+                    <tr onclick="openClientDrawer('${escapeAttr(c.email)}')">
+                        <td>${escapeHtml(c.name || c.email)}<div class="cell-muted" style="font-size:0.75rem;">${escapeHtml(c.email)}</div></td>
+                        <td>${(c.tags || []).map(t => `<span class="badge" style="background:var(--surface-2);color:var(--text-muted);margin-right:4px;">${escapeHtml(t)}</span>`).join('') || '—'}</td>
+                        <td class="cell-muted">${c.leadsCount}</td>
+                        <td class="cell-muted">${c.quotesCount}</td>
+                        <td class="cell-muted">${c.invoicesCount}</td>
+                        <td class="cell-muted">${(c.paidTotal || 0).toFixed(2)} €</td>
+                        <td class="cell-muted">${c.lastActivity ? formatDate(c.lastActivity) : '—'}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+document.getElementById('clientsSearchInput')?.addEventListener('input', (e) => {
+    clientsSearch = e.target.value.trim();
+    renderClientsTable();
+});
+
+async function openClientDrawer(email) {
+    document.getElementById('drawer').innerHTML = `<div class="drawer-header"><h3>Chargement...</h3></div>`;
+    openDrawer();
+    try {
+        const c = await api('/api/clients/' + encodeURIComponent(email));
+        const timelineIcons = { lead: '📩', appointment: '📅', quote: '📝', invoice: '🧾', project: '🗂️' };
+        document.getElementById('drawer').innerHTML = `
+            <div class="drawer-header">
+                <h3>${escapeHtml(c.email)}</h3>
+                <button class="drawer-close" onclick="closeDrawer()">✕</button>
+            </div>
+            <div class="drawer-field">
+                <label>Tags (séparés par des virgules)</label>
+                <input type="text" id="clientTagsInput" value="${escapeAttr((c.tags || []).join(', '))}" placeholder="récurrent, gros compte, instagram...">
+            </div>
+            <div class="drawer-field">
+                <label>Notes internes</label>
+                <textarea id="clientNotesInput" placeholder="Notes libres sur ce client...">${escapeHtml(c.notes || '')}</textarea>
+            </div>
+            <div class="drawer-actions">
+                <button class="btn-secondary" onclick="saveClientMeta('${escapeAttr(c.email)}')">Enregistrer</button>
+            </div>
+            <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border);">
+                <div class="kpi-value" style="font-size:1rem;">${(c.invoices.reduce((s,i)=>s+(i.total||0),0)).toFixed(2)} € facturés · ${(c.invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.total||0),0)).toFixed(2)} € encaissés</div>
+            </div>
+            <h4 style="margin:1rem 0 0.6rem;font-size:0.85rem;color:var(--text-muted);">Historique</h4>
+            <div class="timeline">
+                ${c.timeline.length ? c.timeline.map(e => `
+                    <div style="padding:0.6rem 0;border-bottom:1px solid var(--border);font-size:0.82rem;">
+                        <div>${timelineIcons[e.type] || '•'} ${escapeHtml(e.label)}</div>
+                        <div class="cell-muted" style="font-size:0.72rem;">${formatDate(e.date, true)}</div>
+                    </div>
+                `).join('') : '<p class="cell-muted">Aucun historique.</p>'}
+            </div>
+        `;
+    } catch (e) { toast(e.message); closeDrawer(); }
+}
+
+async function saveClientMeta(email) {
+    const tags = document.getElementById('clientTagsInput').value.split(',').map(t => t.trim()).filter(Boolean);
+    const notes = document.getElementById('clientNotesInput').value.trim();
+    try {
+        await api('/api/clients/' + encodeURIComponent(email), { method: 'PATCH', body: JSON.stringify({ tags, notes }) });
+        toast('Fiche client mise à jour ✅');
+        closeDrawer();
+        loadClients();
+    } catch (e) { toast(e.message); }
+}
+
+/* ============================================================
+   TRÉSORERIE
+   ============================================================ */
+let treasuryChartInstance = null;
+
+async function loadTreasury() {
+    try {
+        const t = await api('/api/treasury');
+        document.getElementById('treasuryInvoiced').textContent = t.invoicedTotal.toFixed(2) + ' €';
+        document.getElementById('treasuryPaid').textContent = t.paidTotal.toFixed(2) + ' €';
+        document.getElementById('treasuryPending').textContent = t.pendingTotal.toFixed(2) + ' €';
+        renderTreasuryChart(t.monthly);
+        renderTreasuryReminders(t.reminders);
+        updateTreasuryBadge(t.reminders.count);
+    } catch (e) { toast(e.message); }
+}
+
+function renderTreasuryChart(monthly) {
+    const ctx = document.getElementById('treasuryChart').getContext('2d');
+    const labels = monthly.map(m => new Date(m.month + '-01').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }));
+    const data = monthly.map(m => m.total);
+    if (treasuryChartInstance) treasuryChartInstance.destroy();
+    treasuryChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Encaissé', data, backgroundColor: '#da2c48' }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    });
+}
+
+function renderTreasuryReminders(reminders) {
+    const wrap = document.getElementById('treasuryRemindersWrap');
+    const { quotesToRemind, invoicesOverdue } = reminders;
+    if (!quotesToRemind.length && !invoicesOverdue.length) {
+        wrap.innerHTML = emptyStateHTML('Rien à relancer pour le moment 🎉');
+        return;
+    }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Type</th><th>Client</th><th>Montant</th><th>Détail</th><th></th></tr></thead>
+            <tbody>
+                ${quotesToRemind.map(q => `
+                    <tr>
+                        <td><span class="badge" style="background:var(--surface-2);color:var(--text-muted);">Devis</span></td>
+                        <td>${escapeHtml(q.clientName || q.clientEmail)}</td>
+                        <td class="cell-muted">${(q.total || 0).toFixed(2)} €</td>
+                        <td class="cell-muted">Envoyé le ${formatDate(q.sent_at)}, sans réponse</td>
+                        <td><button class="btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="sendQuoteReminder(${q.id})">Relancer</button></td>
+                    </tr>
+                `).join('')}
+                ${invoicesOverdue.map(i => `
+                    <tr>
+                        <td><span class="badge" style="background:var(--surface-2);color:var(--text-muted);">Facture</span></td>
+                        <td>${escapeHtml(i.clientName || i.clientEmail)}</td>
+                        <td class="cell-muted">${(i.total || 0).toFixed(2)} €</td>
+                        <td class="cell-muted">${i.invoiceNumber} — échue le ${formatDate(i.dueDate)}</td>
+                        <td><button class="btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="sendInvoiceReminder(${i.id})">Relancer</button></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+async function sendQuoteReminder(id) {
+    try { await api('/api/quotes/' + id + '/remind', { method: 'POST', timeoutMs: 30000 }); toast('Relance envoyée ✅'); loadTreasury(); }
+    catch (e) { toast(e.message); }
+}
+
+async function sendInvoiceReminder(id) {
+    try { await api('/api/invoices/' + id + '/remind', { method: 'POST', timeoutMs: 30000 }); toast('Relance envoyée ✅'); loadTreasury(); }
+    catch (e) { toast(e.message); }
+}
+
+function updateTreasuryBadge(count) {
+    const badge = document.getElementById('treasuryBadge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+}
+
+async function loadTreasuryBadgeOnly() {
+    try {
+        const r = await api('/api/reminders');
+        updateTreasuryBadge(r.quotesToRemind.length + r.invoicesOverdue.length);
+    } catch { /* silencieux — non bloquant */ }
+}
 
 async function loadQuotes() {
     try {

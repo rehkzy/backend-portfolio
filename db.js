@@ -16,6 +16,7 @@ const DEFAULTS = {
     "events": [],
     "quotes": [],
     "invoices": [],
+    "clients": [],
     "users": [],
     "teamLogs": [],
     "about": {
@@ -95,7 +96,8 @@ const DEFAULTS = {
         "siret": "",
         "vatMention": "TVA non applicable, art. 293 B du CGI",
         "iban": "",
-        "paymentTerms": "Paiement à réception de facture. Pénalités de retard : 3 fois le taux d'intérêt légal. Indemnité forfaitaire pour frais de recouvrement : 40 €."
+        "paymentTerms": "Paiement à réception de facture. Pénalités de retard : 3 fois le taux d'intérêt légal. Indemnité forfaitaire pour frais de recouvrement : 40 €.",
+        "paymentDelayDays": 30
     },
     "projects": [],
     "contentCalendar": [],

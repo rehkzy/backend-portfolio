@@ -604,6 +604,111 @@ app.delete('/api/appointments/:id', auth, canWrite, (req, res) => {
     res.json({ ok: true });
 });
 
+/* ---- Fiche client unifiée : normalisation + création à la volée ---- */
+function clientKey(email) { return (email || '').trim().toLowerCase(); }
+
+function touchClient(email, name) {
+    const key = clientKey(email);
+    if (!key) return null;
+    let client = db.get('clients').find({ email: key }).value();
+    if (!client) {
+        client = { email: key, name: name || '', tags: [], notes: '', created_at: now() };
+        db.get('clients').push(client).write();
+    } else if (name && !client.name) {
+        db.get('clients').find({ email: key }).assign({ name }).write();
+    }
+    return client;
+}
+
+/* ============================================================
+   FICHE CLIENT UNIFIÉE
+   Regroupe leads / RDV / devis / factures / projets par email,
+   avec tags et notes internes persistants.
+   ============================================================ */
+app.get('/api/clients', auth, (req, res) => {
+    const leads = db.get('leads').value();
+    const appointments = db.get('appointments').value();
+    const quotes = db.get('quotes').value();
+    const invoices = db.get('invoices').value();
+    const projects = db.get('projects').value();
+    const clientRecords = db.get('clients').value();
+
+    const emails = new Set([
+        ...leads.map(l => clientKey(l.email)),
+        ...appointments.map(a => clientKey(a.email)),
+        ...quotes.map(q => clientKey(q.clientEmail)),
+        ...invoices.map(i => clientKey(i.clientEmail)),
+        ...projects.map(p => clientKey(p.clientEmail)),
+        ...clientRecords.map(c => clientKey(c.email)),
+    ].filter(Boolean));
+
+    const list = [...emails].map(email => {
+        const record = clientRecords.find(c => c.email === email) || {};
+        const myLeads = leads.filter(l => clientKey(l.email) === email);
+        const myAppts = appointments.filter(a => clientKey(a.email) === email);
+        const myQuotes = quotes.filter(q => clientKey(q.clientEmail) === email);
+        const myInvoices = invoices.filter(i => clientKey(i.clientEmail) === email);
+        const myProjects = projects.filter(p => clientKey(p.clientEmail) === email);
+        const name = record.name || myLeads[0]?.name || myQuotes[0]?.clientName || myInvoices[0]?.clientName || '';
+        const allDates = [
+            ...myLeads.map(x => x.created_at), ...myAppts.map(x => x.created_at),
+            ...myQuotes.map(x => x.created_at), ...myInvoices.map(x => x.created_at),
+        ].filter(Boolean).sort();
+        return {
+            email, name,
+            tags: record.tags || [], notes: record.notes || '',
+            leadsCount: myLeads.length, appointmentsCount: myAppts.length,
+            quotesCount: myQuotes.length, invoicesCount: myInvoices.length,
+            projectsCount: myProjects.length,
+            invoicedTotal: myInvoices.reduce((s, i) => s + (i.total || 0), 0),
+            paidTotal: myInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0),
+            lastActivity: allDates.length ? allDates[allDates.length - 1] : (record.created_at || null),
+        };
+    });
+    list.sort((a, b) => (b.lastActivity || '').localeCompare(a.lastActivity || ''));
+    res.json(list);
+});
+
+app.get('/api/clients/:email', auth, (req, res) => {
+    const email = clientKey(req.params.email);
+    const record = db.get('clients').find({ email }).value() || { email, tags: [], notes: '' };
+    const leads = db.get('leads').value().filter(l => clientKey(l.email) === email);
+    const appointments = db.get('appointments').value().filter(a => clientKey(a.email) === email);
+    const quotes = db.get('quotes').value().filter(q => clientKey(q.clientEmail) === email);
+    const invoices = db.get('invoices').value().filter(i => clientKey(i.clientEmail) === email);
+    const projects = db.get('projects').value().filter(p => clientKey(p.clientEmail) === email);
+
+    // Timeline chronologique unifiée (la plus récente en premier)
+    const timeline = [
+        ...leads.map(l => ({ type: 'lead', date: l.created_at, label: `Lead reçu (${l.source})`, ref: l })),
+        ...appointments.map(a => ({ type: 'appointment', date: a.created_at, label: `RDV — ${a.subject}`, ref: a })),
+        ...quotes.map(q => ({ type: 'quote', date: q.created_at, label: `Devis créé — ${(q.total||0).toFixed(2)} €`, ref: q })),
+        ...invoices.map(i => ({ type: 'invoice', date: i.created_at, label: `Facture ${i.invoiceNumber} — ${(i.total||0).toFixed(2)} €`, ref: i })),
+        ...projects.map(p => ({ type: 'project', date: p.created_at, label: `Projet — ${p.name} (${p.stage})`, ref: p })),
+    ].filter(e => e.date).sort((a, b) => b.date.localeCompare(a.date));
+
+    res.json({
+        email: record.email, tags: record.tags || [], notes: record.notes || '',
+        leads, appointments, quotes, invoices, projects, timeline,
+    });
+});
+
+app.patch('/api/clients/:email', auth, canWrite, (req, res) => {
+    const email = clientKey(req.params.email);
+    if (!email) return res.status(400).json({ error: 'email requis' });
+    const { tags, notes, name } = req.body || {};
+    let client = db.get('clients').find({ email }).value();
+    if (!client) { client = { email, name: name || '', tags: [], notes: '', created_at: now() }; db.get('clients').push(client).write(); }
+    const patch = {};
+    if (tags !== undefined) patch.tags = Array.isArray(tags) ? tags : [];
+    if (notes !== undefined) patch.notes = notes;
+    if (name !== undefined) patch.name = name;
+    db.get('clients').find({ email }).assign(patch).write();
+    logTeamAction(req, 'client_updated', `Fiche client mise à jour : ${email}`);
+    res.json({ ok: true });
+});
+
+
 /* ============================================================
    CONTENU DU SITE — theme builder
    GET /api/content : public, appelé par index.html au chargement
@@ -785,6 +890,7 @@ app.post('/api/quotes', auth, adminOnly, (req, res) => {
     };
     quote.total = computeQuoteTotal(quote.items);
     db.get('quotes').push(quote).write();
+    touchClient(clientEmail, clientName);
     logTeamAction(req, 'quote_created', `Devis créé pour ${clientEmail} (${quote.total.toFixed(2)} €)`, quote.id);
     res.status(201).json(quote);
 });
@@ -868,15 +974,19 @@ app.get('/api/invoices', auth, (req, res) => {
 app.post('/api/invoices', auth, adminOnly, (req, res) => {
     const { clientName, clientEmail, clientAddress, items, notes, quoteId } = req.body || {};
     if (!clientEmail) return res.status(400).json({ error: 'clientEmail requis' });
+    const delayDays = Number(db.get('businessSettings').value()?.paymentDelayDays) || 30;
     const invoice = {
         id: nextId('invoices'), created_at: now(), invoiceNumber: nextInvoiceNumber(),
         quoteId: quoteId || null,
         clientName: clientName || '', clientEmail, clientAddress: clientAddress || '',
         items: Array.isArray(items) ? items : [],
-        notes: notes || '', status: 'draft', issue_date: now(), sent_at: null, paid_at: null,
+        notes: notes || '', status: 'draft', issue_date: now(),
+        dueDate: new Date(Date.now() + delayDays * 86400000).toISOString(),
+        sent_at: null, paid_at: null, lastReminderAt: null,
     };
     invoice.total = computeQuoteTotal(invoice.items);
     db.get('invoices').push(invoice).write();
+    touchClient(clientEmail, clientName);
     res.status(201).json(invoice);
 });
 
@@ -884,14 +994,18 @@ app.post('/api/invoices', auth, adminOnly, (req, res) => {
 app.post('/api/quotes/:id/convert-to-invoice', auth, adminOnly, (req, res) => {
     const quote = db.get('quotes').find({ id: Number(req.params.id) }).value();
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
+    const delayDays = Number(db.get('businessSettings').value()?.paymentDelayDays) || 30;
     const invoice = {
         id: nextId('invoices'), created_at: now(), invoiceNumber: nextInvoiceNumber(),
         quoteId: quote.id,
         clientName: quote.clientName, clientEmail: quote.clientEmail, clientAddress: '',
         items: quote.items, total: quote.total,
-        notes: quote.notes || '', status: 'draft', issue_date: now(), sent_at: null, paid_at: null,
+        notes: quote.notes || '', status: 'draft', issue_date: now(),
+        dueDate: new Date(Date.now() + delayDays * 86400000).toISOString(),
+        sent_at: null, paid_at: null, lastReminderAt: null,
     };
     db.get('invoices').push(invoice).write();
+    touchClient(quote.clientEmail, quote.clientName);
     logTeamAction(req, 'invoice_created', `Facture ${invoice.invoiceNumber} créée depuis devis #${quote.id} (${quote.clientEmail})`, invoice.id);
     res.status(201).json(invoice);
 });
@@ -944,6 +1058,74 @@ app.post('/api/invoices/:id/send', auth, adminOnly, async (req, res) => {
     db.get('invoices').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
     logTeamAction(req, 'invoice_sent', `Facture ${invoice.invoiceNumber} envoyée à ${invoice.clientEmail}`, id);
     res.json({ ok: true });
+});
+
+/* ============================================================
+   TRÉSORERIE — vue d'ensemble financière + relances
+   ============================================================ */
+const REMINDER_DELAY_DAYS = 5; // devis envoyé sans réponse depuis N jours → suggestion de relance
+
+function getSuggestedReminders() {
+    const cutoff = new Date(Date.now() - REMINDER_DELAY_DAYS * 86400000).toISOString();
+    const quotes = db.get('quotes').value();
+    const invoices = db.get('invoices').value();
+    const quotesToRemind = quotes.filter(q => q.status === 'sent' && q.sent_at && q.sent_at <= cutoff);
+    const nowIso = now();
+    const invoicesOverdue = invoices.filter(i => i.status !== 'paid' && i.dueDate && i.dueDate <= nowIso && i.sent_at);
+    return { quotesToRemind, invoicesOverdue };
+}
+
+app.get('/api/reminders', auth, (req, res) => {
+    res.json(getSuggestedReminders());
+});
+
+app.post('/api/quotes/:id/remind', auth, adminOnly, async (req, res) => {
+    const id = Number(req.params.id);
+    const quote = db.get('quotes').find({ id }).value();
+    if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
+    const result = await mailer.sendMail(mailer.quoteReminderEmail(quote));
+    if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
+    db.get('quotes').find({ id }).assign({ lastReminderAt: now() }).write();
+    logTeamAction(req, 'quote_reminder_sent', `Relance envoyée pour le devis #${id} (${quote.clientEmail})`, id);
+    res.json({ ok: true });
+});
+
+app.post('/api/invoices/:id/remind', auth, adminOnly, async (req, res) => {
+    const id = Number(req.params.id);
+    const invoice = db.get('invoices').find({ id }).value();
+    if (!invoice) return res.status(404).json({ error: 'Facture introuvable' });
+    const business = db.get('businessSettings').value();
+    const result = await mailer.sendMail(mailer.invoiceReminderEmail(invoice, business));
+    if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
+    db.get('invoices').find({ id }).assign({ lastReminderAt: now() }).write();
+    logTeamAction(req, 'invoice_reminder_sent', `Relance envoyée pour la facture ${invoice.invoiceNumber} (${invoice.clientEmail})`, id);
+    res.json({ ok: true });
+});
+
+app.get('/api/treasury', auth, (req, res) => {
+    const invoices = db.get('invoices').value();
+    const invoicedTotal = invoices.reduce((s, i) => s + (i.total || 0), 0);
+    const paidTotal = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0);
+    const pendingTotal = invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.total || 0), 0);
+
+    // Courbe des encaissements sur les 12 derniers mois
+    const monthly = {};
+    const twelveMonthsAgo = new Date(); twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11); twelveMonthsAgo.setDate(1);
+    for (let i = 0; i < 12; i++) {
+        const d = new Date(twelveMonthsAgo); d.setMonth(d.getMonth() + i);
+        monthly[d.toISOString().slice(0, 7)] = 0;
+    }
+    invoices.filter(i => i.status === 'paid' && i.paid_at).forEach(i => {
+        const key = i.paid_at.slice(0, 7);
+        if (key in monthly) monthly[key] += (i.total || 0);
+    });
+
+    const { quotesToRemind, invoicesOverdue } = getSuggestedReminders();
+    res.json({
+        invoicedTotal, paidTotal, pendingTotal,
+        monthly: Object.entries(monthly).map(([month, total]) => ({ month, total })),
+        reminders: { quotesToRemind, invoicesOverdue, count: quotesToRemind.length + invoicesOverdue.length },
+    });
 });
 
 /* ============================================================
@@ -1096,6 +1278,16 @@ cron.schedule('0 8 1 * *', () => {
 // Vérification des alertes analytics — toutes les heures
 cron.schedule('0 * * * *', () => {
     checkAnalyticsAlerts().catch(err => console.error('Erreur vérification alertes:', err.message));
+}, { timezone: 'Europe/Paris' });
+
+// Digest quotidien des relances suggérées (devis sans réponse, factures en retard) — 9h
+cron.schedule('0 9 * * *', async () => {
+    try {
+        const { quotesToRemind, invoicesOverdue } = getSuggestedReminders();
+        if (!quotesToRemind.length && !invoicesOverdue.length) return;
+        console.log(`💌 Digest relances : ${quotesToRemind.length} devis, ${invoicesOverdue.length} factures`);
+        await mailer.sendMail(mailer.remindersDigestEmail({ quotesToRemind, invoicesOverdue }));
+    } catch (err) { console.error('Erreur digest relances:', err.message); }
 }, { timezone: 'Europe/Paris' });
 
 app.listen(PORT, () => console.log(`✅ Backend Florian B. sur http://localhost:${PORT}`));
