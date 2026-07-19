@@ -85,11 +85,62 @@ app.post('/api/appointments', async (req, res) => {
     mailer.sendMail(mailer.appointmentNotificationEmail(appt)).catch(() => {});
 });
 
+// Suivi d'activité — appelé par le site pour toute action utilisateur (formulaires,
+// consultation de projet, ouverture du chat, FAQ, téléchargements, etc.)
+// Format envoyé par le site : { event, sessionId, path, referrer, timestamp, ...données propres à l'événement }
+// Reste compatible avec l'ancien format { type, meta } utilisé par le code existant.
 app.post('/api/events', (req, res) => {
-    const { type, meta } = req.body || {};
-    if (!type) return res.status(400).json({ error: 'type requis' });
-    db.get('events').push({ id: nextId('events'), created_at: now(), type, meta: meta || {} }).write();
+    const body = req.body || {};
+    const type = body.event || body.type;
+    if (!type) return res.status(400).json({ error: 'event (ou type) requis' });
+    const knownFields = ['event', 'type', 'sessionId', 'path', 'referrer', 'timestamp', 'meta'];
+    const extraMeta = body.meta || Object.fromEntries(Object.entries(body).filter(([k]) => !knownFields.includes(k)));
+    const record = {
+        id: nextId('events'),
+        created_at: now(),
+        type,
+        sessionId: body.sessionId || null,
+        path: body.path || null,
+        referrer: body.referrer || null,
+        meta: extraMeta,
+    };
+    db.get('events').push(record).write();
+    // Garde-fou : ne garder que les 5000 événements les plus récents pour ne pas faire grossir indéfiniment le fichier de données
+    const events = db.get('events').value();
+    if (events.length > 5000) db.set('events', events.slice(events.length - 5000)).write();
     res.status(201).json({ ok: true });
+});
+
+app.get('/api/events', auth, (req, res) => {
+    const { type, q } = req.query;
+    let events = db.get('events').value();
+    if (type) events = events.filter(e => e.type === type);
+    if (q) {
+        const lq = q.toLowerCase();
+        events = events.filter(e => [e.path, e.referrer, e.sessionId, JSON.stringify(e.meta || {})].some(f => f && String(f).toLowerCase().includes(lq)));
+    }
+    const limit = Math.min(Number(req.query.limit) || 300, 1000);
+    res.json(events.slice(-limit).reverse());
+});
+
+app.get('/api/events/summary', auth, (req, res) => {
+    const events = db.get('events').value();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const recent = events.filter(e => e.created_at >= sevenDaysAgo);
+    const byType = {};
+    recent.forEach(e => { byType[e.type] = (byType[e.type] || 0) + 1; });
+    const sessions = new Set(recent.map(e => e.sessionId).filter(Boolean));
+    res.json({
+        total7d: recent.length,
+        totalAll: events.length,
+        uniqueSessions7d: sessions.size,
+        byType: Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([type, count]) => ({ type, count })),
+    });
+});
+
+app.delete('/api/events/:id', auth, (req, res) => {
+    db.get('events').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
 });
 
 /* ============================================================

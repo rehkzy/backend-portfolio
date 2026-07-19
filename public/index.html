@@ -411,6 +411,10 @@
                 Rendez-vous
                 <span class="badge" id="apptBadge" style="display:none"></span>
             </div>
+            <div class="nav-item" data-view="events">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Activité
+            </div>
         </div>
 
         <div class="nav-group">
@@ -771,6 +775,44 @@
                 <button class="filter-chip" data-astatus="cancelled">Annulé</button>
             </div>
             <div id="apptTableWrap"></div>
+        </section>
+
+        <!-- ACTIVITÉ -->
+        <section class="view" id="view-events">
+            <div class="topbar">
+                <h2>Activité</h2>
+                <div class="topbar-actions">
+                    <button class="btn-secondary" id="refreshEventsBtn" style="width:auto; padding:0.55rem 1rem;">Rafraîchir</button>
+                </div>
+            </div>
+            <p class="cell-muted" style="margin-bottom:1.2rem;">Chaque action des visiteurs sur le site — formulaires envoyés, projets consultés, chat ouvert, FAQ, téléchargements... Utile pour voir ce qui intéresse vraiment, et repérer les visiteurs qui montrent une vraie intention (formulaire rempli, RDV demandé).</p>
+
+            <div class="kpi-grid">
+                <div class="kpi-card hero">
+                    <div class="kpi-label">Actions (7 derniers jours)</div>
+                    <div class="kpi-value" id="kpiEvents7d">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Visiteurs uniques (7 jours)</div>
+                    <div class="kpi-value" id="kpiEventsSessions">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Total enregistré</div>
+                    <div class="kpi-value" id="kpiEventsTotal">—</div>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-bottom:1.2rem;">
+                <h3>Répartition par type — 7 derniers jours</h3>
+                <div id="eventsBreakdown"></div>
+            </div>
+
+            <div class="toolbar">
+                <select id="eventsTypeFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.82rem;">
+                    <option value="">Tous les types</option>
+                </select>
+            </div>
+            <div id="eventsTableWrap"></div>
         </section>
 
         <!-- CONTENU : HERO -->
@@ -1163,6 +1205,7 @@ function switchView(view) {
     if (view === 'analytics') loadAnalytics();
     if (view === 'leads') loadLeads();
     if (view === 'appointments') loadAppointments();
+    if (view === 'events') loadEvents();
     if (view === 'content-hero') loadContentHero();
     if (view === 'content-projects') loadContentProjects();
     if (view === 'content-project-galleries') loadProjectGalleries();
@@ -1983,6 +2026,121 @@ async function saveAppt(id) {
 async function deleteAppt(id) {
     if (!confirm('Supprimer définitivement ce rendez-vous ?')) return;
     try { await api('/api/appointments/' + id, { method: 'DELETE' }); toast('Rendez-vous supprimé'); closeDrawer(); loadAppointments(); }
+    catch (e) { toast(e.message); }
+}
+
+/* ---------------- ACTIVITÉ (événements du site) ---------------- */
+let eventsCache = [];
+let eventsTypeFilter = '';
+
+document.getElementById('eventsTypeFilter').addEventListener('change', (e) => {
+    eventsTypeFilter = e.target.value;
+    loadEvents();
+});
+document.getElementById('refreshEventsBtn').addEventListener('click', loadEvents);
+
+function eventTypeLabel(type) {
+    return {
+        page_view: 'Page vue',
+        project_view: 'Projet consulté',
+        image_lightbox_open: 'Image ouverte en grand',
+        faq_open: 'Question FAQ ouverte',
+        cv_download: 'CV téléchargé',
+        social_click: 'Clic réseau social',
+        hero_search_submit: 'Recherche IA (accueil)',
+        chat_opened: 'Chat ouvert',
+        contact_form_submit: 'Formulaire de contact envoyé',
+        rdv_form_submit: 'Demande de RDV envoyée',
+        diagnostic_complete: 'Diagnostic de marque terminé',
+        diagnostic_cta_click: 'CTA diagnostic cliqué',
+        voice_message_sent: 'Message vocal envoyé',
+    }[type] || type;
+}
+
+// Types considérés comme des signaux d'intention forte (formulaires, demandes) — mis en avant visuellement
+const HIGH_INTENT_EVENTS = ['contact_form_submit', 'rdv_form_submit', 'voice_message_sent', 'diagnostic_cta_click'];
+
+async function loadEventsSummary() {
+    try {
+        const s = await api('/api/events/summary');
+        document.getElementById('kpiEvents7d').textContent = s.total7d;
+        document.getElementById('kpiEventsSessions').textContent = s.uniqueSessions7d;
+        document.getElementById('kpiEventsTotal').textContent = s.totalAll;
+
+        const wrap = document.getElementById('eventsBreakdown');
+        if (!s.byType.length) {
+            wrap.innerHTML = emptyStateHTML('Aucune activité enregistrée pour le moment.');
+        } else {
+            wrap.innerHTML = s.byType.map(row => `
+                <div class="status-row">
+                    <span><span class="dot" style="background:${HIGH_INTENT_EVENTS.includes(row.type) ? 'var(--success)' : 'var(--text-muted)'}"></span>${eventTypeLabel(row.type)}</span>
+                    <strong>${row.count}</strong>
+                </div>
+            `).join('');
+        }
+
+        // Alimente le filtre déroulant avec les types réellement présents
+        const select = document.getElementById('eventsTypeFilter');
+        const current = select.value;
+        select.innerHTML = '<option value="">Tous les types</option>' +
+            s.byType.map(row => `<option value="${row.type}">${eventTypeLabel(row.type)}</option>`).join('');
+        select.value = current;
+    } catch (e) { toast(e.message); }
+}
+
+async function loadEvents() {
+    const params = new URLSearchParams();
+    if (eventsTypeFilter) params.set('type', eventsTypeFilter);
+    try {
+        eventsCache = await api('/api/events?' + params.toString());
+        renderEventsTable();
+        loadEventsSummary();
+    } catch (e) { toast(e.message); }
+}
+
+function renderEventsTable() {
+    const wrap = document.getElementById('eventsTableWrap');
+    if (!eventsCache.length) { wrap.innerHTML = emptyStateHTML('Aucune activité pour le moment.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Action</th><th>Page</th><th>Visiteur</th><th>Date</th></tr></thead>
+            <tbody>
+                ${eventsCache.map(ev => `
+                    <tr onclick="openEventDrawer(${ev.id})">
+                        <td>${HIGH_INTENT_EVENTS.includes(ev.type) ? '<span class="dot" style="background:var(--success); display:inline-block; margin-right:6px;"></span>' : ''}${escapeHtml(eventTypeLabel(ev.type))}</td>
+                        <td class="cell-muted">${escapeHtml(ev.path || '—')}</td>
+                        <td class="cell-muted">${ev.sessionId ? escapeHtml(ev.sessionId.slice(0, 14)) + '…' : '—'}</td>
+                        <td class="cell-muted">${formatDate(ev.created_at, true)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function openEventDrawer(id) {
+    const ev = eventsCache.find(x => x.id === id);
+    if (!ev) return;
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${escapeHtml(eventTypeLabel(ev.type))}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-field"><label>Page</label><div class="value">${escapeHtml(ev.path || '—')}</div></div>
+        <div class="drawer-field"><label>Provenance</label><div class="value">${escapeHtml(ev.referrer || 'Accès direct')}</div></div>
+        <div class="drawer-field"><label>Identifiant visiteur (session)</label><div class="value">${escapeHtml(ev.sessionId || '—')}</div></div>
+        <div class="drawer-field"><label>Date</label><div class="value">${formatDate(ev.created_at, true)}</div></div>
+        <div class="drawer-field"><label>Détail</label><textarea readonly style="min-height:160px; font-family:monospace; font-size:0.78rem;">${escapeHtml(JSON.stringify(ev.meta || {}, null, 2))}</textarea></div>
+        <div class="drawer-actions">
+            <button class="btn-danger" onclick="deleteEvent(${ev.id})">Supprimer</button>
+        </div>
+    `;
+    openDrawer();
+}
+
+async function deleteEvent(id) {
+    if (!confirm('Supprimer cet événement ?')) return;
+    try { await api('/api/events/' + id, { method: 'DELETE' }); toast('Événement supprimé'); closeDrawer(); loadEvents(); }
     catch (e) { toast(e.message); }
 }
 
