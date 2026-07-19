@@ -18,6 +18,32 @@ const DEFAULTS = {
     "invoices": [],
     "clients": [],
     "expenses": [],
+    "quoteTemplates": [
+        {
+            "id": 1, "name": "Branding / Identité visuelle",
+            "items": [
+                { "desc": "Recherche & moodboard", "qty": 1, "price": 250 },
+                { "desc": "Logo & déclinaisons", "qty": 1, "price": 600 },
+                { "desc": "Charte graphique (PDF)", "qty": 1, "price": 350 }
+            ]
+        },
+        {
+            "id": 2, "name": "UI/UX Design",
+            "items": [
+                { "desc": "Wireframes", "qty": 1, "price": 300 },
+                { "desc": "Maquettes UI (Figma)", "qty": 1, "price": 900 },
+                { "desc": "Prototype interactif", "qty": 1, "price": 250 }
+            ]
+        },
+        {
+            "id": 3, "name": "Vidéo / Motion design",
+            "items": [
+                { "desc": "Script & storyboard", "qty": 1, "price": 200 },
+                { "desc": "Animation motion design", "qty": 1, "price": 700 },
+                { "desc": "Montage & habillage sonore", "qty": 1, "price": 250 }
+            ]
+        }
+    ],
     "users": [],
     "teamLogs": [],
     "about": {

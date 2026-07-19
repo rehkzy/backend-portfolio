@@ -356,6 +356,7 @@ function leadNotificationEmail(lead) {
                 ['Email', lead.email],
                 ['Source', lead.source || '—'],
                 ['Budget indiqué', lead.budget || '—'],
+                ['Client', lead.isReturningClient ? '🔁 Client déjà connu' : 'Nouveau contact'],
                 ['Reçu le', new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })],
             ])}
             ${emailQuote(lead.message)}
@@ -569,6 +570,31 @@ function remindersDigestEmail({ quotesToRemind, invoicesOverdue }) {
             ${emailDataBlock(rows)}
             ${emailCTA('Ouvrir le dashboard', dashUrl)}
         `, { preheader: `${rows.length} relance(s) suggérée(s)` }),
+    };
+}
+
+/* — 8quinquies. Brief quotidien (interne) — "Aujourd'hui" par email, 8h */
+function dailyBriefEmail({ newLeadsToProcess, apptsToday, quotesToRemind, invoicesOverdue, alerts }) {
+    const dashUrl = (process.env.DASHBOARD_URL || 'https://florian-b.fr') + '/dashboard';
+    const dateLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const statsRow = [
+        { value: String(newLeadsToProcess), label: 'Leads à traiter' },
+        { value: String(apptsToday.length), label: "RDV aujourd'hui" },
+        { value: String(quotesToRemind.length + invoicesOverdue.length), label: 'À relancer' },
+    ];
+    const apptsRows = apptsToday.map(a => [a.subject || 'RDV', new Date(a.confirmedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })]);
+    return {
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
+        subject: `☀️ Ton brief du ${dateLabel}`,
+        html: emailWrapper(`
+            ${emailTitle('Bonjour Florian')}
+            <p style="margin:0 0 24px;color:${C.textMuted};text-transform:capitalize;">${dateLabel}</p>
+            ${emailStatGrid(statsRow)}
+            ${apptsRows.length ? `${emailDivider()}<p style="margin:0 0 12px;font-size:13px;font-weight:700;color:${C.white};text-transform:uppercase;letter-spacing:0.8px;">RDV du jour</p>${emailDataBlock(apptsRows)}` : ''}
+            ${alerts && alerts.length ? `${emailDivider()}<p style="margin:0 0 12px;font-size:13px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:0.8px;">⚠️ À surveiller</p>${alerts.map(a => `<p style="margin:0 0 8px;font-size:13px;color:${C.textMuted};">${a}</p>`).join('')}` : ''}
+            ${emailDivider()}
+            ${emailCTA('Ouvrir le dashboard', dashUrl)}
+        `, { preheader: `${newLeadsToProcess} leads · ${apptsToday.length} RDV · ${quotesToRemind.length + invoicesOverdue.length} relance(s)` }),
     };
 }
 
@@ -809,6 +835,7 @@ module.exports = {
     quoteReminderEmail,
     invoiceReminderEmail,
     remindersDigestEmail,
+    dailyBriefEmail,
     quoteHtmlPage,
     invoiceHtmlPage,
     invoiceEmail,

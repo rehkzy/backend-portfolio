@@ -368,6 +368,7 @@ app.post('/api/leads', async (req, res) => {
         id: nextId('leads'), created_at: now(),
         name: name || null, email, message,
         source: source || 'chat', status: 'new', notes: '', budget: budget || null,
+        isReturningClient: isReturningClient(email),
         tracking,
     };
     db.get('leads').push(lead).write();
@@ -491,6 +492,43 @@ app.delete('/api/events/:id', auth, canWrite, (req, res) => {
 /* ============================================================
    DONNÉES PROTÉGÉES — dashboard admin
    ============================================================ */
+/* ============================================================
+   COCKPIT — vue "Aujourd'hui" : tout ce qui demande une action,
+   + timeline unifiée des 14 prochains jours (devis/RDV/projets/contenu)
+   ============================================================ */
+app.get('/api/cockpit', auth, (req, res) => {
+    const todayStr = now().slice(0, 10);
+    const in14days = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+
+    const leads = db.get('leads').value();
+    const appointments = db.get('appointments').value();
+    const projects = db.get('projects').value();
+    const contentCalendar = db.get('contentCalendar').value();
+    const { quotesToRemind, invoicesOverdue } = getSuggestedReminders();
+
+    const newLeadsToProcess = leads.filter(l => l.status === 'new');
+    const apptsToday = appointments.filter(a => a.confirmedDate && a.confirmedDate.slice(0, 10) === todayStr);
+    const activeProjects = projects.filter(p => p.stage !== 'livre');
+
+    // Timeline unifiée : RDV confirmés + posts programmés + devis à relancer, sur 14 jours
+    const timeline = [
+        ...appointments.filter(a => a.confirmedDate && a.confirmedDate.slice(0, 10) >= todayStr && a.confirmedDate.slice(0, 10) <= in14days)
+            .map(a => ({ date: a.confirmedDate.slice(0, 10), type: 'appointment', label: `RDV — ${a.subject}`, ref: a.id })),
+        ...contentCalendar.filter(c => c.date && c.date >= todayStr && c.date <= in14days && c.status !== 'posted')
+            .map(c => ({ date: c.date, type: 'content', label: `Post ${c.platform || ''} — ${c.title}`, ref: c.id })),
+    ].sort((a, b) => a.date.localeCompare(b.date));
+
+    res.json({
+        newLeadsToProcess: newLeadsToProcess.length,
+        apptsToday: apptsToday.map(a => ({ id: a.id, subject: a.subject, email: a.email, confirmedDate: a.confirmedDate })),
+        quotesToRemindCount: quotesToRemind.length,
+        invoicesOverdueCount: invoicesOverdue.length,
+        activeProjectsCount: activeProjects.length,
+        timeline,
+    });
+});
+
+
 app.get('/api/stats', auth, (req, res) => {
     const leads = db.get('leads').value();
     const appointments = db.get('appointments').value();
@@ -524,10 +562,12 @@ app.get('/api/stats', auth, (req, res) => {
 });
 
 app.get('/api/leads', auth, (req, res) => {
-    const { status, q } = req.query;
+    const { status, q, includeArchived } = req.query;
     let leads = db.get('leads').value();
+    if (!includeArchived) leads = leads.filter(l => !l.archived);
     if (status) leads = leads.filter(l => l.status === status);
     if (q) { const lq = q.toLowerCase(); leads = leads.filter(l => [l.name, l.email, l.message].some(f => f && f.toLowerCase().includes(lq))); }
+    leads = leads.map(l => ({ ...l, priorityScore: computeLeadPriorityScore(l) }));
     res.json(leads.reverse());
 });
 
@@ -562,6 +602,7 @@ app.post('/api/admin/leads', auth, canWrite, (req, res) => {
         id: nextId('leads'), created_at: now(),
         name: name || null, email, message: message || '',
         source: source || 'manuel', status: status || 'new', notes: '',
+        isReturningClient: isReturningClient(email),
         tracking: { ip: getRealIp(req), ...parseUA(req.headers['user-agent']), addedBy: req.user.email },
     };
     db.get('leads').push(lead).write();
@@ -606,8 +647,74 @@ app.delete('/api/appointments/:id', auth, canWrite, (req, res) => {
     res.json({ ok: true });
 });
 
+/* ============================================================
+   SYNCHRONISATION CALENDRIER — flux .ics abonnable (Google Agenda,
+   Apple Calendar...) avec tous les RDV confirmés à venir.
+   Protégé par un token dérivé de JWT_SECRET (pas de login requis,
+   pour permettre à l'appli calendrier de le récupérer périodiquement).
+   ============================================================ */
+function calendarFeedToken() {
+    return crypto.createHmac('sha256', JWT_SECRET).update('calendar-feed').digest('hex').slice(0, 32);
+}
+
+function icsEscape(str) { return String(str || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n'); }
+function icsDate(iso) { return new Date(iso).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'; }
+
+app.get('/api/appointments/calendar.ics', (req, res) => {
+    if (req.query.token !== calendarFeedToken()) return res.status(403).send('Token invalide');
+    const appts = db.get('appointments').value().filter(a => a.status === 'confirmed' && a.confirmedDate);
+    const events = appts.map(a => {
+        const start = new Date(a.confirmedDate);
+        const end = new Date(start.getTime() + 3600000);
+        return [
+            'BEGIN:VEVENT',
+            `UID:appt-${a.id}@florian-b.fr`,
+            `DTSTAMP:${icsDate(now())}`,
+            `DTSTART:${icsDate(start.toISOString())}`,
+            `DTEND:${icsDate(end.toISOString())}`,
+            `SUMMARY:${icsEscape('RDV — ' + (a.subject || ''))}`,
+            `DESCRIPTION:${icsEscape('Contact : ' + a.email)}`,
+            'END:VEVENT',
+        ].join('\r\n');
+    });
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Florian B.//Dashboard//FR', 'CALSCALE:GREGORIAN', ...events, 'END:VCALENDAR'].join('\r\n');
+    res.set('Content-Type', 'text/calendar; charset=utf-8');
+    res.set('Content-Disposition', 'inline; filename="rdv-florian-b.ics"');
+    res.send(ics);
+});
+
+app.get('/api/appointments/calendar-feed-url', auth, (req, res) => {
+    const base = process.env.DASHBOARD_URL || `${req.protocol}://${req.get('host')}`;
+    res.json({ url: `${base}/api/appointments/calendar.ics?token=${calendarFeedToken()}` });
+});
+
 /* ---- Fiche client unifiée : normalisation + création à la volée ---- */
 function clientKey(email) { return (email || '').trim().toLowerCase(); }
+
+// Un client a-t-il déjà une trace avant cette date (autre lead, devis, facture) ?
+// Sert à repérer les clients récurrents dès la réception d'un nouveau lead.
+function isReturningClient(email, beforeDate = now()) {
+    const key = clientKey(email);
+    if (!key) return false;
+    const inLeads = db.get('leads').value().some(l => clientKey(l.email) === key && l.created_at < beforeDate);
+    const inQuotes = db.get('quotes').value().some(q => clientKey(q.clientEmail) === key && q.created_at < beforeDate);
+    const inInvoices = db.get('invoices').value().some(i => clientKey(i.clientEmail) === key && i.created_at < beforeDate);
+    return inLeads || inQuotes || inInvoices;
+}
+
+// Score de priorité d'un lead (0-100) — aide à savoir lequel traiter en premier.
+// Facteurs : budget indiqué, fraîcheur, client déjà connu.
+const BUDGET_SCORES = { '> 6000€': 40, '3000-6000€': 32, '1000-3000€': 22, '< 1000€': 10, 'non précisé': 15 };
+function computeLeadPriorityScore(lead) {
+    let score = 30; // base
+    score += BUDGET_SCORES[lead.budget] ?? 15;
+    const hoursOld = (Date.now() - new Date(lead.created_at)) / 3600000;
+    if (hoursOld < 24) score += 20;
+    else if (hoursOld < 72) score += 10;
+    if (lead.isReturningClient) score += 15;
+    if (lead.status === 'new') score += 5;
+    return Math.max(0, Math.min(100, Math.round(score)));
+}
 
 function touchClient(email, name) {
     const key = clientKey(email);
@@ -938,6 +1045,11 @@ function quoteAcceptToken(id) {
     return crypto.createHmac('sha256', JWT_SECRET).update('quote-accept-' + id).digest('hex').slice(0, 32);
 }
 
+// Modèles de devis — pré-remplissage rapide par type de prestation
+app.get('/api/quote-templates', auth, (req, res) => {
+    res.json(db.get('quoteTemplates').value());
+});
+
 app.get('/api/quotes', auth, (req, res) => {
     res.json([...db.get('quotes').value()].reverse());
 });
@@ -1077,7 +1189,9 @@ function nextInvoiceNumber() {
 }
 
 app.get('/api/invoices', auth, (req, res) => {
-    res.json([...db.get('invoices').value()].reverse());
+    let invoices = db.get('invoices').value();
+    if (!req.query.includeArchived) invoices = invoices.filter(i => !i.archived);
+    res.json([...invoices].reverse());
 });
 
 app.post('/api/invoices', auth, adminOnly, (req, res) => {
@@ -1264,13 +1378,33 @@ app.get('/api/treasury', auth, (req, res) => {
     const expensesThisYear = expenses.filter(e => e.date && new Date(e.date).getFullYear() === thisYear).reduce((s, e) => s + (e.amount || 0), 0);
     const expensesTotal = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
+    // Prévision de trésorerie à 30 jours — factures en attente (certaines) + devis
+    // envoyés non répondus, pondérés par une probabilité d'acceptation indicative.
+    const quotes = db.get('quotes').value();
+    const quotesSentValue = quotes.filter(q => q.status === 'sent').reduce((s, q) => s + (q.total || 0), 0);
+    const quotesDraftValue = quotes.filter(q => q.status === 'draft').reduce((s, q) => s + (q.total || 0), 0);
+    const forecastNext30 = pendingTotal + quotesSentValue * 0.5 + quotesDraftValue * 0.1;
+
+    // Comparaisons mois/mois et année/année
+    const lastMonthDate = new Date(); lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+    const lastMonthKey = lastMonthDate.toISOString().slice(0, 7);
+    const revenueLastMonth = invoices.filter(i => i.status === 'paid' && i.paid_at?.startsWith(lastMonthKey)).reduce((s, i) => s + (i.total || 0), 0);
+    const revenueLastYear = invoices.filter(i => i.status === 'paid' && i.paid_at && new Date(i.paid_at).getFullYear() === thisYear - 1).reduce((s, i) => s + (i.total || 0), 0);
+    const leads = db.get('leads').value();
+    const leadsThisMonth = leads.filter(l => l.created_at.startsWith(thisMonthKey)).length;
+    const leadsLastMonth = leads.filter(l => l.created_at.startsWith(lastMonthKey)).length;
+
     res.json({
-        invoicedTotal, paidTotal, pendingTotal,
+        invoicedTotal, paidTotal, pendingTotal, forecastNext30,
         monthly: Object.entries(monthly).map(([month, total]) => ({ month, total })),
         reminders: { quotesToRemind, invoicesOverdue, count: quotesToRemind.length + invoicesOverdue.length },
         goals: {
             monthly: Number(business.revenueGoalMonthly) || 0, annual: Number(business.revenueGoalAnnual) || 0,
             revenueThisMonth, revenueThisYear,
+        },
+        comparison: {
+            revenueThisMonth, revenueLastMonth, revenueThisYear, revenueLastYear,
+            leadsThisMonth, leadsLastMonth,
         },
         expenses: { total: expensesTotal, thisMonth: expensesThisMonth, thisYear: expensesThisYear },
         netResultThisMonth: revenueThisMonth - expensesThisMonth,
@@ -1468,11 +1602,15 @@ async function buildAndSendMonthlyReport() {
 
     let gaSummary = null;
     try { gaSummary = analytics.isConfigured() ? await analytics.getOverview(30) : null; } catch { gaSummary = null; }
+    const visitors = gaSummary?.configured ? gaSummary.totals.activeUsers : null;
 
-    const result = await mailer.sendMail(mailer.monthlyReportEmail({
-        newLeads, wonLeads, revenue,
-        visitors: gaSummary?.configured ? gaSummary.totals.activeUsers : null,
-    }));
+    const mail = mailer.monthlyReportEmail({ newLeads, wonLeads, revenue, visitors });
+    try {
+        const monthLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        const pdfBuffer = await pdfGen.generateMonthlyReportPdf({ monthLabel, newLeads, wonLeads, revenue, visitors });
+        mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Rapport-${new Date().toISOString().slice(0,7)}.pdf` }];
+    } catch (err) { console.error('Erreur génération PDF rapport:', err.message); }
+    const result = await mailer.sendMail(mail);
     return result;
 }
 
@@ -1482,7 +1620,84 @@ app.post('/api/admin/send-report', auth, adminOnly, async (req, res) => {
     res.json({ ok: true });
 });
 
+// Téléchargement direct du rapport en PDF (indépendamment de l'envoi par email)
+app.get('/api/admin/monthly-report/pdf', auth, adminOnly, async (req, res) => {
+    const leads = db.get('leads').value();
+    const quotes = db.get('quotes').value();
+    const now30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const newLeads = leads.filter(l => l.created_at >= now30).length;
+    const wonLeads = leads.filter(l => l.status === 'won' && l.created_at >= now30).length;
+    const revenue = quotes.filter(q => q.status === 'paid' && q.paid_at >= now30).reduce((s, q) => s + (q.total || 0), 0);
+    let gaSummary = null;
+    try { gaSummary = analytics.isConfigured() ? await analytics.getOverview(30) : null; } catch { gaSummary = null; }
+    const monthLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const pdfBuffer = await pdfGen.generateMonthlyReportPdf({
+        monthLabel, newLeads, wonLeads, revenue,
+        visitors: gaSummary?.configured ? gaSummary.totals.activeUsers : null,
+    });
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="Rapport-${new Date().toISOString().slice(0,7)}.pdf"`);
+    res.send(pdfBuffer);
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+// Archivage automatique — 1er de chaque mois à 3h : leads perdus et factures payées
+// depuis plus de 6 mois basculent en archive (ils restent dans les données/exports,
+// juste masqués des listes actives par défaut).
+function runAutoArchiving() {
+    const sixMonthsAgo = new Date(Date.now() - 180 * 86400000).toISOString();
+    const leads = db.get('leads').value();
+    let archivedLeads = 0;
+    leads.forEach(l => {
+        if (!l.archived && l.status === 'lost' && l.created_at < sixMonthsAgo) {
+            db.get('leads').find({ id: l.id }).assign({ archived: true }).write();
+            archivedLeads++;
+        }
+    });
+    const invoices = db.get('invoices').value();
+    let archivedInvoices = 0;
+    invoices.forEach(i => {
+        if (!i.archived && i.status === 'paid' && i.paid_at && i.paid_at < sixMonthsAgo) {
+            db.get('invoices').find({ id: i.id }).assign({ archived: true }).write();
+            archivedInvoices++;
+        }
+    });
+    if (archivedLeads || archivedInvoices) console.log(`🗄️  Archivage auto : ${archivedLeads} lead(s), ${archivedInvoices} facture(s)`);
+}
+
+// Alertes proactives — signaux faibles à repérer avant qu'ils ne deviennent un problème.
+function computeProactiveAlerts() {
+    const alerts = [];
+    const leads = db.get('leads').value();
+    const tenDaysAgo = new Date(Date.now() - 10 * 86400000).toISOString();
+    if (!leads.some(l => l.created_at >= tenDaysAgo)) {
+        alerts.push("Aucun nouveau lead depuis 10 jours — pense à relancer ta visibilité (Instagram, réseau).");
+    }
+    const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
+    const d60 = new Date(Date.now() - 60 * 86400000).toISOString();
+    const last30 = leads.filter(l => l.created_at >= d30);
+    const prev30 = leads.filter(l => l.created_at >= d60 && l.created_at < d30);
+    const rate = (arr) => arr.length ? arr.filter(l => l.status === 'won').length / arr.length : null;
+    const r1 = rate(last30), r0 = rate(prev30);
+    if (r0 !== null && r1 !== null && r1 < r0 - 0.15) {
+        alerts.push(`Le taux de conversion a baissé (${Math.round(r1*100)}% vs ${Math.round(r0*100)}% le mois précédent).`);
+    }
+    return alerts;
+}
+
+async function buildAndSendDailyBrief() {
+    const cockpitLeads = db.get('leads').value().filter(l => l.status === 'new').length;
+    const todayStr = now().slice(0, 10);
+    const apptsToday = db.get('appointments').value().filter(a => a.confirmedDate && a.confirmedDate.slice(0, 10) === todayStr);
+    const { quotesToRemind, invoicesOverdue } = getSuggestedReminders();
+    const alerts = computeProactiveAlerts();
+    // Rien à signaler et aucune alerte : pas la peine d'encombrer la boîte mail.
+    if (!cockpitLeads && !apptsToday.length && !quotesToRemind.length && !invoicesOverdue.length && !alerts.length) return;
+    await mailer.sendMail(mailer.dailyBriefEmail({
+        newLeadsToProcess: cockpitLeads, apptsToday, quotesToRemind, invoicesOverdue, alerts,
+    }));
+}
 
 // Rapport mensuel automatique — le 1er de chaque mois à 8h (heure de Paris)
 cron.schedule('0 8 1 * *', () => {
@@ -1495,14 +1710,14 @@ cron.schedule('0 * * * *', () => {
     checkAnalyticsAlerts().catch(err => console.error('Erreur vérification alertes:', err.message));
 }, { timezone: 'Europe/Paris' });
 
-// Digest quotidien des relances suggérées (devis sans réponse, factures en retard) — 9h
-cron.schedule('0 9 * * *', async () => {
-    try {
-        const { quotesToRemind, invoicesOverdue } = getSuggestedReminders();
-        if (!quotesToRemind.length && !invoicesOverdue.length) return;
-        console.log(`💌 Digest relances : ${quotesToRemind.length} devis, ${invoicesOverdue.length} factures`);
-        await mailer.sendMail(mailer.remindersDigestEmail({ quotesToRemind, invoicesOverdue }));
-    } catch (err) { console.error('Erreur digest relances:', err.message); }
+// Brief quotidien — 8h : leads à traiter, RDV du jour, relances suggérées, alertes proactives
+cron.schedule('0 8 * * *', () => {
+    buildAndSendDailyBrief().catch(err => console.error('Erreur brief quotidien:', err.message));
+}, { timezone: 'Europe/Paris' });
+
+// Archivage automatique — 1er de chaque mois à 3h
+cron.schedule('0 3 1 * *', () => {
+    try { runAutoArchiving(); } catch (err) { console.error('Erreur archivage auto:', err.message); }
 }, { timezone: 'Europe/Paris' });
 
 // Rappel de RDV 24h avant — vérifié toutes les heures pour couvrir tous les horaires de RDV

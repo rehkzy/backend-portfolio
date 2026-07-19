@@ -491,6 +491,11 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Vue d'ensemble</div>
+            <div class="nav-item" data-view="cockpit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Aujourd'hui
+                <span class="badge" id="cockpitBadge" style="display:none;"></span>
+            </div>
             <div class="nav-item active" data-view="overview">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
                 Overview
@@ -615,6 +620,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Télécharger une sauvegarde
             </div>
+            <div class="nav-item" id="monthlyReportPdfBtn" data-role="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Rapport mensuel (PDF)
+            </div>
         </div>
 
         <div class="sidebar-footer">
@@ -642,6 +651,22 @@
         </div>
 
         <!-- OVERVIEW -->
+        <section class="view" id="view-cockpit">
+            <div class="topbar">
+                <h2>Aujourd'hui</h2>
+            </div>
+            <div class="kpi-grid" style="margin-bottom:1.2rem;">
+                <div class="kpi-card"><div class="kpi-label">Leads à traiter</div><div class="kpi-value" id="cockpitNewLeads">—</div></div>
+                <div class="kpi-card"><div class="kpi-label">RDV aujourd'hui</div><div class="kpi-value" id="cockpitApptsToday">—</div></div>
+                <div class="kpi-card"><div class="kpi-label">À relancer</div><div class="kpi-value" id="cockpitReminders">—</div></div>
+                <div class="kpi-card"><div class="kpi-label">Projets en cours</div><div class="kpi-value" id="cockpitProjects">—</div></div>
+            </div>
+            <h3 style="margin:0 0 0.8rem;font-size:0.95rem;">RDV du jour</h3>
+            <div id="cockpitApptsWrap" style="margin-bottom:1.6rem;"></div>
+            <h3 style="margin:0 0 0.8rem;font-size:0.95rem;">Les 14 prochains jours</h3>
+            <div id="cockpitTimelineWrap"></div>
+        </section>
+
         <section class="view active" id="view-overview">
             <div class="topbar">
                 <h2>Overview</h2>
@@ -911,6 +936,9 @@
                 <button class="filter-chip" data-status="contacted">Contacté</button>
                 <button class="filter-chip" data-status="won">Gagné</button>
                 <button class="filter-chip" data-status="lost">Perdu</button>
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--text-muted);margin-left:auto;">
+                    <input type="checkbox" id="leadsShowArchived"> Voir les archives
+                </label>
             </div>
             <div id="leadsTableWrap"></div>
             <div class="kanban-board" id="leadsKanban" style="display:none;"></div>
@@ -920,6 +948,9 @@
         <section class="view" id="view-appointments">
             <div class="topbar">
                 <h2>Rendez-vous</h2>
+                <div class="topbar-actions">
+                    <button class="btn-secondary" id="copyCalendarFeedBtn" style="width:auto; padding:0.6rem 1.2rem;">🔗 Lien calendrier (abonnement)</button>
+                </div>
             </div>
             <div class="toolbar">
                 <button class="filter-chip active" data-astatus="">Tous</button>
@@ -1196,6 +1227,9 @@
                 <button class="filter-chip" data-istatus="draft">Brouillon</button>
                 <button class="filter-chip" data-istatus="sent">Envoyée</button>
                 <button class="filter-chip" data-istatus="paid">Payée</button>
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--text-muted);margin-left:auto;">
+                    <input type="checkbox" id="invoicesShowArchived"> Voir les archives
+                </label>
             </div>
             <div class="kpi-grid" style="margin-bottom:1.2rem;">
                 <div class="kpi-card">
@@ -1275,6 +1309,14 @@
                     <div class="kpi-label">Résultat net (mois)</div>
                     <div class="kpi-value" id="treasuryNet">—</div>
                 </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Prévision 30 jours</div>
+                    <div class="kpi-value" id="treasuryForecast">—</div>
+                </div>
+            </div>
+            <div class="panel" style="margin-bottom:1.2rem;">
+                <h3 style="margin:0 0 1rem;">Comparaisons</h3>
+                <div id="treasuryComparisonWrap"></div>
             </div>
             <div class="panel" style="margin-bottom:1.2rem;">
                 <h3 style="margin:0 0 1rem;">Objectifs de chiffre d'affaires</h3>
@@ -1474,6 +1516,7 @@ async function boot() {
     loadOverview();
     updateLastRefreshLabel();
     api('/api/leads').then(data => { leadsCache = data; }).catch(() => {}); // alimente l'autocomplete client
+    api('/api/cockpit').then(c => updateCockpitBadge(c.newLeadsToProcess + c.apptsToday.length + c.quotesToRemindCount + c.invoicesOverdueCount)).catch(() => {});
     if (CURRENT_USER.role === 'admin') loadTreasuryBadgeOnly();
 }
 
@@ -1563,6 +1606,7 @@ function switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
     if (view === 'overview') loadOverview();
+    if (view === 'cockpit') loadCockpit();
     if (view === 'analytics') loadAnalytics();
     if (view === 'leads') loadLeads();
     if (view === 'appointments') loadAppointments();
@@ -2341,6 +2385,7 @@ function emptyStateHTML(msg) {
 
 /* ---------------- LEADS ---------------- */
 let leadsStatusFilter = '';
+let leadsSortByPriority = false;
 document.querySelectorAll('#view-leads .filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
         document.querySelectorAll('#view-leads .filter-chip').forEach(c => c.classList.remove('active'));
@@ -2360,22 +2405,31 @@ async function loadLeads() {
     const params = new URLSearchParams();
     if (leadsStatusFilter) params.set('status', leadsStatusFilter);
     if (q) params.set('q', q);
+    if (document.getElementById('leadsShowArchived')?.checked) params.set('includeArchived', '1');
     try {
         leadsCache = await api('/api/leads?' + params.toString());
         renderLeadsTable();
     } catch (e) { toast(e.message); }
 }
+document.getElementById('leadsShowArchived')?.addEventListener('change', loadLeads);
+
+function priorityBadge(score) {
+    const color = score >= 65 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#888';
+    return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;color:${color};font-weight:700;">● ${score}</span>`;
+}
 
 function renderLeadsTable() {
     const wrap = document.getElementById('leadsTableWrap');
     if (!leadsCache.length) { wrap.innerHTML = emptyStateHTML("Aucun lead pour le moment. Ils apparaîtront ici dès qu'un visiteur utilisera le chat."); return; }
+    const list = leadsSortByPriority ? [...leadsCache].sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0)) : leadsCache;
     wrap.innerHTML = `
         <table class="data-table">
-            <thead><tr><th>Nom</th><th>Email</th><th>Message</th><th>Statut</th><th>Reçu</th></tr></thead>
+            <thead><tr><th onclick="toggleLeadsSort()" style="cursor:pointer;">Priorité ${leadsSortByPriority ? '▼' : ''}</th><th>Nom</th><th>Email</th><th>Message</th><th>Statut</th><th>Reçu</th></tr></thead>
             <tbody>
-                ${leadsCache.map(l => `
+                ${list.map(l => `
                     <tr onclick="openLeadDrawer(${l.id})">
-                        <td>${escapeHtml(l.name || '—')}</td>
+                        <td>${priorityBadge(l.priorityScore || 0)}</td>
+                        <td>${escapeHtml(l.name || '—')} ${l.isReturningClient ? '<span title="Client déjà connu" style="font-size:0.7rem;">🔁</span>' : ''}</td>
                         <td class="cell-muted">${escapeHtml(l.email)}</td>
                         <td class="cell-muted">${escapeHtml((l.message || '').slice(0, 50))}${(l.message || '').length > 50 ? '…' : ''}</td>
                         <td><span class="badge ${l.status}">${statusLabel(l.status)}</span></td>
@@ -2386,6 +2440,8 @@ function renderLeadsTable() {
         </table>
     `;
 }
+
+function toggleLeadsSort() { leadsSortByPriority = !leadsSortByPriority; renderLeadsTable(); }
 
 function trackingSection(t) {
     if (!t) return '';
@@ -2444,6 +2500,7 @@ function openLeadDrawer(id) {
         <div class="drawer-field"><label>Email</label><div class="value">${escapeHtml(l.email)}</div></div>
         <div class="drawer-field"><label>Message</label><div class="value">${escapeHtml(l.message || '')}</div></div>
         <div class="drawer-field"><label>Source</label><div class="value">${escapeHtml(l.source || 'chat')}</div></div>
+        <div class="drawer-field"><label>Priorité</label><div class="value">${priorityBadge(l.priorityScore || 0)} ${l.isReturningClient ? '· 🔁 Client déjà connu' : '· Nouveau contact'}</div></div>
         ${l.budget ? `<div class="drawer-field"><label>Budget indiqué</label><div class="value">${escapeHtml(l.budget)}</div></div>` : ''}
         <div class="drawer-field"><label>Reçu le</label><div class="value">${formatDate(l.created_at, true)}</div></div>
         <div class="drawer-field">
@@ -2573,6 +2630,14 @@ document.querySelectorAll('#view-appointments .filter-chip').forEach(chip => {
         apptStatusFilter = chip.dataset.astatus;
         loadAppointments();
     });
+});
+
+document.getElementById('copyCalendarFeedBtn')?.addEventListener('click', async () => {
+    try {
+        const { url } = await api('/api/appointments/calendar-feed-url');
+        await navigator.clipboard.writeText(url);
+        toast("Lien copié ✅ — colle-le dans Google Agenda (Autres agendas → À partir de l'URL) ou Apple Calendar (Fichier → Nouvel abonnement).");
+    } catch (e) { toast(e.message); }
 });
 
 async function loadAppointments() {
@@ -3270,6 +3335,40 @@ document.querySelectorAll('#view-quotes .filter-chip').forEach(chip => {
 });
 
 /* ============================================================
+   COCKPIT — "Aujourd'hui"
+   ============================================================ */
+const TIMELINE_ICONS = { appointment: '📅', content: '📸' };
+
+async function loadCockpit() {
+    try {
+        const c = await api('/api/cockpit');
+        document.getElementById('cockpitNewLeads').textContent = c.newLeadsToProcess;
+        document.getElementById('cockpitApptsToday').textContent = c.apptsToday.length;
+        document.getElementById('cockpitReminders').textContent = c.quotesToRemindCount + c.invoicesOverdueCount;
+        document.getElementById('cockpitProjects').textContent = c.activeProjectsCount;
+        updateCockpitBadge(c.newLeadsToProcess + c.apptsToday.length + c.quotesToRemindCount + c.invoicesOverdueCount);
+
+        const apptsWrap = document.getElementById('cockpitApptsWrap');
+        apptsWrap.innerHTML = c.apptsToday.length
+            ? c.apptsToday.map(a => `<div class="edit-card"><div class="edit-card-fields"><strong>${escapeHtml(a.subject || '')}</strong><p class="cell-muted" style="font-size:0.8rem;">${escapeHtml(a.email)} · ${new Date(a.confirmedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p></div></div>`).join('')
+            : emptyStateHTML("Aucun RDV confirmé aujourd'hui.");
+
+        const tlWrap = document.getElementById('cockpitTimelineWrap');
+        tlWrap.innerHTML = c.timeline.length
+            ? c.timeline.map(e => `<div style="display:flex;gap:0.8rem;padding:0.55rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;"><span class="cell-muted" style="width:90px;flex-shrink:0;">${formatDate(e.date)}</span><span>${TIMELINE_ICONS[e.type] || '•'} ${escapeHtml(e.label)}</span></div>`).join('')
+            : emptyStateHTML('Rien de programmé sur les 14 prochains jours.');
+    } catch (e) { toast(e.message); }
+}
+
+function updateCockpitBadge(count) {
+    const badge = document.getElementById('cockpitBadge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; }
+    else badge.style.display = 'none';
+}
+
+
+/* ============================================================
    CLIENTS — fiche unifiée
    ============================================================ */
 let clientsCache = [];
@@ -3376,6 +3475,8 @@ async function loadTreasury() {
         document.getElementById('treasuryPaid').textContent = t.paidTotal.toFixed(2) + ' €';
         document.getElementById('treasuryPending').textContent = t.pendingTotal.toFixed(2) + ' €';
         document.getElementById('treasuryNet').textContent = t.netResultThisMonth.toFixed(2) + ' €';
+        document.getElementById('treasuryForecast').textContent = t.forecastNext30.toFixed(0) + ' €';
+        renderTreasuryComparison(t.comparison);
         renderTreasuryChart(t.monthly);
         renderTreasuryReminders(t.reminders);
         renderTreasuryGoals(t.goals);
@@ -3489,6 +3590,22 @@ async function deleteExpense(id) {
     catch (e) { toast(e.message); }
 }
 
+
+function renderTreasuryComparison(c) {
+    const wrap = document.getElementById('treasuryComparisonWrap');
+    const pctChange = (a, b) => b > 0 ? Math.round(((a - b) / b) * 100) : (a > 0 ? 100 : 0);
+    const row = (label, current, prev, unit = '€') => {
+        const pct = pctChange(current, prev);
+        const color = pct > 0 ? '#22c55e' : pct < 0 ? '#ff2f76' : 'var(--text-muted)';
+        return `<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+            <span>${label}</span>
+            <span>${current.toFixed(unit === '€' ? 0 : 0)}${unit} <span style="color:${color};font-weight:700;">(${pct >= 0 ? '+' : ''}${pct}%)</span></span>
+        </div>`;
+    };
+    wrap.innerHTML = row('CA — ce mois vs mois dernier', c.revenueThisMonth, c.revenueLastMonth)
+        + row('CA — cette année vs année dernière', c.revenueThisYear, c.revenueLastYear)
+        + row('Leads — ce mois vs mois dernier', c.leadsThisMonth, c.leadsLastMonth, '');
+}
 
 function renderTreasuryChart(monthly) {
     const ctx = document.getElementById('treasuryChart').getContext('2d');
@@ -3658,6 +3775,10 @@ function openQuoteDrawer(id) {
             <input type="email" id="qClientEmail" value="${escapeAttr(q?.clientEmail || '')}" autocomplete="off">
             <div class="autocomplete-dropdown" id="qClientEmailDropdown"></div>
         </div>
+        ${!q ? `<div class="drawer-field">
+            <label>Partir d'un modèle (optionnel)</label>
+            <select id="qTemplateSelect"><option value="">— Aucun —</option></select>
+        </div>` : ''}
         <div class="drawer-field">
             <label>Prestations</label>
             <div id="quoteItemsWrap">${(q?.items?.length ? q.items : [{}]).map(quoteItemRowHTML).join('')}</div>
@@ -3684,6 +3805,24 @@ function openQuoteDrawer(id) {
     };
     attachQuoteItemEvents(document.getElementById('quoteItemsWrap'));
     attachClientAutocomplete('qClientName', 'qClientEmail', 'qClientNameDropdown', 'qClientEmailDropdown');
+    if (!q) loadQuoteTemplatesIntoSelect();
+}
+
+let quoteTemplatesCache = [];
+async function loadQuoteTemplatesIntoSelect() {
+    try {
+        if (!quoteTemplatesCache.length) quoteTemplatesCache = await api('/api/quote-templates');
+        const sel = document.getElementById('qTemplateSelect');
+        if (!sel) return;
+        quoteTemplatesCache.forEach(t => sel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${escapeHtml(t.name)}</option>`));
+        sel.onchange = () => {
+            const tpl = quoteTemplatesCache.find(t => t.id === Number(sel.value));
+            const wrap = document.getElementById('quoteItemsWrap');
+            if (!tpl) return;
+            wrap.innerHTML = tpl.items.map(quoteItemRowHTML).join('');
+            attachQuoteItemEvents(wrap);
+        };
+    } catch (e) { /* silencieux — non bloquant */ }
 }
 
 function collectQuoteItems() {
@@ -4186,6 +4325,23 @@ document.getElementById('backupBtn').addEventListener('click', async () => {
     } catch (e) { toast(e.message); }
 });
 
+document.getElementById('monthlyReportPdfBtn').addEventListener('click', async () => {
+    try {
+        const res = await fetch(API_BASE + '/api/admin/monthly-report/pdf', { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) throw new Error('Échec de la génération du rapport');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Rapport-${new Date().toISOString().slice(0, 7)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast('Rapport téléchargé ✅');
+    } catch (e) { toast(e.message); }
+});
+
 /* ============================================================
    AUTOCOMPLETE CLIENT — suggère les contacts déjà connus
    (à partir des leads) en tapant nom ou email.
@@ -4327,7 +4483,8 @@ document.querySelectorAll('#view-invoices .filter-chip').forEach(chip => {
 
 async function loadInvoices() {
     try {
-        invoicesCache = await api('/api/invoices');
+        const params = document.getElementById('invoicesShowArchived')?.checked ? '?includeArchived=1' : '';
+        invoicesCache = await api('/api/invoices' + params);
         const total = invoicesCache.reduce((s, i) => s + (i.total || 0), 0);
         const paid = invoicesCache.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0);
         const pending = invoicesCache.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.total || 0), 0);
@@ -4337,6 +4494,7 @@ async function loadInvoices() {
         renderInvoicesTable();
     } catch (e) { toast(e.message); }
 }
+document.getElementById('invoicesShowArchived')?.addEventListener('change', loadInvoices);
 
 function renderInvoicesTable() {
     const wrap = document.getElementById('invoicesTableWrap');

@@ -185,4 +185,45 @@ async function generateInvoicePdf(invoice, business = {}) {
     return bufferFromDoc(doc);
 }
 
-module.exports = { generateQuotePdf, generateInvoicePdf };
+/* ============================================================
+   RAPPORT MENSUEL — PDF téléchargeable/archivable
+   ============================================================ */
+async function generateMonthlyReportPdf({ monthLabel, newLeads, wonLeads, revenue, visitors, comparison }) {
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    doc.rect(0, 0, doc.page.width, 8).fill(ACCENT);
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(20).text('FLORIAN B', 50, 40, { continued: true }).fillColor(ACCENT).text('.', { continued: false });
+    doc.fillColor(MUTED).font('Helvetica').fontSize(9).text('Rapport mensuel', 50, 64);
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(16).text((monthLabel || '').toUpperCase(), 300, 40, { width: 245, align: 'right' });
+    doc.moveTo(50, 95).lineTo(545, 95).strokeColor(LINE).stroke();
+
+    let y = 130;
+    const stat = (label, value, x) => {
+        doc.font('Helvetica-Bold').fontSize(24).fillColor(ACCENT).text(String(value), x, y);
+        doc.font('Helvetica').fontSize(9).fillColor(MUTED).text(label, x, y + 32, { width: 150 });
+    };
+    stat('Nouveaux leads', newLeads, 50);
+    stat('Projets gagnés', wonLeads, 220);
+    stat('CA encaissé', money(revenue), 390);
+    y += 90;
+
+    if (visitors !== null && visitors !== undefined) {
+        doc.font('Helvetica').fontSize(10).fillColor(MUTED).text(`Visiteurs actifs (30 derniers jours) : ${visitors}`, 50, y);
+        y += 30;
+    }
+
+    if (comparison) {
+        doc.moveTo(50, y).lineTo(545, y).strokeColor(LINE).stroke();
+        y += 20;
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text('Comparaison', 50, y);
+        y += 20;
+        doc.font('Helvetica').fontSize(9.5).fillColor(MUTED);
+        doc.text(`CA ce mois vs mois dernier : ${money(comparison.revenueThisMonth)} vs ${money(comparison.revenueLastMonth)}`, 50, y); y += 16;
+        doc.text(`CA cette année vs année dernière : ${money(comparison.revenueThisYear)} vs ${money(comparison.revenueLastYear)}`, 50, y); y += 16;
+        doc.text(`Leads ce mois vs mois dernier : ${comparison.leadsThisMonth} vs ${comparison.leadsLastMonth}`, 50, y);
+    }
+
+    drawFooter(doc, ['Rapport généré automatiquement', 'florian-b.fr']);
+    return bufferFromDoc(doc);
+}
+
+module.exports = { generateQuotePdf, generateInvoicePdf, generateMonthlyReportPdf };
