@@ -244,6 +244,35 @@
     .geo-legend-dot.city { background: #fff; border: 1.5px solid var(--accent); box-shadow: none; }
     .geo-tooltip { position: absolute; pointer-events: none; background: #1c1d24; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 0.4rem 0.7rem; font-size: 0.75rem; font-weight: 700; box-shadow: 0 12px 28px rgba(0,0,0,0.5); opacity: 0; transform: translate(-50%, -130%); transition: opacity 0.12s; white-space: nowrap; z-index: 20; }
     .geo-tooltip.active { opacity: 1; }
+
+    /* ============ TRACKING VISITEUR — fiche enrichie ============ */
+    .tracking-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 1rem 0; }
+    .tracking-chip { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.65rem 0.8rem; font-size: 0.78rem; }
+    .tracking-chip .tc-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 700; margin-bottom: 0.2rem; }
+    .tracking-chip .tc-value { font-weight: 700; color: var(--text); word-break: break-all; }
+    .tracking-chip.accent { border-color: var(--accent); background: var(--accent-glow); }
+    .tracking-path { font-size: 0.72rem; color: var(--text-muted); background: var(--surface-2); border-radius: 8px; padding: 0.5rem 0.7rem; margin: 0.4rem 0; line-height: 1.6; word-break: break-all; }
+
+    /* ============ JOURNAL ACTIVITÉ ============ */
+    .journal-entry { display: flex; gap: 0.9rem; padding: 0.85rem 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .journal-entry:last-child { border-bottom: none; }
+    .journal-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; }
+    .journal-body { flex: 1; min-width: 0; }
+    .journal-who { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .journal-what { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .journal-meta { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.3rem; display: flex; gap: 0.7rem; flex-wrap: wrap; }
+    .journal-meta span { display: flex; align-items: center; gap: 0.25rem; }
+    .journal-action-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 100px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .journal-action-badge.lead   { background: var(--info-bg);    color: var(--info); }
+    .journal-action-badge.quote  { background: var(--warning-bg); color: var(--warning); }
+    .journal-action-badge.invoice{ background: var(--success-bg); color: var(--success); }
+    .journal-action-badge.user   { background: rgba(218,44,72,0.12); color: var(--accent); }
+    .journal-action-badge.content{ background: var(--surface-2); color: var(--text-muted); }
+    .journal-action-badge.system { background: var(--surface-2); color: var(--text-muted); }
+
+    /* Indicateur "en ligne" */
+    .online-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; margin-right: 5px; box-shadow: 0 0 0 2px rgba(34,197,94,0.25); }
+    .online-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.6rem; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 100px; font-size: 0.72rem; font-weight: 700; color: #22c55e; gap: 0.3rem; }
     .geo-tooltip span { display: block; font-weight: 500; color: var(--text-muted); font-size: 0.68rem; margin-top: 0.1rem; }
 
     /* ============ ÉDITEURS DE CONTENU ============ */
@@ -490,6 +519,10 @@
             <div class="nav-item" data-view="team" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Équipe
+            </div>
+            <div class="nav-item" data-view="journal" data-role="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Journal
             </div>
         </div>
 
@@ -1130,11 +1163,25 @@
             <div class="topbar">
                 <h2>Équipe</h2>
                 <div class="topbar-actions">
-                    <button class="btn-primary" id="inviteUserBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Inviter un membre</button>
+                    <button class="btn-primary" id="inviteUserBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">+ Inviter un membre</button>
                 </div>
             </div>
             <p class="cell-muted" style="margin-bottom:1.2rem;">Gère les personnes qui ont accès au dashboard et leur rôle. <strong>Admin</strong> pilote tout · <strong>Rédacteur</strong> gère leads, RDV, contenu du site et calendrier · <strong>Lecteur</strong> consulte sans modifier.</p>
             <div id="teamListWrap"></div>
+        </section>
+
+        <!-- JOURNAL D'ACTIVITÉ -->
+        <section class="view" id="view-journal">
+            <div class="topbar">
+                <h2>Journal d'activité</h2>
+                <div class="topbar-actions">
+                    <span id="activeSessionsBadgeWrap" style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--text-muted);"></span>
+                    <button class="icon-btn" id="refreshJournalBtn" title="Rafraîchir">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="journalWrap"></div>
         </section>
 
         <!-- MON COMPTE -->
@@ -1385,6 +1432,7 @@ function switchView(view) {
     if (view === 'calendar') loadContentCalendar();
     if (view === 'team') loadTeam();
     if (view === 'account') loadAccount();
+    if (view === 'journal') loadJournal();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => refreshCurrentView());
@@ -2003,6 +2051,52 @@ function renderLeadsTable() {
     `;
 }
 
+function trackingSection(t) {
+    if (!t) return '';
+    const geo = t.geo || {};
+    const flag = geo.countryCode ? `<span title="${geo.country || ''}" style="font-size:1.1rem;">${countryFlag(geo.countryCode)}</span>` : '';
+    const chips = [
+        t.ip         ? ['IP',          t.ip,                                            'accent'] : null,
+        geo.city     ? ['Localisation', `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country || ''}`, ''] : null,
+        geo.isp      ? ['Opérateur',   geo.isp,                                         ''] : null,
+        geo.timezone ? ['Fuseau',       geo.timezone,                                   ''] : null,
+        t.browser    ? ['Navigateur',  t.browser,                                       ''] : null,
+        t.os         ? ['OS',          t.os,                                            ''] : null,
+        t.device     ? ['Appareil',    {mobile:'📱 Mobile', tablet:'📱 Tablette', desktop:'💻 Desktop'}[t.device] || t.device, ''] : null,
+        t.screen     ? ['Écran',       t.screen,                                        ''] : null,
+        t.lang       ? ['Langue',      t.lang,                                          ''] : null,
+        t.connection ? ['Connexion',   t.connection,                                    ''] : null,
+        t.visitDuration != null ? ['Temps sur le site', t.visitDuration + 's', ''] : null,
+        t.referrer   ? ['Référent',    t.referrer,                                      ''] : null,
+        t.utmSource  ? ['UTM Source',  t.utmSource + (t.utmMedium ? ' / ' + t.utmMedium : '') + (t.utmCampaign ? ' / ' + t.utmCampaign : ''), ''] : null,
+    ].filter(Boolean);
+
+    return `
+    <div style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border);">
+        <label style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:700;">
+            🌐 Tracking visiteur ${flag}
+        </label>
+        <div class="tracking-grid" style="margin-top:0.6rem;">
+            ${chips.map(([label, value, cls]) => `
+            <div class="tracking-chip ${cls}">
+                <div class="tc-label">${label}</div>
+                <div class="tc-value">${escapeHtml(String(value))}</div>
+            </div>`).join('')}
+        </div>
+        ${t.pagesVisited ? `
+        <div class="tc-label" style="margin-top:0.6rem;">Parcours de navigation</div>
+        <div class="tracking-path">${escapeHtml(t.pagesVisited)}</div>
+        ` : ''}
+    </div>`;
+}
+
+function countryFlag(code) {
+    if (!code || code.length !== 2) return '';
+    try {
+        return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+    } catch { return ''; }
+}
+
 function openLeadDrawer(id) {
     const l = leadsCache.find(x => x.id === id);
     if (!l) return;
@@ -2035,17 +2129,16 @@ function openLeadDrawer(id) {
                 <button type="button" class="reply-template-btn" data-template="indispo">Actuellement complet</button>
             </div>
             <textarea id="replyMessage" placeholder="Bonjour, merci pour votre message..." style="min-height:140px;"></textarea>
-            <p class="cell-muted" style="margin-top:0.5rem; font-size:0.75rem;">✨ Mis en forme automatiquement avec le design du site (fond sombre, rouge, logo) — tu n'as qu'à écrire le texte.</p>
+            <p class="cell-muted" style="margin-top:0.5rem; font-size:0.75rem;">✨ Mis en forme automatiquement avec le design du site.</p>
         </div>
         <div class="drawer-actions">
             <button class="btn-primary" id="sendReplyBtn" onclick="sendLeadReply(${l.id})">Envoyer la réponse</button>
         </div>
+        ${trackingSection(l.tracking)}
     `;
     openDrawer();
     document.querySelectorAll('.reply-template-btn').forEach(btn => {
-        btn.onclick = () => {
-            document.getElementById('replyMessage').value = REPLY_TEMPLATES[btn.dataset.template](l);
-        };
+        btn.onclick = () => { document.getElementById('replyMessage').value = REPLY_TEMPLATES[btn.dataset.template](l); };
     });
 }
 
@@ -2201,6 +2294,7 @@ function openApptDrawer(id) {
         <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border);">
             <button class="btn-primary" id="addToLeadsBtn" onclick="addApptToLeads(${a.id})">+ Ajouter aux leads</button>
         </div>
+        ${trackingSection(a.tracking)}
     `;
     openDrawer();
 }
@@ -3182,23 +3276,30 @@ async function loadTeam() {
 function renderTeamList() {
     const wrap = document.getElementById('teamListWrap');
     if (!teamCache.length) { wrap.innerHTML = emptyStateHTML('Aucun membre pour le moment.'); return; }
+    const now = Date.now();
     wrap.innerHTML = `
         <table class="data-table">
-            <thead><tr><th>Membre</th><th>Rôle</th><th>Statut</th><th></th></tr></thead>
+            <thead><tr><th>Membre</th><th>Rôle</th><th>Statut</th><th>Dernière activité</th><th></th></tr></thead>
             <tbody>
-                ${teamCache.map(u => `
+                ${teamCache.map(u => {
+                    const lastSeen = u.lastSeenAt ? new Date(u.lastSeenAt) : null;
+                    const isOnline = lastSeen && (now - lastSeen.getTime()) < 10 * 60 * 1000;
+                    const lastSeenLabel = !lastSeen ? '—' : isOnline ? '<span class="online-badge"><span class="online-dot"></span>En ligne</span>' : `Il y a ${timeAgo(lastSeen)}`;
+                    return `
                     <tr onclick="openTeamDrawer(${u.id})">
                         <td>
                             <strong style="color:var(--text);">${escapeHtml(u.name || u.email)}</strong>
                             ${u.name ? `<div class="cell-muted">${escapeHtml(u.email)}</div>` : ''}
+                            ${u.id === CURRENT_USER.id ? '<span class="cell-muted" style="font-size:0.7rem;">(vous)</span>' : ''}
                         </td>
-                        <td>${ROLE_LABELS[u.role] || u.role}${u.id === CURRENT_USER.id ? ' <span class="cell-muted">(vous)</span>' : ''}</td>
+                        <td>${ROLE_LABELS[u.role] || u.role}</td>
                         <td><span class="badge ${u.status === 'active' ? 'won' : u.status === 'invited' ? 'pending' : 'lost'}">${u.status === 'active' ? 'Actif' : u.status === 'invited' ? 'Invitation en attente' : 'Désactivé'}</span></td>
+                        <td style="font-size:0.8rem;">${lastSeenLabel}</td>
                         <td class="row-actions" onclick="event.stopPropagation()">
                             ${u.status === 'invited' ? `<button class="icon-btn" title="Renvoyer l'invitation" onclick="resendInvite(${u.id})">✉️</button>` : ''}
                         </td>
-                    </tr>
-                `).join('')}
+                    </tr>`;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -3216,6 +3317,11 @@ function openTeamDrawer(id) {
         </div>
         ${u ? `
             <div class="drawer-field"><label>Email</label><div class="value">${escapeHtml(u.email)}</div></div>
+            <div class="drawer-field"><label>Statut</label>
+                <span class="badge ${u.status === 'active' ? 'won' : u.status === 'invited' ? 'pending' : 'lost'}">
+                    ${u.status === 'active' ? '● Actif' : u.status === 'invited' ? '⏳ Invitation en attente' : '⊘ Désactivé'}
+                </span>
+            </div>
         ` : `
             <div class="drawer-field"><label>Email *</label><input type="email" id="tmEmail" placeholder="collegue@exemple.fr"></div>
             <div class="drawer-field"><label>Nom (optionnel)</label><input type="text" id="tmName" placeholder="Prénom Nom"></div>
@@ -3229,7 +3335,7 @@ function openTeamDrawer(id) {
         </div>
         ${u && !isSelf ? `
             <div class="drawer-field">
-                <label>Statut</label>
+                <label>Statut du compte</label>
                 <select id="tmStatus">
                     <option value="active" ${u.status !== 'disabled' ? 'selected' : ''}>Actif</option>
                     <option value="disabled" ${u.status === 'disabled' ? 'selected' : ''}>Désactivé</option>
@@ -3240,8 +3346,23 @@ function openTeamDrawer(id) {
             <button class="btn-secondary" onclick="saveTeamMember(${u ? u.id : 'null'})">${u ? 'Enregistrer' : "Envoyer l'invitation"}</button>
             ${u && !isSelf ? `<button class="btn-danger" onclick="deleteTeamMember(${u.id})">Supprimer</button>` : ''}
         </div>
+        ${u ? `<div id="memberTimelineWrap" style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+            <label style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:700;">Activité récente</label>
+            <div id="memberTimeline" style="margin-top:0.6rem;"><span class="cell-muted">Chargement…</span></div>
+        </div>` : ''}
     `;
     openDrawer();
+    // Charger la timeline du membre
+    if (u) {
+        api('/api/admin/team-logs?userId=' + u.id + '&limit=30')
+            .then(logs => {
+                const el = document.getElementById('memberTimeline');
+                if (!el) return;
+                if (!logs.length) { el.innerHTML = '<span class="cell-muted">Aucune action enregistrée.</span>'; return; }
+                el.innerHTML = logs.map(journalEntryHtml).join('');
+            })
+            .catch(() => {});
+    }
 }
 
 async function saveTeamMember(id) {
@@ -3316,6 +3437,90 @@ document.getElementById('saveAccountPasswordBtn').addEventListener('click', asyn
         document.getElementById('accNewPasswordConfirm').value = '';
     } catch (e) { errBox.textContent = e.message; errBox.style.display = 'block'; }
 });
+
+/* ============================================================
+   JOURNAL D'ACTIVITÉ ÉQUIPE
+   ============================================================ */
+const ACTION_LABELS = {
+    lead_status_changed:   { label: 'Statut lead modifié',   cat: 'lead'    },
+    lead_note_edited:      { label: 'Note lead modifiée',    cat: 'lead'    },
+    lead_deleted:          { label: 'Lead supprimé',         cat: 'lead'    },
+    lead_created_manual:   { label: 'Lead ajouté',           cat: 'lead'    },
+    lead_replied:          { label: 'Réponse envoyée',       cat: 'lead'    },
+    quote_created:         { label: 'Devis créé',            cat: 'quote'   },
+    quote_status_changed:  { label: 'Statut devis modifié',  cat: 'quote'   },
+    quote_deleted:         { label: 'Devis supprimé',        cat: 'quote'   },
+    quote_sent:            { label: 'Devis envoyé',          cat: 'quote'   },
+    invoice_created:       { label: 'Facture créée',         cat: 'invoice' },
+    invoice_status_changed:{ label: 'Statut facture modifié',cat: 'invoice' },
+    invoice_deleted:       { label: 'Facture supprimée',     cat: 'invoice' },
+    invoice_sent:          { label: 'Facture envoyée',       cat: 'invoice' },
+    user_invited:          { label: 'Membre invité',         cat: 'user'    },
+    user_updated:          { label: 'Membre modifié',        cat: 'user'    },
+    user_deleted:          { label: 'Membre supprimé',       cat: 'user'    },
+    site_content_updated:  { label: 'Contenu site modifié',  cat: 'content' },
+    business_settings_updated: { label: 'Paramètres entreprise', cat: 'system' },
+};
+
+function journalEntryHtml(log) {
+    const meta = ACTION_LABELS[log.action] || { label: log.action, cat: 'system' };
+    const initials = (log.userName || log.userEmail || '?').slice(0, 2).toUpperCase();
+    const ua = log.ua ? (() => { const p = parseUASimple(log.ua); return p; })() : null;
+    return `
+    <div class="journal-entry">
+        <div class="journal-avatar" title="${escapeHtml(log.userEmail || '')}">${initials}</div>
+        <div class="journal-body">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <span class="journal-who">${escapeHtml(log.userName || log.userEmail || '—')}</span>
+                <span class="journal-action-badge ${meta.cat}">${meta.label}</span>
+            </div>
+            ${log.detail ? `<div class="journal-what">${escapeHtml(log.detail)}</div>` : ''}
+            <div class="journal-meta">
+                <span>🕐 ${formatDate(log.ts, true)}</span>
+                ${log.ip ? `<span>📍 ${escapeHtml(log.ip)}</span>` : ''}
+                ${ua ? `<span>💻 ${escapeHtml(ua)}</span>` : ''}
+            </div>
+        </div>
+    </div>`;
+}
+
+function parseUASimple(ua) {
+    if (!ua) return null;
+    let browser = '';
+    if (/Edg\//i.test(ua)) browser = 'Edge';
+    else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+    else if (/Chrome\//i.test(ua)) browser = 'Chrome';
+    else if (/Safari\//i.test(ua)) browser = 'Safari';
+    let os = '';
+    if (/Windows/i.test(ua)) os = 'Windows';
+    else if (/iPhone|iPad/i.test(ua)) os = 'iOS';
+    else if (/Android/i.test(ua)) os = 'Android';
+    else if (/Mac OS/i.test(ua)) os = 'macOS';
+    return [browser, os].filter(Boolean).join(' · ') || null;
+}
+
+async function loadJournal() {
+    try {
+        const [logs, sessions] = await Promise.all([
+            api('/api/admin/team-logs?limit=200'),
+            api('/api/admin/active-sessions'),
+        ]);
+        // Indicateur sessions actives
+        const wrap = document.getElementById('activeSessionsBadgeWrap');
+        if (sessions.length) {
+            wrap.innerHTML = `<span class="online-badge"><span class="online-dot"></span>${sessions.length} en ligne</span>
+            ${sessions.map(s => `<span title="${escapeHtml(s.email)}" style="font-size:0.75rem;color:var(--text-muted);">${escapeHtml(s.name || s.email)}</span>`).join('<span style="color:var(--border);">·</span>')}`;
+        } else {
+            wrap.innerHTML = '<span style="font-size:0.75rem;color:var(--text-muted);">Personne d\'autre en ligne</span>';
+        }
+        // Journal
+        const journalWrap = document.getElementById('journalWrap');
+        if (!logs.length) { journalWrap.innerHTML = emptyStateHTML('Aucune action enregistrée pour l\'instant.'); return; }
+        journalWrap.innerHTML = `<div class="panel">${logs.map(journalEntryHtml).join('')}</div>`;
+    } catch (e) { toast(e.message); }
+}
+
+document.getElementById('refreshJournalBtn').addEventListener('click', () => loadJournal());
 
 /* ============================================================
    SAUVEGARDE
@@ -3807,6 +4012,13 @@ function formatDate(iso, full = false) {
     if (!iso) return '—';
     const d = new Date(iso.replace(' ', 'T') + 'Z');
     return full ? d.toLocaleString('fr-FR') : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+function timeAgo(date) {
+    const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s / 60) + 'min';
+    if (s < 86400) return Math.floor(s / 3600) + 'h';
+    return Math.floor(s / 86400) + 'j';
 }
 function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str ?? ''; return div.innerHTML; }
 function toast(msg) {

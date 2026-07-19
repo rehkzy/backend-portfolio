@@ -17,6 +17,7 @@ const DEFAULTS = {
     "quotes": [],
     "invoices": [],
     "users": [],
+    "teamLogs": [],
     "about": {
     "eyebrow": "Derrière l'écran",
     "title": "Florian, avant d'être un portfolio",

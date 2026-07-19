@@ -26,6 +26,13 @@ app.use(cors({
 }));
 app.use('/dashboard', express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOADS_DIR));
+// tracker.js servi directement à la racine avec CORS large (doit être chargé depuis florian-b.fr)
+app.get('/tracker.js', (req, res) => {
+    res.set('Content-Type', 'application/javascript');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.join(__dirname, 'public', 'tracker.js'));
+});
 
 /* ============================================================
    HELPERS
@@ -37,6 +44,99 @@ function nextId(collection) {
 }
 
 function now() { return new Date().toISOString(); }
+
+/* ---- IP réelle (Railway est derrière un proxy) ---- */
+function getRealIp(req) {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) return forwarded.split(',')[0].trim();
+    return req.socket?.remoteAddress || req.ip || null;
+}
+
+/* ---- Parsing User-Agent simple (sans lib externe) ---- */
+function parseUA(ua) {
+    if (!ua) return { browser: 'Inconnu', os: 'Inconnu', device: 'desktop' };
+    let browser = 'Autre';
+    let os      = 'Autre';
+    let device  = 'desktop';
+
+    // Device
+    if (/mobile|android|iphone|ipod/i.test(ua))  device = 'mobile';
+    else if (/ipad|tablet/i.test(ua))             device = 'tablet';
+
+    // Browser (ordre important — Edge avant Chrome, etc.)
+    if      (/Edg\//i.test(ua))         browser = 'Edge '      + (ua.match(/Edg\/([\d.]+)/)?.[1]||'').split('.')[0];
+    else if (/OPR\//i.test(ua))         browser = 'Opera '     + (ua.match(/OPR\/([\d.]+)/)?.[1]||'').split('.')[0];
+    else if (/Firefox\//i.test(ua))     browser = 'Firefox '   + (ua.match(/Firefox\/([\d.]+)/)?.[1]||'').split('.')[0];
+    else if (/Chrome\//i.test(ua))      browser = 'Chrome '    + (ua.match(/Chrome\/([\d.]+)/)?.[1]||'').split('.')[0];
+    else if (/Safari\//i.test(ua))      browser = 'Safari '    + (ua.match(/Version\/([\d.]+)/)?.[1]||'').split('.')[0];
+    else if (/MSIE|Trident/i.test(ua))  browser = 'IE';
+
+    // OS
+    if      (/Windows NT 10/i.test(ua))     os = 'Windows 10/11';
+    else if (/Windows NT/i.test(ua))        os = 'Windows';
+    else if (/iPhone.*OS ([\d_]+)/i.test(ua)) os = 'iOS ' + ua.match(/iPhone.*OS ([\d_]+)/i)?.[1]?.replace(/_/g,'.');
+    else if (/iPad.*OS ([\d_]+)/i.test(ua))   os = 'iPadOS ' + ua.match(/iPad.*OS ([\d_]+)/i)?.[1]?.replace(/_/g,'.');
+    else if (/Android ([\d.]+)/i.test(ua))  os = 'Android ' + ua.match(/Android ([\d.]+)/i)?.[1];
+    else if (/Mac OS X ([\d_]+)/i.test(ua)) os = 'macOS ' + ua.match(/Mac OS X ([\d_]+)/i)?.[1]?.replace(/_/g,'.');
+    else if (/Linux/i.test(ua))             os = 'Linux';
+
+    return { browser, os, device };
+}
+
+/* ---- Géolocalisation IP via api.ip-api.com (gratuit, 45 req/min) ---- */
+async function geolocateIp(ip) {
+    if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168') || ip.startsWith('10.')) {
+        return { country: 'Local', city: 'Local', region: null, lat: null, lon: null, isp: null, timezone: null };
+    }
+    try {
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => ctrl.abort(), 4000);
+        const res  = await fetch(
+            `http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,regionName,city,lat,lon,timezone,isp,org`,
+            { signal: ctrl.signal }
+        ).finally(() => clearTimeout(tid));
+        if (!res.ok) return null;
+        const d = await res.json();
+        if (d.status !== 'success') return null;
+        return {
+            country: d.country, countryCode: d.countryCode,
+            region: d.regionName, city: d.city,
+            lat: d.lat, lon: d.lon,
+            timezone: d.timezone, isp: d.isp || d.org || null,
+        };
+    } catch { return null; }
+}
+
+/* ---- Logging des actions équipe ---- */
+function logTeamAction(req, action, detail = null, targetId = null) {
+    if (!req.user) return;
+    const entry = {
+        id: nextId('teamLogs'),
+        ts: now(),
+        userId: req.user.userId,
+        userName: req.user.name || req.user.email,
+        userEmail: req.user.email,
+        action,
+        detail,
+        targetId,
+        ip: getRealIp(req),
+        ua: req.headers['user-agent'] || null,
+    };
+    db.get('teamLogs').push(entry).write();
+    // Garder max 2000 logs
+    const logs = db.get('teamLogs').value();
+    if (logs.length > 2000) db.set('teamLogs', logs.slice(logs.length - 2000)).write();
+}
+
+/* ---- Heartbeat : mémoriser la dernière activité de chaque utilisateur connecté ---- */
+function touchUserActivity(req) {
+    if (!req.user) return;
+    db.get('users').find({ id: req.user.userId }).assign({
+        lastSeenAt: now(),
+        lastIp: getRealIp(req),
+        lastUa: req.headers['user-agent'] || null,
+    }).write();
+}
 
 /* ============================================================
    AUTH & RÔLES
@@ -59,6 +159,7 @@ function auth(req, res, next) {
         const user = db.get('users').find({ id: payload.userId }).value();
         if (!user || user.status !== 'active') return res.status(401).json({ error: 'Compte désactivé ou introuvable' });
         req.user = { userId: user.id, email: user.email, role: user.role, name: user.name };
+        touchUserActivity(req);
         next();
     } catch { return res.status(401).json({ error: 'Session invalide ou expirée' }); }
 }
@@ -142,7 +243,10 @@ app.post('/api/auth/invite/:token/accept', (req, res) => {
    ============================================================ */
 app.get('/api/admin/users', auth, adminOnly, (req, res) => {
     const users = db.get('users').value().map(u => ({
-        id: u.id, email: u.email, name: u.name, role: u.role, status: u.status, created_at: u.created_at,
+        id: u.id, email: u.email, name: u.name, role: u.role,
+        status: u.status, created_at: u.created_at,
+        lastSeenAt: u.lastSeenAt || null,
+        lastIp: u.lastIp || null,
     }));
     res.json(users);
 });
@@ -163,8 +267,8 @@ app.post('/api/admin/users', auth, adminOnly, async (req, res) => {
         inviteTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 jours
     };
     db.get('users').push(user).write();
-
     const result = await mailer.sendMail(mailer.teamInviteEmail(user, inviteToken));
+    logTeamAction(req, 'user_invited', `${cleanEmail} invité avec le rôle ${role}`, user.id);
     res.status(201).json({ id: user.id, emailSent: result.sent, emailError: result.sent ? null : result.reason });
 });
 
@@ -209,6 +313,9 @@ app.patch('/api/admin/users/:id', auth, adminOnly, (req, res) => {
     if (status !== undefined && ['active', 'disabled'].includes(status)) patch.status = status;
     if (name !== undefined) patch.name = name;
     target.assign(patch).write();
+    const t = db.get('users').find({ id }).value();
+    if (patch.role || patch.status)
+        logTeamAction(req, 'user_updated', `${t.email} : ${patch.role ? `rôle → ${patch.role}` : ''}${patch.status ? ` statut → ${patch.status}` : ''}`.trim(), id);
     res.json({ ok: true });
 });
 
@@ -221,33 +328,105 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
         const otherActiveAdmins = db.get('users').value().filter(u => u.id !== id && u.role === 'admin' && u.status === 'active').length;
         if (otherActiveAdmins === 0) return res.status(400).json({ error: 'Impossible : il doit toujours rester au moins un administrateur actif' });
     }
+    const targetU = db.get('users').find({ id }).value();
+    logTeamAction(req, 'user_deleted', `${targetU?.email || '#' + id} supprimé de l'équipe`, id);
     db.get('users').remove({ id }).write();
     res.json({ ok: true });
 });
-
 /* ============================================================
    INGESTION PUBLIQUE — appelée par le chat widget du site
    ============================================================ */
 app.post('/api/leads', async (req, res) => {
     const { name, email, message, source } = req.body || {};
     if (!email || !message) return res.status(400).json({ error: 'email et message requis' });
-    const lead = { id: nextId('leads'), created_at: now(), name: name || null, email, message, source: source || 'chat', status: 'new', notes: '' };
-    db.get('leads').push(lead).write();
-    res.status(201).json({ id: lead.id }); // on répond tout de suite, les emails partent en arrière-plan
 
-    mailer.sendMail(mailer.leadConfirmationEmail(lead)).catch(() => {});
-    mailer.sendMail(mailer.leadNotificationEmail(lead)).catch(() => {});
+    // Tracking visiteur — tout ce qu'on peut récupérer
+    const ip  = getRealIp(req);
+    const ua  = req.headers['user-agent'] || null;
+    const uaParsed = parseUA(ua);
+    const tracking = {
+        ip,
+        ...uaParsed,                                           // browser, os, device
+        referrer:   req.body.referrer   || req.headers['referer'] || null,
+        page:       req.body.page       || null,
+        sessionId:  req.body.sessionId  || null,
+        lang:       req.body.lang       || null,
+        timezone:   req.body.timezone   || null,
+        screen:     req.body.screen     || null,
+        connection: req.body.connection || null,
+        utmSource:  req.body.utmSource  || null,
+        utmMedium:  req.body.utmMedium  || null,
+        utmCampaign:req.body.utmCampaign|| null,
+        visitDuration: req.body.visitDuration || null,
+        pagesVisited:  req.body.pagesVisited  || null,
+        ua,
+        geo: null, // rempli en arrière-plan
+    };
+
+    const lead = {
+        id: nextId('leads'), created_at: now(),
+        name: name || null, email, message,
+        source: source || 'chat', status: 'new', notes: '',
+        tracking,
+    };
+    db.get('leads').push(lead).write();
+    res.status(201).json({ id: lead.id });
+
+    // Géolocalisation + emails en arrière-plan (ne bloquent pas la réponse)
+    (async () => {
+        const geo = await geolocateIp(ip);
+        if (geo) {
+            db.get('leads').find({ id: lead.id }).assign({ tracking: { ...tracking, geo } }).write();
+            lead.tracking.geo = geo; // pour l'email de notif
+        }
+        mailer.sendMail(mailer.leadConfirmationEmail(lead)).catch(() => {});
+        mailer.sendMail(mailer.leadNotificationEmail(lead)).catch(() => {});
+    })();
 });
 
 app.post('/api/appointments', async (req, res) => {
     const { date_text, time_text, subject, email } = req.body || {};
     if (!email || !subject) return res.status(400).json({ error: 'email et subject requis' });
-    const appt = { id: nextId('appointments'), created_at: now(), date_text: date_text || null, time_text: time_text || null, subject, email, status: 'pending', notes: '' };
+
+    const ip = getRealIp(req);
+    const ua = req.headers['user-agent'] || null;
+    const uaParsed = parseUA(ua);
+    const tracking = {
+        ip,
+        ...uaParsed,
+        referrer:    req.body.referrer    || req.headers['referer'] || null,
+        page:        req.body.page        || null,
+        sessionId:   req.body.sessionId   || null,
+        lang:        req.body.lang        || null,
+        timezone:    req.body.timezone    || null,
+        screen:      req.body.screen      || null,
+        utmSource:   req.body.utmSource   || null,
+        utmMedium:   req.body.utmMedium   || null,
+        utmCampaign: req.body.utmCampaign || null,
+        visitDuration: req.body.visitDuration || null,
+        pagesVisited:  req.body.pagesVisited  || null,
+        ua,
+        geo: null,
+    };
+
+    const appt = {
+        id: nextId('appointments'), created_at: now(),
+        date_text: date_text || null, time_text: time_text || null,
+        subject, email, status: 'pending', notes: '',
+        tracking,
+    };
     db.get('appointments').push(appt).write();
     res.status(201).json({ id: appt.id });
 
-    mailer.sendMail(mailer.appointmentConfirmationEmail(appt)).catch(() => {});
-    mailer.sendMail(mailer.appointmentNotificationEmail(appt)).catch(() => {});
+    (async () => {
+        const geo = await geolocateIp(ip);
+        if (geo) {
+            db.get('appointments').find({ id: appt.id }).assign({ tracking: { ...tracking, geo } }).write();
+            appt.tracking.geo = geo;
+        }
+        mailer.sendMail(mailer.appointmentConfirmationEmail(appt)).catch(() => {});
+        mailer.sendMail(mailer.appointmentNotificationEmail(appt)).catch(() => {});
+    })();
 });
 
 // Suivi d'activité — appelé par le site pour toute action utilisateur (formulaires,
@@ -356,17 +535,25 @@ app.patch('/api/leads/:id', auth, canWrite, (req, res) => {
     const { status, notes } = req.body || {};
     const lead = db.get('leads').find({ id });
     if (!lead.value()) return res.status(404).json({ error: 'Lead introuvable' });
+    const prev = lead.value();
     if (status) lead.assign({ status }).write();
     if (notes !== undefined) lead.assign({ notes }).write();
+    if (status && status !== prev.status)
+        logTeamAction(req, 'lead_status_changed', `Lead #${id} (${prev.email}) : ${prev.status} → ${status}`, id);
+    if (notes !== undefined)
+        logTeamAction(req, 'lead_note_edited', `Lead #${id} (${prev.email})`, id);
     res.json({ ok: true });
 });
 
 app.delete('/api/leads/:id', auth, canWrite, (req, res) => {
-    db.get('leads').remove({ id: Number(req.params.id) }).write();
+    const id = Number(req.params.id);
+    const lead = db.get('leads').find({ id }).value();
+    logTeamAction(req, 'lead_deleted', `Lead #${id}${lead ? ` (${lead.email})` : ''}`, id);
+    db.get('leads').remove({ id }).write();
     res.json({ ok: true });
 });
 
-// Ajout manuel d'un lead depuis le dashboard (contact reçu par téléphone, Instagram, en personne...)
+// Ajout manuel d'un lead depuis le dashboard
 app.post('/api/admin/leads', auth, canWrite, (req, res) => {
     const { name, email, message, source, status } = req.body || {};
     if (!email) return res.status(400).json({ error: 'email requis' });
@@ -374,8 +561,10 @@ app.post('/api/admin/leads', auth, canWrite, (req, res) => {
         id: nextId('leads'), created_at: now(),
         name: name || null, email, message: message || '',
         source: source || 'manuel', status: status || 'new', notes: '',
+        tracking: { ip: getRealIp(req), ...parseUA(req.headers['user-agent']), addedBy: req.user.email },
     };
     db.get('leads').push(lead).write();
+    logTeamAction(req, 'lead_created_manual', `Lead ajouté manuellement : ${email}`, lead.id);
     res.status(201).json({ id: lead.id });
 });
 
@@ -386,11 +575,10 @@ app.post('/api/leads/:id/reply', auth, canWrite, async (req, res) => {
     if (!message) return res.status(400).json({ error: 'message requis' });
     const lead = db.get('leads').find({ id }).value();
     if (!lead) return res.status(404).json({ error: 'Lead introuvable' });
-
     const result = await mailer.sendMail(mailer.leadReplyEmail(lead, message));
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
-
     db.get('leads').find({ id }).assign({ status: 'contacted' }).write();
+    logTeamAction(req, 'lead_replied', `Réponse envoyée à ${lead.email}`, id);
     res.json({ ok: true });
 });
 
@@ -430,6 +618,7 @@ app.put('/api/admin/content', auth, canWrite, (req, res) => {
     const content = req.body;
     if (!content || typeof content !== 'object') return res.status(400).json({ error: 'Corps invalide' });
     db.set('site_content', content).write();
+    logTeamAction(req, 'site_content_updated', 'Contenu du site modifié (Hero, Projets, FAQ, Galeries...)');
     res.json({ ok: true });
 });
 
@@ -596,6 +785,7 @@ app.post('/api/quotes', auth, adminOnly, (req, res) => {
     };
     quote.total = computeQuoteTotal(quote.items);
     db.get('quotes').push(quote).write();
+    logTeamAction(req, 'quote_created', `Devis créé pour ${clientEmail} (${quote.total.toFixed(2)} €)`, quote.id);
     res.status(201).json(quote);
 });
 
@@ -604,6 +794,7 @@ app.patch('/api/quotes/:id', auth, adminOnly, (req, res) => {
     const q = db.get('quotes').find({ id });
     if (!q.value()) return res.status(404).json({ error: 'Devis introuvable' });
     const { clientName, clientEmail, items, notes, status } = req.body || {};
+    const prev = q.value();
     const patch = {};
     if (clientName !== undefined) patch.clientName = clientName;
     if (clientEmail !== undefined) patch.clientEmail = clientEmail;
@@ -614,15 +805,20 @@ app.patch('/api/quotes/:id', auth, adminOnly, (req, res) => {
     }
     if (items !== undefined) { patch.items = items; patch.total = computeQuoteTotal(items); }
     q.assign(patch).write();
+    if (status && status !== prev.status)
+        logTeamAction(req, 'quote_status_changed', `Devis #${id} (${prev.clientEmail}) : ${prev.status} → ${status}`, id);
     res.json({ ok: true });
 });
 
 app.delete('/api/quotes/:id', auth, adminOnly, (req, res) => {
-    db.get('quotes').remove({ id: Number(req.params.id) }).write();
+    const id = Number(req.params.id);
+    const q = db.get('quotes').find({ id }).value();
+    logTeamAction(req, 'quote_deleted', `Devis #${id}${q ? ` (${q.clientEmail})` : ''} supprimé`, id);
+    db.get('quotes').remove({ id }).write();
     res.json({ ok: true });
 });
 
-// Page HTML imprimable (le graphiste peut l'ouvrir et "Imprimer > Enregistrer en PDF")
+// Page HTML imprimable
 app.get('/api/quotes/:id/view', auth, (req, res) => {
     const quote = db.get('quotes').find({ id: Number(req.params.id) }).value();
     if (!quote) return res.status(404).send('Devis introuvable');
@@ -638,6 +834,7 @@ app.post('/api/quotes/:id/send', auth, adminOnly, async (req, res) => {
     const result = await mailer.sendMail(mailer.quoteEmail(quote));
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('quotes').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
+    logTeamAction(req, 'quote_sent', `Devis #${id} envoyé par email à ${quote.clientEmail}`, id);
     res.json({ ok: true });
 });
 
@@ -650,6 +847,7 @@ app.get('/api/business-settings', auth, (req, res) => {
 
 app.put('/api/business-settings', auth, adminOnly, (req, res) => {
     db.set('businessSettings', req.body || {}).write();
+    logTeamAction(req, 'business_settings_updated', 'Paramètres entreprise modifiés');
     res.json({ ok: true });
 });
 
@@ -682,7 +880,7 @@ app.post('/api/invoices', auth, adminOnly, (req, res) => {
     res.status(201).json(invoice);
 });
 
-// Convertir un devis existant en facture officielle (reprend les lignes, numéro séquentiel généré)
+// Convertir un devis existant en facture officielle
 app.post('/api/quotes/:id/convert-to-invoice', auth, adminOnly, (req, res) => {
     const quote = db.get('quotes').find({ id: Number(req.params.id) }).value();
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
@@ -694,6 +892,7 @@ app.post('/api/quotes/:id/convert-to-invoice', auth, adminOnly, (req, res) => {
         notes: quote.notes || '', status: 'draft', issue_date: now(), sent_at: null, paid_at: null,
     };
     db.get('invoices').push(invoice).write();
+    logTeamAction(req, 'invoice_created', `Facture ${invoice.invoiceNumber} créée depuis devis #${quote.id} (${quote.clientEmail})`, invoice.id);
     res.status(201).json(invoice);
 });
 
@@ -701,6 +900,7 @@ app.patch('/api/invoices/:id', auth, adminOnly, (req, res) => {
     const id = Number(req.params.id);
     const inv = db.get('invoices').find({ id });
     if (!inv.value()) return res.status(404).json({ error: 'Facture introuvable' });
+    const prev = inv.value();
     const { clientName, clientEmail, clientAddress, items, notes, status } = req.body || {};
     const patch = {};
     if (clientName !== undefined) patch.clientName = clientName;
@@ -713,11 +913,16 @@ app.patch('/api/invoices/:id', auth, adminOnly, (req, res) => {
     }
     if (items !== undefined) { patch.items = items; patch.total = computeQuoteTotal(items); }
     inv.assign(patch).write();
+    if (status && status !== prev.status)
+        logTeamAction(req, 'invoice_status_changed', `Facture ${prev.invoiceNumber} : ${prev.status} → ${status}`, id);
     res.json({ ok: true });
 });
 
 app.delete('/api/invoices/:id', auth, adminOnly, (req, res) => {
-    db.get('invoices').remove({ id: Number(req.params.id) }).write();
+    const id = Number(req.params.id);
+    const inv = db.get('invoices').find({ id }).value();
+    logTeamAction(req, 'invoice_deleted', `Facture ${inv?.invoiceNumber || '#' + id} supprimée`, id);
+    db.get('invoices').remove({ id }).write();
     res.json({ ok: true });
 });
 
@@ -737,6 +942,7 @@ app.post('/api/invoices/:id/send', auth, adminOnly, async (req, res) => {
     const result = await mailer.sendMail(mailer.invoiceEmail(invoice, business));
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('invoices').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
+    logTeamAction(req, 'invoice_sent', `Facture ${invoice.invoiceNumber} envoyée à ${invoice.clientEmail}`, id);
     res.json({ ok: true });
 });
 
@@ -814,6 +1020,31 @@ app.patch('/api/content-calendar/:id', auth, canWrite, (req, res) => {
 app.delete('/api/content-calendar/:id', auth, canWrite, (req, res) => {
     db.get('contentCalendar').remove({ id: Number(req.params.id) }).write();
     res.json({ ok: true });
+});
+
+/* ============================================================
+   LOGS ÉQUIPE — journal d'activité (admin uniquement)
+   ============================================================ */
+// Journal global toutes actions confondues
+app.get('/api/admin/team-logs', auth, adminOnly, (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 200, 500);
+    const userId = req.query.userId ? Number(req.query.userId) : null;
+    let logs = db.get('teamLogs').value();
+    if (userId) logs = logs.filter(l => l.userId === userId);
+    res.json(logs.slice(-limit).reverse());
+});
+
+// Sessions actives : membres vus dans les 10 dernières minutes
+app.get('/api/admin/active-sessions', auth, adminOnly, (req, res) => {
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const active = db.get('users').value()
+        .filter(u => u.status === 'active' && u.lastSeenAt && u.lastSeenAt >= cutoff)
+        .map(u => ({
+            id: u.id, email: u.email, name: u.name, role: u.role,
+            lastSeenAt: u.lastSeenAt, lastIp: u.lastIp || null,
+            ua: u.lastUa ? parseUA(u.lastUa) : null,
+        }));
+    res.json(active);
 });
 
 /* ============================================================
