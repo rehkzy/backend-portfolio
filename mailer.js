@@ -35,6 +35,8 @@ async function sendMail({ to, subject, html, replyTo }) {
                     subject,
                     htmlContent: html,
                     ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+                    trackClicks: false,  // désactive le tracking qui réécrit les URLs et casse les liens d'invitation
+                    trackOpens: false,
                 }),
                 signal: controller.signal,
             });
