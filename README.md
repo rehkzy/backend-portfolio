@@ -17,7 +17,7 @@ npm install
 cp .env.example .env
 ```
 
-Génère le hash de ton mot de passe admin :
+Génère le hash de ton mot de passe admin (uniquement pour le tout premier compte — les suivants s'invitent depuis le dashboard, voir section 4ter) :
 ```bash
 npm run hash-password -- "TonMotDePasse"
 ```
@@ -62,9 +62,10 @@ Dashboard : **http://localhost:4000/dashboard**
 | Variable | Description |
 |---|---|
 | `JWT_SECRET` | N'importe quelle longue chaîne aléatoire (sécurise les sessions) |
-| `ADMIN_PASSWORD_HASH` | Généré avec `npm run hash-password -- "motdepasse"` |
+| `ADMIN_PASSWORD_HASH` | Généré avec `npm run hash-password -- "motdepasse"` — sert uniquement à créer ton compte admin la toute première fois |
 | `ALLOWED_ORIGIN` | `https://florian-b.fr,https://www.florian-b.fr` |
 | `PORT` | Laisse Railway le définir automatiquement, sinon `4000` |
+| `DASHBOARD_URL` | L'URL Railway de ton dashboard (ex: `https://xxx.up.railway.app`) — utilisée dans les emails d'invitation d'équipe |
 | `BREVO_API_KEY` | Ta clé API Brevo — voir section 4bis |
 | `SENDER_EMAIL` | `contact@florian-b.fr` (doit être vérifié dans Brevo) |
 | `SENDER_NAME` | `Florian B.` |
@@ -103,6 +104,37 @@ Ajoute dans Railway → Variables :
 | `SENDER_NAME` | `Florian B.` |
 
 Railway redémarre automatiquement — les emails (confirmations, notifications, devis, factures, alertes) passent désormais par Brevo.
+
+---
+
+## 4ter. Gérer ton équipe (plusieurs comptes, plusieurs rôles)
+
+Le dashboard supporte plusieurs comptes utilisateurs, chacun avec un rôle :
+
+| Rôle | Ce qu'il peut faire |
+|---|---|
+| **Administrateur** | Absolument tout : leads, RDV, contenu du site, devis, factures, paramètres entreprise, sauvegarde, **et gérer l'équipe** |
+| **Rédacteur** | Leads, rendez-vous, contenu du site (Hero, Projets, FAQ, galeries...), calendrier de contenu. Pas d'accès aux devis/factures/paramètres/équipe |
+| **Lecteur** | Consultation uniquement, partout — aucune modification possible |
+
+### Inviter quelqu'un
+1. Dans le dashboard → menu **"Équipe"** (visible seulement par les admins) → **"+ Inviter un membre"**
+2. Renseigne son email, son nom (facultatif) et choisis son rôle → **"Envoyer l'invitation"**
+3. La personne reçoit un email avec un lien pour définir son mot de passe (valable 7 jours)
+4. Une fois son mot de passe défini, elle accède directement au dashboard avec son rôle
+
+⚠️ Pour que le lien d'invitation fonctionne, la variable `DASHBOARD_URL` doit être configurée sur Railway (voir tableau ci-dessus) avec l'URL de ton dashboard Railway — **pas** l'URL de florian-b.fr, qui est un site différent hébergé ailleurs.
+
+### Modifier ou retirer un accès
+Dans **"Équipe"**, clique sur un membre pour changer son rôle, le désactiver (accès coupé immédiatement) ou le supprimer. Un administrateur ne peut pas modifier son propre rôle ni se désactiver lui-même — il faut qu'un autre admin le fasse. Le dashboard t'empêche aussi de te retrouver sans aucun administrateur actif.
+
+### Ton propre compte
+Menu **"Mon compte"** (en bas de la barre latérale) → change ton nom affiché ou ton mot de passe à tout moment.
+
+### Ton compte admin historique
+Ton mot de passe actuel (`ADMIN_PASSWORD_HASH`) continue de fonctionner normalement — il correspond à ton compte admin, créé automatiquement au premier démarrage après cette mise à jour. Tu peux ensuite changer ce mot de passe depuis "Mon compte" comme n'importe quel autre compte.
+
+⚠️ **Important** : la connexion demande maintenant un **email + mot de passe** (avant, c'était juste le mot de passe). Ton compte migré utilise l'email défini dans `SENDER_EMAIL` (visible dans tes variables Railway, généralement `contact@florian-b.fr`). Ton mot de passe, lui, ne change pas.
 
 ---
 
@@ -184,7 +216,10 @@ Ajoute `GA_PROPERTY_ID` (le nombre) et `GA_SERVICE_ACCOUNT_JSON` (colle **le con
 
 ## 8. Sécurité
 
-- Un seul compte admin, mot de passe hashé (bcrypt), session JWT (7 jours)
+- Plusieurs comptes possibles, chacun avec un mot de passe hashé (bcrypt) et un rôle (admin / rédacteur / lecteur) — voir section 4ter
+- Session JWT (7 jours), revérifiée à chaque requête : désactiver ou supprimer un compte coupe l'accès immédiatement, pas seulement à l'expiration du token
+- Les liens d'invitation expirent après 7 jours et ne sont utilisables qu'une fois
+- Le dashboard t'empêche de te retrouver sans administrateur actif (impossible de désactiver/rétrograder/supprimer le dernier admin)
+- Les droits sont vérifiés côté serveur sur chaque route, pas seulement dans l'interface — un rédacteur ou lecteur qui tenterait de forcer une action non autorisée serait bloqué par le serveur
 - Les routes publiques (`POST /api/leads`, `POST /api/appointments`, `GET /api/content`) sont volontairement ouvertes — c'est le site qui les appelle sans authentification
-- Toutes les autres routes nécessitent le token admin
 - `ALLOWED_ORIGIN` doit toujours pointer vers ton vrai domaine, jamais `*` en production

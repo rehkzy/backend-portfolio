@@ -16,6 +16,7 @@ const DEFAULTS = {
     "events": [],
     "quotes": [],
     "invoices": [],
+    "users": [],
     "about": {
     "eyebrow": "Derrière l'écran",
     "title": "Florian, avant d'être un portfolio",
@@ -378,5 +379,24 @@ const DEFAULTS = {
 };
 
 db.defaults(DEFAULTS).write();
+
+// Migration douce : si aucun utilisateur n'existe encore, on crée le compte
+// admin historique à partir de ADMIN_PASSWORD_HASH (variable Railway existante),
+// pour que l'accès ne soit jamais coupé lors du passage au multi-utilisateurs.
+if (db.get('users').value().length === 0 && process.env.ADMIN_PASSWORD_HASH) {
+    const adminEmail = (process.env.SENDER_EMAIL || 'admin@florian-b.fr').toLowerCase();
+    db.get('users').push({
+        id: 1,
+        email: adminEmail,
+        name: 'Florian',
+        passwordHash: process.env.ADMIN_PASSWORD_HASH,
+        role: 'admin',
+        status: 'active',
+        inviteToken: null,
+        inviteTokenExpires: null,
+        created_at: new Date().toISOString(),
+    }).write();
+    console.log(`👤 Compte admin initial créé — connecte-toi avec l'email "${adminEmail}" et ton mot de passe habituel.`);
+}
 
 module.exports = db;

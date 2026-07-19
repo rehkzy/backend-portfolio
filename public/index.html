@@ -373,16 +373,39 @@
 <body data-theme="light">
 
 <div id="loginScreen">
-    <div class="login-card">
+    <div class="login-card" id="loginCard">
         <div class="login-logo">FB</div>
         <h1>Dashboard Florian B.</h1>
         <p>Connectez-vous pour accéder à vos leads, RDV et statistiques.</p>
         <div class="login-error" id="loginError"></div>
         <div class="field">
-            <label>Mot de passe admin</label>
-            <input type="password" id="loginPassword" placeholder="••••••••">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="vous@exemple.fr" autocomplete="username">
+        </div>
+        <div class="field">
+            <label>Mot de passe</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
         </div>
         <button class="btn-primary" id="loginBtn">Se connecter</button>
+    </div>
+    <div class="login-card" id="inviteCard" style="display:none;">
+        <div class="login-logo">FB</div>
+        <h1>Bienvenue !</h1>
+        <p id="inviteIntro">Définissez votre mot de passe pour accéder au dashboard.</p>
+        <div class="login-error" id="inviteError"></div>
+        <div class="field">
+            <label>Votre nom</label>
+            <input type="text" id="inviteName" placeholder="Prénom Nom">
+        </div>
+        <div class="field">
+            <label>Nouveau mot de passe</label>
+            <input type="password" id="invitePassword" placeholder="8 caractères minimum" autocomplete="new-password">
+        </div>
+        <div class="field">
+            <label>Confirmer le mot de passe</label>
+            <input type="password" id="invitePasswordConfirm" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <button class="btn-primary" id="inviteAcceptBtn">Activer mon compte</button>
     </div>
 </div>
 
@@ -436,15 +459,15 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Business</div>
-            <div class="nav-item" data-view="quotes">
+            <div class="nav-item" data-view="quotes" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
                 Devis
             </div>
-            <div class="nav-item" data-view="invoices">
+            <div class="nav-item" data-view="invoices" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h12M6 12h8M6 16h4"/></svg>
                 Factures
             </div>
-            <div class="nav-item" data-view="projects">
+            <div class="nav-item" data-view="projects" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 Suivi de projets
             </div>
@@ -460,9 +483,13 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Paramètres</div>
-            <div class="nav-item" data-view="business-settings">
+            <div class="nav-item" data-view="business-settings" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 Mon entreprise
+            </div>
+            <div class="nav-item" data-view="team" data-role="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Équipe
             </div>
         </div>
 
@@ -504,7 +531,7 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Système</div>
-            <div class="nav-item" id="backupBtn">
+            <div class="nav-item" id="backupBtn" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Télécharger une sauvegarde
             </div>
@@ -512,6 +539,10 @@
 
         <div class="sidebar-footer">
             <div class="cmdk-hint" id="cmdkHint"><span>Recherche rapide</span><kbd>⌘K</kbd></div>
+            <div class="nav-item" data-view="account">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span id="navAccountLabel">Mon compte</span>
+            </div>
             <div class="nav-item" id="logoutBtn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 Déconnexion
@@ -766,7 +797,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="10"/></svg>
                         </button>
                     </div>
-                    <button class="btn-primary" id="addLeadBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Ajouter un lead</button>
+                    <button class="btn-primary" id="addLeadBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">+ Ajouter un lead</button>
                 </div>
             </div>
             <div class="toolbar" id="leadsListToolbar">
@@ -842,7 +873,7 @@
             <div class="topbar">
                 <h2>Hero</h2>
                 <div class="topbar-actions">
-                    <button class="btn-primary" id="saveHeroBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                    <button class="btn-primary" id="saveHeroBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
                 </div>
             </div>
             <div class="panel" style="max-width:560px;">
@@ -906,7 +937,7 @@
                 <h2>FAQ</h2>
                 <div class="topbar-actions">
                     <button class="btn-primary" id="addFaqBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Ajouter une question</button>
-                    <button class="btn-primary" id="saveFaqBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                    <button class="btn-primary" id="saveFaqBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
                 </div>
             </div>
             <div id="faqListWrap"></div>
@@ -917,7 +948,7 @@
             <div class="topbar">
                 <h2>À propos</h2>
                 <div class="topbar-actions">
-                    <button class="btn-primary" id="saveAboutBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                    <button class="btn-primary" id="saveAboutBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
                 </div>
             </div>
             <div class="panel" style="max-width:620px;">
@@ -934,7 +965,7 @@
             <div class="topbar">
                 <h2>Parcours</h2>
                 <div class="topbar-actions">
-                    <button class="btn-primary" id="saveResumeBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                    <button class="btn-primary" id="saveResumeBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
                 </div>
             </div>
             <div class="panel" style="max-width:620px; margin-bottom:1.2rem;">
@@ -963,7 +994,7 @@
             <div class="topbar">
                 <h2>Contact & Réseaux</h2>
                 <div class="topbar-actions">
-                    <button class="btn-primary" id="saveContactBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                    <button class="btn-primary" id="saveContactBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
                 </div>
             </div>
             <div class="panel" style="max-width:520px;">
@@ -981,7 +1012,7 @@
             <div class="topbar">
                 <h2>SEO</h2>
                 <div class="topbar-actions">
-                    <button class="btn-primary" id="saveSeoBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
+                    <button class="btn-primary" id="saveSeoBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">Enregistrer</button>
                 </div>
             </div>
             <div class="panel" style="max-width:560px;">
@@ -1088,10 +1119,44 @@
             <div class="topbar">
                 <h2>Calendrier de contenu</h2>
                 <div class="topbar-actions">
-                    <button class="btn-primary" id="addContentBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Idée de post</button>
+                    <button class="btn-primary" id="addContentBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">+ Idée de post</button>
                 </div>
             </div>
             <div id="calendarListWrap"></div>
+        </section>
+
+        <!-- ÉQUIPE -->
+        <section class="view" id="view-team">
+            <div class="topbar">
+                <h2>Équipe</h2>
+                <div class="topbar-actions">
+                    <button class="btn-primary" id="inviteUserBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Inviter un membre</button>
+                </div>
+            </div>
+            <p class="cell-muted" style="margin-bottom:1.2rem;">Gère les personnes qui ont accès au dashboard et leur rôle. <strong>Admin</strong> pilote tout · <strong>Rédacteur</strong> gère leads, RDV, contenu du site et calendrier · <strong>Lecteur</strong> consulte sans modifier.</p>
+            <div id="teamListWrap"></div>
+        </section>
+
+        <!-- MON COMPTE -->
+        <section class="view" id="view-account">
+            <div class="topbar">
+                <h2>Mon compte</h2>
+            </div>
+            <div class="panel" style="max-width:480px; margin-bottom:1.2rem;">
+                <h3>Profil</h3>
+                <div class="drawer-field"><label>Nom affiché</label><input type="text" id="accName" placeholder="Prénom Nom"></div>
+                <div class="drawer-field"><label>Email</label><div class="value" id="accEmail">—</div></div>
+                <div class="drawer-field"><label>Rôle</label><div class="value" id="accRole">—</div></div>
+                <button class="btn-primary" id="saveAccountNameBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer le nom</button>
+            </div>
+            <div class="panel" style="max-width:480px;">
+                <h3>Changer mon mot de passe</h3>
+                <div class="login-error" id="accPasswordError" style="display:none;"></div>
+                <div class="drawer-field"><label>Mot de passe actuel</label><input type="password" id="accCurrentPassword" autocomplete="current-password"></div>
+                <div class="drawer-field"><label>Nouveau mot de passe</label><input type="password" id="accNewPassword" placeholder="8 caractères minimum" autocomplete="new-password"></div>
+                <div class="drawer-field"><label>Confirmer</label><input type="password" id="accNewPasswordConfirm" autocomplete="new-password"></div>
+                <button class="btn-primary" id="saveAccountPasswordBtn" style="width:auto; padding:0.6rem 1.2rem;">Changer le mot de passe</button>
+            </div>
         </section>
     </main>
 </div>
@@ -1118,6 +1183,7 @@
 const API_BASE = ''; // ex: 'https://api.florian-b.fr' si le dashboard est hébergé ailleurs
 
 let TOKEN = localStorage.getItem('fb_token') || null;
+let CURRENT_USER = null; // { id, email, name, role } — rempli par boot()
 let currentView = 'overview';
 let leadsCache = [];
 let apptCache = [];
@@ -1155,13 +1221,15 @@ async function api(path, opts = {}) {
 /* ---------------- AUTH ---------------- */
 document.getElementById('loginBtn').addEventListener('click', login);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 
 async function login() {
+    const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errBox = document.getElementById('loginError');
     errBox.style.display = 'none';
     try {
-        const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ password }) });
+        const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
         TOKEN = data.token;
         localStorage.setItem('fb_token', TOKEN);
         boot();
@@ -1173,22 +1241,96 @@ async function login() {
 
 function logout() {
     TOKEN = null;
+    CURRENT_USER = null;
     localStorage.removeItem('fb_token');
     document.getElementById('app').classList.remove('active');
     document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginCard').style.display = 'block';
+    document.getElementById('inviteCard').style.display = 'none';
 }
 document.getElementById('logoutBtn').addEventListener('click', logout);
 
+// Applique les restrictions de l'interface selon le rôle courant :
+// masque les entrées de nav et actions réservées à un rôle plus élevé.
+// Rappel : ceci est un confort d'affichage, la vraie sécurité est côté serveur (routes protégées).
+function applyRolePermissions() {
+    const role = CURRENT_USER ? CURRENT_USER.role : 'lecteur';
+    document.querySelectorAll('[data-role]').forEach(el => {
+        const required = el.dataset.role; // pour l'instant uniquement "admin"
+        const allowed = required === 'admin' ? role === 'admin' : true;
+        el.style.display = allowed ? '' : 'none';
+    });
+    // Rédacteur/Lecteur : masquer les actions d'écriture sur les vues encore visibles
+    const isReadOnly = role === 'lecteur';
+    document.querySelectorAll('[data-write-action]').forEach(el => {
+        el.style.display = isReadOnly ? 'none' : '';
+    });
+    document.getElementById('navAccountLabel').textContent = CURRENT_USER ? (CURRENT_USER.name || CURRENT_USER.email) : 'Mon compte';
+}
+
 async function boot() {
     try {
-        await api('/api/auth/me');
+        CURRENT_USER = await api('/api/auth/me');
     } catch { return; }
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').classList.add('active');
+    applyRolePermissions();
     loadOverview();
     updateLastRefreshLabel();
     api('/api/leads').then(data => { leadsCache = data; }).catch(() => {}); // alimente l'autocomplete client
 }
+
+/* ---------------- INVITATION (nouveau membre définit son mot de passe) ---------------- */
+function getInviteTokenFromUrl() {
+    const m = location.hash.match(/invite=([a-f0-9]+)/i);
+    return m ? m[1] : null;
+}
+
+async function initInviteFlowIfNeeded() {
+    const token = getInviteTokenFromUrl();
+    if (!token) return false;
+    try {
+        const info = await fetch(API_BASE + '/api/auth/invite/' + token).then(r => {
+            if (!r.ok) return r.json().then(e => { throw new Error(e.error || 'Lien invalide'); });
+            return r.json();
+        });
+        document.getElementById('loginCard').style.display = 'none';
+        document.getElementById('inviteCard').style.display = 'block';
+        document.getElementById('inviteIntro').textContent = `Bienvenue ${info.name || ''} ! Définissez votre mot de passe pour accéder au dashboard (${info.email}).`;
+        document.getElementById('inviteName').value = info.name || '';
+        return true;
+    } catch (e) {
+        document.getElementById('loginError').textContent = e.message;
+        document.getElementById('loginError').style.display = 'block';
+        return false;
+    }
+}
+
+document.getElementById('inviteAcceptBtn').addEventListener('click', async () => {
+    const token = getInviteTokenFromUrl();
+    const name = document.getElementById('inviteName').value.trim();
+    const password = document.getElementById('invitePassword').value;
+    const passwordConfirm = document.getElementById('invitePasswordConfirm').value;
+    const errBox = document.getElementById('inviteError');
+    errBox.style.display = 'none';
+    if (password.length < 8) { errBox.textContent = 'Le mot de passe doit faire au moins 8 caractères'; errBox.style.display = 'block'; return; }
+    if (password !== passwordConfirm) { errBox.textContent = 'Les deux mots de passe ne correspondent pas'; errBox.style.display = 'block'; return; }
+    try {
+        const res = await fetch(API_BASE + '/api/auth/invite/' + token + '/accept', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        TOKEN = data.token;
+        localStorage.setItem('fb_token', TOKEN);
+        history.replaceState(null, '', location.pathname); // nettoie le #invite=... de l'URL
+        boot();
+    } catch (e) {
+        errBox.textContent = e.message;
+        errBox.style.display = 'block';
+    }
+});
 
 /* ---------------- THEME ---------------- */
 const savedTheme = localStorage.getItem('fb_theme') || 'light';
@@ -1241,6 +1383,8 @@ function switchView(view) {
     if (view === 'business-settings') loadBusinessSettings();
     if (view === 'projects') loadProjectsTrack();
     if (view === 'calendar') loadContentCalendar();
+    if (view === 'team') loadTeam();
+    if (view === 'account') loadAccount();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => refreshCurrentView());
@@ -2215,7 +2359,19 @@ async function deleteEvent(id) {
 }
 
 /* ---------------- DRAWER ---------------- */
-function openDrawer() { document.getElementById('drawer').classList.add('active'); document.getElementById('drawerOverlay').classList.add('active'); }
+function openDrawer() {
+    document.getElementById('drawer').classList.add('active');
+    document.getElementById('drawerOverlay').classList.add('active');
+    // Le rôle lecteur ne doit pouvoir que consulter : on masque les boutons d'action
+    // (Enregistrer, Supprimer, Répondre...) injectés dynamiquement dans le drawer,
+    // et on rend les champs non éditables.
+    if (CURRENT_USER && CURRENT_USER.role === 'lecteur') {
+        const drawer = document.getElementById('drawer');
+        const actions = drawer.querySelector('.drawer-actions');
+        if (actions) actions.style.display = 'none';
+        drawer.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = true; });
+    }
+}
 function closeDrawer() { document.getElementById('drawer').classList.remove('active'); document.getElementById('drawerOverlay').classList.remove('active'); }
 document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
 
@@ -2639,6 +2795,11 @@ function renderLeadsKanban() {
 }
 
 function attachKanbanDragEvents(boardEl, onDrop) {
+    // Lecture seule pour le rôle lecteur : pas de drag&drop possible
+    if (CURRENT_USER && CURRENT_USER.role === 'lecteur') {
+        boardEl.querySelectorAll('.kanban-card').forEach(card => { card.draggable = false; card.style.cursor = 'default'; });
+        return;
+    }
     let draggedId = null;
     boardEl.querySelectorAll('.kanban-card').forEach(card => {
         card.addEventListener('dragstart', () => { draggedId = card.dataset.id; card.classList.add('dragging'); });
@@ -3001,6 +3162,160 @@ async function deleteCalendarItem(id) {
     try { await api('/api/content-calendar/' + id, { method: 'DELETE' }); toast('Supprimé'); closeDrawer(); loadContentCalendar(); }
     catch (e) { toast(e.message); }
 }
+
+/* ============================================================
+   ÉQUIPE — gestion des utilisateurs (admin uniquement)
+   ============================================================ */
+const ROLE_LABELS = { admin: 'Administrateur', redacteur: 'Rédacteur', lecteur: 'Lecteur' };
+const ROLE_DESCRIPTIONS = {
+    admin: 'Accès total : finances, équipe, tout piloter',
+    redacteur: 'Leads, RDV, contenu du site, calendrier',
+    lecteur: 'Consultation uniquement, aucune modification',
+};
+let teamCache = [];
+
+async function loadTeam() {
+    try { teamCache = await api('/api/admin/users'); renderTeamList(); }
+    catch (e) { toast(e.message); }
+}
+
+function renderTeamList() {
+    const wrap = document.getElementById('teamListWrap');
+    if (!teamCache.length) { wrap.innerHTML = emptyStateHTML('Aucun membre pour le moment.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Membre</th><th>Rôle</th><th>Statut</th><th></th></tr></thead>
+            <tbody>
+                ${teamCache.map(u => `
+                    <tr onclick="openTeamDrawer(${u.id})">
+                        <td>
+                            <strong style="color:var(--text);">${escapeHtml(u.name || u.email)}</strong>
+                            ${u.name ? `<div class="cell-muted">${escapeHtml(u.email)}</div>` : ''}
+                        </td>
+                        <td>${ROLE_LABELS[u.role] || u.role}${u.id === CURRENT_USER.id ? ' <span class="cell-muted">(vous)</span>' : ''}</td>
+                        <td><span class="badge ${u.status === 'active' ? 'won' : u.status === 'invited' ? 'pending' : 'lost'}">${u.status === 'active' ? 'Actif' : u.status === 'invited' ? 'Invitation en attente' : 'Désactivé'}</span></td>
+                        <td class="row-actions" onclick="event.stopPropagation()">
+                            ${u.status === 'invited' ? `<button class="icon-btn" title="Renvoyer l'invitation" onclick="resendInvite(${u.id})">✉️</button>` : ''}
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+document.getElementById('inviteUserBtn').addEventListener('click', () => openTeamDrawer(null));
+
+function openTeamDrawer(id) {
+    const u = id ? teamCache.find(x => x.id === id) : null;
+    const isSelf = u && u.id === CURRENT_USER.id;
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${u ? (u.name || u.email) : 'Inviter un membre'}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        ${u ? `
+            <div class="drawer-field"><label>Email</label><div class="value">${escapeHtml(u.email)}</div></div>
+        ` : `
+            <div class="drawer-field"><label>Email *</label><input type="email" id="tmEmail" placeholder="collegue@exemple.fr"></div>
+            <div class="drawer-field"><label>Nom (optionnel)</label><input type="text" id="tmName" placeholder="Prénom Nom"></div>
+        `}
+        <div class="drawer-field">
+            <label>Rôle</label>
+            <select id="tmRole" ${isSelf ? 'disabled' : ''}>
+                ${Object.entries(ROLE_LABELS).map(([k, v]) => `<option value="${k}" ${(u ? u.role : 'lecteur') === k ? 'selected' : ''}>${v} — ${ROLE_DESCRIPTIONS[k]}</option>`).join('')}
+            </select>
+            ${isSelf ? `<p class="cell-muted" style="margin-top:0.4rem;">Vous ne pouvez pas modifier votre propre rôle.</p>` : ''}
+        </div>
+        ${u && !isSelf ? `
+            <div class="drawer-field">
+                <label>Statut</label>
+                <select id="tmStatus">
+                    <option value="active" ${u.status !== 'disabled' ? 'selected' : ''}>Actif</option>
+                    <option value="disabled" ${u.status === 'disabled' ? 'selected' : ''}>Désactivé</option>
+                </select>
+            </div>
+        ` : ''}
+        <div class="drawer-actions">
+            <button class="btn-secondary" onclick="saveTeamMember(${u ? u.id : 'null'})">${u ? 'Enregistrer' : "Envoyer l'invitation"}</button>
+            ${u && !isSelf ? `<button class="btn-danger" onclick="deleteTeamMember(${u.id})">Supprimer</button>` : ''}
+        </div>
+    `;
+    openDrawer();
+}
+
+async function saveTeamMember(id) {
+    try {
+        if (id) {
+            const isSelf = id === CURRENT_USER.id;
+            const patch = {};
+            if (!isSelf) {
+                patch.role = document.getElementById('tmRole').value;
+                patch.status = document.getElementById('tmStatus').value;
+            }
+            await api('/api/admin/users/' + id, { method: 'PATCH', body: JSON.stringify(patch) });
+            toast('Membre mis à jour ✅');
+        } else {
+            const email = document.getElementById('tmEmail').value.trim();
+            const name = document.getElementById('tmName').value.trim();
+            const role = document.getElementById('tmRole').value;
+            if (!email) { toast("L'email est obligatoire."); return; }
+            const result = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ email, name, role }) });
+            toast(result.emailSent ? 'Invitation envoyée ✅' : "Membre créé, mais l'email n'a pas pu être envoyé — vérifie la config Brevo");
+        }
+        closeDrawer();
+        loadTeam();
+    } catch (e) { toast(e.message); }
+}
+
+async function resendInvite(id) {
+    try {
+        const result = await api('/api/admin/users/' + id + '/resend-invite', { method: 'POST' });
+        toast(result.emailSent ? 'Invitation renvoyée ✅' : "Membre mis à jour, mais l'email n'a pas pu être envoyé");
+    } catch (e) { toast(e.message); }
+}
+
+async function deleteTeamMember(id) {
+    if (!confirm('Supprimer ce membre ? Il perdra immédiatement l\'accès au dashboard.')) return;
+    try { await api('/api/admin/users/' + id, { method: 'DELETE' }); toast('Membre supprimé'); closeDrawer(); loadTeam(); }
+    catch (e) { toast(e.message); }
+}
+
+/* ============================================================
+   MON COMPTE
+   ============================================================ */
+function loadAccount() {
+    document.getElementById('accName').value = CURRENT_USER.name || '';
+    document.getElementById('accEmail').textContent = CURRENT_USER.email;
+    document.getElementById('accRole').textContent = ROLE_LABELS[CURRENT_USER.role] || CURRENT_USER.role;
+}
+
+document.getElementById('saveAccountNameBtn').addEventListener('click', async () => {
+    const name = document.getElementById('accName').value.trim();
+    try {
+        await api('/api/auth/me', { method: 'PATCH', body: JSON.stringify({ name }) });
+        CURRENT_USER.name = name;
+        applyRolePermissions();
+        toast('Nom mis à jour ✅');
+    } catch (e) { toast(e.message); }
+});
+
+document.getElementById('saveAccountPasswordBtn').addEventListener('click', async () => {
+    const currentPassword = document.getElementById('accCurrentPassword').value;
+    const newPassword = document.getElementById('accNewPassword').value;
+    const newPasswordConfirm = document.getElementById('accNewPasswordConfirm').value;
+    const errBox = document.getElementById('accPasswordError');
+    errBox.style.display = 'none';
+    if (newPassword.length < 8) { errBox.textContent = 'Le nouveau mot de passe doit faire au moins 8 caractères'; errBox.style.display = 'block'; return; }
+    if (newPassword !== newPasswordConfirm) { errBox.textContent = 'Les deux mots de passe ne correspondent pas'; errBox.style.display = 'block'; return; }
+    try {
+        await api('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
+        toast('Mot de passe changé ✅');
+        document.getElementById('accCurrentPassword').value = '';
+        document.getElementById('accNewPassword').value = '';
+        document.getElementById('accNewPasswordConfirm').value = '';
+    } catch (e) { errBox.textContent = e.message; errBox.style.display = 'block'; }
+});
 
 /* ============================================================
    SAUVEGARDE
@@ -3503,7 +3818,11 @@ function toast(msg) {
 }
 
 /* ---------------- INIT ---------------- */
-if (TOKEN) boot(); else document.getElementById('loginScreen').style.display = 'flex';
+(async function initApp() {
+    const isInvite = await initInviteFlowIfNeeded();
+    if (isInvite) { document.getElementById('loginScreen').style.display = 'flex'; return; }
+    if (TOKEN) boot(); else document.getElementById('loginScreen').style.display = 'flex';
+})();
 </script>
 </body>
 </html>

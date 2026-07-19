@@ -175,6 +175,31 @@ function leadReplyEmail(lead, message) {
     };
 }
 
+const ROLE_LABELS = { admin: 'Administrateur', redacteur: 'Rédacteur', lecteur: 'Lecteur' };
+
+// Invitation à rejoindre le dashboard — envoyée quand un admin ajoute un membre.
+// inviteToken est ajouté brut à l'URL, le lien mène à une page du dashboard qui
+// permet de définir son mot de passe. Le dashboard est servi par Railway, pas par
+// florian-b.fr (qui est le site statique OVH) — DASHBOARD_URL doit être configuré.
+function teamInviteEmail(user, inviteToken) {
+    if (!process.env.DASHBOARD_URL) {
+        console.warn('⚠️  DASHBOARD_URL non configuré — le lien d\'invitation sera invalide. Ajoute-le dans les variables Railway.');
+    }
+    const dashboardOrigin = (process.env.DASHBOARD_URL || '').replace(/\/$/, '');
+    const link = `${dashboardOrigin}/dashboard/#invite=${inviteToken}`;
+    return {
+        to: user.email,
+        subject: 'Invitation au dashboard — Florian B.',
+        html: brandEmailWrapper(`
+            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Vous êtes invité(e) !</p>
+            <p style="margin:0 0 16px;">Florian vous donne accès au dashboard avec le rôle <strong style="color:#fff;">${ROLE_LABELS[user.role] || user.role}</strong>.</p>
+            <p style="margin:0 0 8px;">Cliquez sur le bouton ci-dessous pour définir votre mot de passe et accéder au dashboard :</p>
+            ${brandButton('Définir mon mot de passe', link)}
+            <p style="margin:24px 0 0; color:#888; font-size:13px;">Ce lien expire dans 7 jours. Si vous ne voyez pas le bouton, copiez ce lien dans votre navigateur :<br><span style="word-break:break-all;">${link}</span></p>
+        `, { preheader: 'Vous avez été invité(e) à rejoindre le dashboard.' }),
+    };
+}
+
 // ---- Devis / Factures ----
 function quoteItemsHtml(items, forEmail = false) {
     const rows = (items || []).map(i => `
@@ -377,6 +402,7 @@ module.exports = {
     appointmentConfirmationEmail,
     appointmentNotificationEmail,
     leadReplyEmail,
+    teamInviteEmail,
     quoteEmail,
     quoteHtmlPage,
     invoiceHtmlPage,
