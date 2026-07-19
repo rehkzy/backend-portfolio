@@ -9,6 +9,7 @@ const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
 const mailer = require('./mailer');
+const pdfGen = require('./pdf');
 const analytics = require('./analytics');
 const cron = require('node-cron');
 
@@ -911,6 +912,26 @@ function computeQuoteTotal(items) {
     return (items || []).reduce((sum, i) => sum + (Number(i.qty) || 0) * (Number(i.price) || 0), 0);
 }
 
+// Numérotation séquentielle des devis — même logique que les factures (traçabilité).
+function nextQuoteNumber() {
+    const year = new Date().getFullYear();
+    const quotes = db.get('quotes').value();
+    const countThisYear = quotes.filter(q => (q.quoteNumber || '').startsWith(`DE-${year}-`)).length;
+    return `DE-${year}-${String(countThisYear + 1).padStart(3, '0')}`;
+}
+
+// Vérifie que les mentions obligatoires sont renseignées avant d'émettre un document officiel.
+// Ceci reflète les obligations courantes pour un(e) indépendant(e) en France ; à faire valider
+// par un comptable/juriste selon ta situation exacte.
+function checkLegalReadiness(business) {
+    const missing = [];
+    if (!business.legalName) missing.push('Nom / raison sociale');
+    if (!business.siret) missing.push('N° SIRET');
+    if (!business.address) missing.push('Adresse');
+    if (!business.vatMention) missing.push('Mention TVA');
+    return missing;
+}
+
 // Token signé (non devinable) pour le lien "J'accepte ce devis" envoyé par email —
 // pas besoin de compte client, le lien seul fait foi.
 function quoteAcceptToken(id) {
@@ -924,16 +945,19 @@ app.get('/api/quotes', auth, (req, res) => {
 app.post('/api/quotes', auth, adminOnly, (req, res) => {
     const { clientName, clientEmail, items, notes, leadId } = req.body || {};
     if (!clientEmail) return res.status(400).json({ error: 'clientEmail requis' });
+    const validityDays = Number(db.get('businessSettings').value()?.quoteValidityDays) || 30;
     const quote = {
         id: nextId('quotes'), created_at: now(), leadId: leadId || null,
+        quoteNumber: nextQuoteNumber(),
+        validUntil: new Date(Date.now() + validityDays * 86400000).toISOString(),
         clientName: clientName || '', clientEmail,
         items: Array.isArray(items) ? items : [],
-        notes: notes || '', status: 'draft', sent_at: null, paid_at: null,
+        notes: notes || '', status: 'draft', sent_at: null, paid_at: null, accepted_at: null,
     };
     quote.total = computeQuoteTotal(quote.items);
     db.get('quotes').push(quote).write();
     touchClient(clientEmail, clientName);
-    logTeamAction(req, 'quote_created', `Devis créé pour ${clientEmail} (${quote.total.toFixed(2)} €)`, quote.id);
+    logTeamAction(req, 'quote_created', `Devis ${quote.quoteNumber} créé pour ${clientEmail} (${quote.total.toFixed(2)} €)`, quote.id);
     res.status(201).json(quote);
 });
 
@@ -971,7 +995,7 @@ app.get('/api/quotes/:id/view', auth, (req, res) => {
     const quote = db.get('quotes').find({ id: Number(req.params.id) }).value();
     if (!quote) return res.status(404).send('Devis introuvable');
     res.set('Content-Type', 'text/html');
-    res.send(mailer.quoteHtmlPage(quote));
+    res.send(mailer.quoteHtmlPage(quote, db.get('businessSettings').value()));
 });
 
 // Envoi du devis par email au client
@@ -979,7 +1003,13 @@ app.post('/api/quotes/:id/send', auth, adminOnly, async (req, res) => {
     const id = Number(req.params.id);
     const quote = db.get('quotes').find({ id }).value();
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
-    const result = await mailer.sendMail(mailer.quoteEmail(quote, quoteAcceptToken(id)));
+    const business = db.get('businessSettings').value() || {};
+    const mail = mailer.quoteEmail(quote, quoteAcceptToken(id));
+    try {
+        const pdfBuffer = await pdfGen.generateQuotePdf(quote, business);
+        mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Devis-${quote.quoteNumber || quote.id}.pdf` }];
+    } catch (err) { console.error('Erreur génération PDF devis:', err.message); }
+    const result = await mailer.sendMail(mail);
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('quotes').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
     logTeamAction(req, 'quote_sent', `Devis #${id} envoyé par email à ${quote.clientEmail}`, id);
@@ -1131,8 +1161,17 @@ app.post('/api/invoices/:id/send', auth, adminOnly, async (req, res) => {
     const id = Number(req.params.id);
     const invoice = db.get('invoices').find({ id }).value();
     if (!invoice) return res.status(404).json({ error: 'Facture introuvable' });
-    const business = db.get('businessSettings').value();
-    const result = await mailer.sendMail(mailer.invoiceEmail(invoice, business));
+    const business = db.get('businessSettings').value() || {};
+    const missing = checkLegalReadiness(business);
+    if (missing.length) {
+        return res.status(400).json({ error: `Complète d'abord "Mon entreprise" avant d'envoyer une facture officielle — il manque : ${missing.join(', ')}.` });
+    }
+    const mail = mailer.invoiceEmail(invoice, business);
+    try {
+        const pdfBuffer = await pdfGen.generateInvoicePdf(invoice, business);
+        mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Facture-${invoice.invoiceNumber}.pdf` }];
+    } catch (err) { console.error('Erreur génération PDF facture:', err.message); }
+    const result = await mailer.sendMail(mail);
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('invoices').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
     logTeamAction(req, 'invoice_sent', `Facture ${invoice.invoiceNumber} envoyée à ${invoice.clientEmail}`, id);
@@ -1162,7 +1201,13 @@ app.post('/api/quotes/:id/remind', auth, adminOnly, async (req, res) => {
     const id = Number(req.params.id);
     const quote = db.get('quotes').find({ id }).value();
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
-    const result = await mailer.sendMail(mailer.quoteReminderEmail(quote));
+    const business = db.get('businessSettings').value() || {};
+    const mail = mailer.quoteReminderEmail(quote);
+    try {
+        const pdfBuffer = await pdfGen.generateQuotePdf(quote, business);
+        mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Devis-${quote.quoteNumber || quote.id}.pdf` }];
+    } catch (err) { console.error('Erreur génération PDF devis:', err.message); }
+    const result = await mailer.sendMail(mail);
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('quotes').find({ id }).assign({ lastReminderAt: now() }).write();
     logTeamAction(req, 'quote_reminder_sent', `Relance envoyée pour le devis #${id} (${quote.clientEmail})`, id);
@@ -1173,8 +1218,13 @@ app.post('/api/invoices/:id/remind', auth, adminOnly, async (req, res) => {
     const id = Number(req.params.id);
     const invoice = db.get('invoices').find({ id }).value();
     if (!invoice) return res.status(404).json({ error: 'Facture introuvable' });
-    const business = db.get('businessSettings').value();
-    const result = await mailer.sendMail(mailer.invoiceReminderEmail(invoice, business));
+    const business = db.get('businessSettings').value() || {};
+    const mail = mailer.invoiceReminderEmail(invoice, business);
+    try {
+        const pdfBuffer = await pdfGen.generateInvoicePdf(invoice, business);
+        mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Facture-${invoice.invoiceNumber}.pdf` }];
+    } catch (err) { console.error('Erreur génération PDF facture:', err.message); }
+    const result = await mailer.sendMail(mail);
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('invoices').find({ id }).assign({ lastReminderAt: now() }).write();
     logTeamAction(req, 'invoice_reminder_sent', `Relance envoyée pour la facture ${invoice.invoiceNumber} (${invoice.clientEmail})`, id);

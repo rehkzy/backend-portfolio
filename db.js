@@ -100,7 +100,9 @@ const DEFAULTS = {
         "paymentTerms": "Paiement à réception de facture. Pénalités de retard : 3 fois le taux d'intérêt légal. Indemnité forfaitaire pour frais de recouvrement : 40 €.",
         "paymentDelayDays": 30,
         "revenueGoalMonthly": 0,
-        "revenueGoalAnnual": 0
+        "revenueGoalAnnual": 0,
+        "legalStatusMention": "Auto-entrepreneur — Dispensé d'immatriculation au RCS et au RM",
+        "quoteValidityDays": 30
     },
     "projects": [],
     "contentCalendar": [],

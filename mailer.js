@@ -7,7 +7,7 @@ function isMailerConfigured() {
     return Boolean(process.env.BREVO_API_KEY && process.env.SENDER_EMAIL);
 }
 
-async function sendMail({ to, subject, html, replyTo }) {
+async function sendMail({ to, subject, html, replyTo, attachments }) {
     if (!isMailerConfigured()) {
         console.warn('⚠️  Brevo non configuré (BREVO_API_KEY / SENDER_EMAIL manquants) — email non envoyé:', subject);
         return { sent: false, reason: 'smtp_not_configured' };
@@ -30,6 +30,7 @@ async function sendMail({ to, subject, html, replyTo }) {
                     subject,
                     htmlContent: html,
                     ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+                    ...(attachments && attachments.length ? { attachment: attachments } : {}),
                     trackClicks: false,
                     trackOpens: false,
                 }),
@@ -90,6 +91,8 @@ function emailWrapper(innerHtml, { preheader = '', accentLine = true } = {}) {
 <meta name="color-scheme" content="dark">
 <meta name="supported-color-schemes" content="dark">
 <title>Florian B.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   @keyframes fadeUp {
     from { opacity:0; transform:translateY(12px); }
@@ -127,12 +130,12 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
               <td>
-                <span style="font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:18px;letter-spacing:1px;color:${C.white};text-transform:uppercase;text-decoration:none;">
+                <span style="font-family:'Syne',Georgia,'Times New Roman',serif;font-weight:700;font-size:18px;letter-spacing:1px;color:${C.white};text-transform:uppercase;text-decoration:none;">
                   FLORIAN B<span style="color:${C.accent};">.</span>
                 </span>
               </td>
               <td align="right">
-                <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;color:${C.textDim};text-transform:uppercase;letter-spacing:1.5px;">
+                <span style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;color:${C.textDim};text-transform:uppercase;letter-spacing:1.5px;">
                   Graphiste &amp; DA
                 </span>
               </td>
@@ -143,7 +146,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
 
       <!-- CONTENU -->
       <tr>
-        <td class="email-pad anim-fadeup" style="padding:40px 44px;color:${C.text};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;line-height:1.7;">
+        <td class="email-pad anim-fadeup" style="padding:40px 44px;color:${C.text};font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;line-height:1.7;">
           ${innerHtml}
         </td>
       </tr>
@@ -153,7 +156,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
         <td style="padding:24px 44px 32px;border-top:1px solid ${C.separator};">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textDim};line-height:1.6;">
+              <td style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textDim};line-height:1.6;">
                 <strong style="color:${C.textMuted};">Florian Bonnet</strong><br>
                 Graphiste &amp; Directeur Artistique · Paris<br>
                 <a href="https://florian-b.fr" style="color:${C.accent};text-decoration:none;">florian-b.fr</a>
@@ -161,7 +164,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
                 <a href="mailto:contact@florian-b.fr" style="color:${C.textDim};text-decoration:none;">contact@florian-b.fr</a>
               </td>
               <td align="right" valign="bottom">
-                <span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:${C.separator};letter-spacing:1px;">FB.</span>
+                <span style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:${C.separator};letter-spacing:1px;">FB.</span>
               </td>
             </tr>
           </table>
@@ -181,7 +184,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
 
 // Titre principal de l'email
 function emailTitle(text) {
-    return `<p class="email-title" style="margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:700;color:${C.white};line-height:1.2;letter-spacing:-0.5px;">${text}</p>`;
+    return `<p class="email-title" style="margin:0 0 24px;font-family:'Syne',Georgia,'Times New Roman',serif;font-size:30px;font-weight:700;color:${C.white};line-height:1.2;letter-spacing:-0.5px;">${text}</p>`;
 }
 
 // Bouton CTA principal
@@ -191,7 +194,7 @@ function emailCTA(label, url) {
   <tr>
     <td style="border-radius:100px;background:${C.accent};">
       <a class="btn-main" href="${url}"
-        style="display:inline-block;padding:14px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;color:${C.white};text-decoration:none;border-radius:100px;text-transform:uppercase;letter-spacing:0.8px;mso-padding-alt:0;transition:opacity 0.2s;">
+        style="display:inline-block;padding:14px 32px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;color:${C.white};text-decoration:none;border-radius:100px;text-transform:uppercase;letter-spacing:0.8px;mso-padding-alt:0;transition:opacity 0.2s;">
         ${label}
       </a>
     </td>
@@ -204,7 +207,7 @@ function emailQuote(text) {
     return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
   <tr>
-    <td style="padding:20px 24px;background:${C.surface};border-left:3px solid ${C.accent};border-radius:0 12px 12px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;font-style:italic;color:#c0c0c0;line-height:1.7;">
+    <td style="padding:20px 24px;background:${C.surface};border-left:3px solid ${C.accent};border-radius:0 12px 12px 0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;font-style:italic;color:#c0c0c0;line-height:1.7;">
       « ${text} »
     </td>
   </tr>
@@ -215,8 +218,8 @@ function emailQuote(text) {
 function emailDataBlock(rows) {
     const rowsHtml = rows.map(([label, value], i) => `
     <tr>
-      <td style="padding:12px 0;border-bottom:1px solid ${C.separator};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${C.textMuted};white-space:nowrap;padding-right:24px;">${label}</td>
-      <td style="padding:12px 0;border-bottom:1px solid ${C.separator};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${C.white};font-weight:600;text-align:right;">${value}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${C.separator};font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${C.textMuted};white-space:nowrap;padding-right:24px;">${label}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${C.separator};font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${C.white};font-weight:600;text-align:right;">${value}</td>
     </tr>`).join('');
     return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
@@ -230,9 +233,9 @@ function emailStatCard(value, label, note = '') {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
   <tr>
     <td style="padding:24px;background:${C.accentDim};border:1px solid ${C.accent}33;border-radius:14px;text-align:center;">
-      <div class="stat-val" style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:700;color:${C.accent};line-height:1;">${value}</div>
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textMuted};margin-top:6px;text-transform:uppercase;letter-spacing:1px;">${label}</div>
-      ${note ? `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textDim};margin-top:4px;">${note}</div>` : ''}
+      <div class="stat-val" style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:36px;font-weight:700;color:${C.accent};line-height:1;">${value}</div>
+      <div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textMuted};margin-top:6px;text-transform:uppercase;letter-spacing:1px;">${label}</div>
+      ${note ? `<div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textDim};margin-top:4px;">${note}</div>` : ''}
     </td>
   </tr>
 </table>`;
@@ -248,8 +251,8 @@ function emailStatGrid(stats) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="padding:20px 16px;background:${C.surface};border:1px solid ${C.separator};border-radius:12px;text-align:center;">
-            <div style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:700;color:${C.white};line-height:1;">${s.value}</div>
-            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textMuted};margin-top:5px;text-transform:uppercase;letter-spacing:0.8px;">${s.label}</div>
+            <div style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:28px;font-weight:700;color:${C.white};line-height:1;">${s.value}</div>
+            <div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textMuted};margin-top:5px;text-transform:uppercase;letter-spacing:0.8px;">${s.label}</div>
           </td>
         </tr>
       </table>
@@ -261,7 +264,7 @@ function emailStatGrid(stats) {
 // Badge de rôle
 function emailRoleBadge(role) {
     const labels = { admin: 'Administrateur', redacteur: 'Rédacteur', lecteur: 'Lecteur' };
-    return `<span style="display:inline-block;padding:4px 12px;background:${C.accentDim};border:1px solid ${C.accent}55;border-radius:100px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:0.8px;">${labels[role] || role}</span>`;
+    return `<span style="display:inline-block;padding:4px 12px;background:${C.accentDim};border:1px solid ${C.accent}55;border-radius:100px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:0.8px;">${labels[role] || role}</span>`;
 }
 
 // Ligne de séparation stylée
@@ -272,7 +275,7 @@ function emailDivider() {
 // Texte signature
 function emailSignature(name = 'Florian B.') {
     return `
-<p style="margin:28px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${C.textMuted};line-height:1.6;">
+<p style="margin:28px 0 0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${C.textMuted};line-height:1.6;">
   À bientôt,<br>
   <strong style="color:${C.white};font-size:15px;">${name}</strong><br>
   <span style="font-size:12px;color:${C.textDim};">Graphiste &amp; Directeur Artistique · Paris</span>
@@ -289,19 +292,19 @@ function quoteItemsHtml(items, forEmail = true) {
     const main  = forEmail ? C.white      : '#111';
     const rows = (items || []).map(i => `
     <tr>
-      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${main};">${i.desc || ''}</td>
-      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${mutd};text-align:center;">${i.qty || 0}</td>
-      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${mutd};text-align:right;">${(Number(i.price) || 0).toFixed(2)} €</td>
-      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${main};font-weight:700;text-align:right;">${((Number(i.qty)||0)*(Number(i.price)||0)).toFixed(2)} €</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${main};">${i.desc || ''}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${mutd};text-align:center;">${i.qty || 0}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${mutd};text-align:right;">${(Number(i.price) || 0).toFixed(2)} €</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${main};font-weight:700;text-align:right;">${((Number(i.qty)||0)*(Number(i.price)||0)).toFixed(2)} €</td>
     </tr>`).join('');
     return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;border-collapse:collapse;">
   <thead>
     <tr>
-      <th style="padding:0 0 10px;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Prestation</th>
-      <th style="padding:0 0 10px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Qté</th>
-      <th style="padding:0 0 10px;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">P.U.</th>
-      <th style="padding:0 0 10px;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Total</th>
+      <th style="padding:0 0 10px;text-align:left;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Prestation</th>
+      <th style="padding:0 0 10px;text-align:center;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Qté</th>
+      <th style="padding:0 0 10px;text-align:right;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">P.U.</th>
+      <th style="padding:0 0 10px;text-align:right;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Total</th>
     </tr>
   </thead>
   <tbody>${rows}</tbody>
@@ -312,9 +315,9 @@ function quoteTotalRow(total, forEmail = true) {
     return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px;">
   <tr>
-    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${forEmail ? C.textMuted : '#888'};text-transform:uppercase;letter-spacing:0.8px;">Total</td>
+    <td style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${forEmail ? C.textMuted : '#888'};text-transform:uppercase;letter-spacing:0.8px;">Total</td>
     <td style="text-align:right;">
-      <span style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:${forEmail ? C.white : '#0a0a0a'};">${(total || 0).toFixed(2)} <span style="font-size:16px;">€</span></span>
+      <span style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:${forEmail ? C.white : '#0a0a0a'};">${(total || 0).toFixed(2)} <span style="font-size:16px;">€</span></span>
     </td>
   </tr>
 </table>`;
@@ -464,10 +467,14 @@ function quoteEmail(quote, acceptToken = null) {
         : null;
     return {
         to: quote.clientEmail,
-        subject: `Devis — ${quote.clientName || 'Votre projet'} — Florian B.`,
+        subject: `Devis ${quote.quoteNumber || ''} — ${quote.clientName || 'Votre projet'} — Florian B.`,
         html: emailWrapper(`
             ${emailTitle('Votre devis')}
-            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${quote.clientName || ''},<br>Voici la proposition détaillée pour votre projet.</p>
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${quote.clientName || ''},<br>Voici la proposition détaillée pour votre projet — vous la trouverez également en pièce jointe (PDF), prête à archiver.</p>
+            ${emailDataBlock([
+                ['N° de devis', quote.quoteNumber || `#${quote.id}`],
+                ['Valable jusqu\'au', quote.validUntil ? new Date(quote.validUntil).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : '—'],
+            ])}
             ${quoteItemsHtml(quote.items, true)}
             ${quoteTotalRow(quote.total, true)}
             ${quote.notes ? `${emailDivider()}<p style="margin:0;font-size:14px;color:${C.textMuted};font-style:italic;">${quote.notes}</p>` : ''}
@@ -476,7 +483,7 @@ function quoteEmail(quote, acceptToken = null) {
             ${emailDivider()}
             <p style="margin:0;font-size:14px;color:${C.textMuted};">Des questions ? Répondez directement à cet email, je suis là.</p>
             ${emailSignature()}
-        `, { preheader: `Devis — Total ${(quote.total||0).toFixed(2)} €` }),
+        `, { preheader: `Devis ${quote.quoteNumber || ''} — Total ${(quote.total||0).toFixed(2)} €` }),
     };
 }
 
@@ -501,7 +508,7 @@ function invoiceEmail(invoice, business = {}) {
         subject: `Facture ${invoice.invoiceNumber} — Florian B.`,
         html: emailWrapper(`
             ${emailTitle(`Facture n°${invoice.invoiceNumber}`)}
-            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${invoice.clientName || ''},<br>Veuillez trouver ci-dessous le détail de votre facture.</p>
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${invoice.clientName || ''},<br>Veuillez trouver ci-joint votre facture officielle au format PDF, à conserver pour votre comptabilité. Le détail ci-dessous en résume le contenu.</p>
             ${quoteItemsHtml(invoice.items, true)}
             ${quoteTotalRow(invoice.total, true)}
             ${business.iban ? `${emailDivider()}<p style="margin:0;font-size:13px;color:${C.textMuted};">Règlement par virement :<br><strong style="color:${C.white};font-family:monospace;">${business.iban}</strong></p>` : ''}
@@ -519,7 +526,7 @@ function quoteReminderEmail(quote) {
         subject: `Petit rappel — votre devis — Florian B.`,
         html: emailWrapper(`
             ${emailTitle('Toujours partant(e) ?')}
-            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${quote.clientName || ''},<br>Je me permets de revenir vers vous au sujet du devis envoyé récemment — il reste disponible si vous souhaitez donner suite.</p>
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${quote.clientName || ''},<br>Je me permets de revenir vers vous au sujet du devis envoyé récemment (à nouveau joint en PDF) — il reste disponible si vous souhaitez donner suite.</p>
             ${quoteItemsHtml(quote.items, true)}
             ${quoteTotalRow(quote.total, true)}
             ${emailDivider()}
@@ -536,7 +543,7 @@ function invoiceReminderEmail(invoice, business = {}) {
         subject: `Rappel — Facture ${invoice.invoiceNumber} en attente de règlement`,
         html: emailWrapper(`
             ${emailTitle('Facture en attente')}
-            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${invoice.clientName || ''},<br>Sauf erreur de ma part, la facture n°${invoice.invoiceNumber} n'a pas encore été réglée. Voici son détail :</p>
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${invoice.clientName || ''},<br>Sauf erreur de ma part, la facture n°${invoice.invoiceNumber} n'a pas encore été réglée (à nouveau jointe en PDF). Voici son détail :</p>
             ${quoteItemsHtml(invoice.items, true)}
             ${quoteTotalRow(invoice.total, true)}
             ${business.iban ? `${emailDivider()}<p style="margin:0;font-size:13px;color:${C.textMuted};">Règlement par virement :<br><strong style="color:${C.white};font-family:monospace;">${business.iban}</strong></p>` : ''}
@@ -612,7 +619,7 @@ function analyticsAlertEmail(alert, value) {
    PAGES HTML IMPRIMABLES (devis / factures)
    Fond blanc pour l'impression — design cohérent
    ============================================================ */
-function quoteHtmlPage(quote) {
+function quoteHtmlPage(quote, business = {}) {
     return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -641,7 +648,8 @@ function quoteHtmlPage(quote) {
   .total-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; }
   .total-amount { font-family: 'Syne', Georgia, serif; font-size: 30px; font-weight: 800; color: #da2c48; }
   .notes { margin-top: 28px; padding: 16px 20px; background: #fafafa; border-left: 3px solid #da2c48; border-radius: 0 8px 8px 0; font-size: 13px; color: #666; font-style: italic; line-height: 1.7; }
-  .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #aaa; line-height: 1.7; }
+  .signature-block { margin-top: 40px; padding: 18px 20px; border: 1px dashed #ccc; border-radius: 8px; font-size: 12px; color: #888; }
+  .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 11px; color: #aaa; line-height: 1.8; }
   @media print {
     body { margin: 0; padding: 24px; }
     .no-print { display: none; }
@@ -652,9 +660,10 @@ function quoteHtmlPage(quote) {
   <div class="header">
     <div class="logo">FLORIAN B<span>.</span></div>
     <div class="meta">
-      Devis n°DEV-${String(quote.id).padStart(3,'0')}<br>
+      Devis n°${quote.quoteNumber || `#${quote.id}`}<br>
       ${new Date(quote.created_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}<br>
-      <span class="badge">${quote.status === 'paid' ? 'Accepté & payé' : quote.status === 'sent' ? 'Envoyé' : 'Brouillon'}</span>
+      ${quote.validUntil ? `Valable jusqu'au ${new Date(quote.validUntil).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}<br>` : ''}
+      <span class="badge">${quote.status === 'accepted' ? 'Accepté' : quote.status === 'paid' ? 'Accepté & payé' : quote.status === 'sent' ? 'Envoyé' : 'Brouillon'}</span>
     </div>
   </div>
   <div class="client-block">
@@ -675,12 +684,18 @@ function quoteHtmlPage(quote) {
     </tbody>
   </table>
   <div class="total-row">
-    <span class="total-label">Total</span>
+    <span class="total-label">Total ${business.vatMention ? '' : 'TTC'}</span>
     <span class="total-amount">${(quote.total||0).toFixed(2)} €</span>
   </div>
   ${quote.notes ? `<div class="notes">${quote.notes}</div>` : ''}
+  <div class="signature-block">
+    <strong style="color:#555;">Bon pour accord</strong><br>
+    Date, signature et mention manuscrite « bon pour accord » précédant la signature.
+  </div>
   <div class="footer">
-    Florian Bonnet — Graphiste &amp; Directeur Artistique, Paris<br>
+    ${business.legalName || 'Florian Bonnet'} — Graphiste &amp; Directeur Artistique, Paris${business.siret ? ` — SIRET ${business.siret}` : ''}<br>
+    ${business.vatMention || 'TVA non applicable, art. 293 B du CGI'}${business.legalStatusMention ? ` — ${business.legalStatusMention}` : ''}<br>
+    Devis gratuit, sans engagement jusqu'à acceptation —
     <a href="https://florian-b.fr" style="color:#da2c48;text-decoration:none;">florian-b.fr</a> · contact@florian-b.fr
   </div>
   <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
@@ -768,7 +783,8 @@ function invoiceHtmlPage(invoice, business = {}) {
   ${business.iban ? `<div class="iban-block">Règlement par virement bancaire<strong>${business.iban}</strong></div>` : ''}
   <div class="legal">
     ${business.paymentTerms || ''}<br>
-    ${business.legalName || 'Florian Bonnet'} — Graphiste &amp; Directeur Artistique, Paris — <a href="https://florian-b.fr" style="color:#da2c48;text-decoration:none;">florian-b.fr</a>
+    ${business.vatMention || 'TVA non applicable, art. 293 B du CGI'}${business.legalStatusMention ? ` — ${business.legalStatusMention}` : ''}<br>
+    ${business.legalName || 'Florian Bonnet'} — Graphiste &amp; Directeur Artistique, Paris${business.siret ? ` — SIRET ${business.siret}` : ''} — <a href="https://florian-b.fr" style="color:#da2c48;text-decoration:none;">florian-b.fr</a>
   </div>
   <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
 </body>

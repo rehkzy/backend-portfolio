@@ -1233,7 +1233,10 @@
                 <div class="drawer-field"><label>Délai de paiement des factures (jours)</label><input type="number" id="bsPaymentDelayDays" min="0" placeholder="30"></div>
                 <div class="drawer-field"><label>Objectif de CA mensuel (€)</label><input type="number" id="bsGoalMonthly" min="0" placeholder="3000"></div>
                 <div class="drawer-field"><label>Objectif de CA annuel (€)</label><input type="number" id="bsGoalAnnual" min="0" placeholder="36000"></div>
+                <div class="drawer-field"><label>Statut juridique (mention légale)</label><input type="text" id="bsLegalStatus" placeholder="Auto-entrepreneur — Dispensé d'immatriculation au RCS et au RM"></div>
+                <div class="drawer-field"><label>Validité des devis (jours)</label><input type="number" id="bsQuoteValidity" min="0" placeholder="30"></div>
             </div>
+            <div class="panel" id="legalReadinessPanel" style="max-width:560px;margin-top:1.2rem;"></div>
         </section>
 
         <!-- SUIVI DE PROJETS -->
@@ -3576,10 +3579,11 @@ function renderQuotesTable() {
     if (!list.length) { wrap.innerHTML = emptyStateHTML('Aucun devis pour le moment.'); return; }
     wrap.innerHTML = `
         <table class="data-table">
-            <thead><tr><th>Client</th><th>Montant</th><th>Statut</th><th>Créé le</th><th></th></tr></thead>
+            <thead><tr><th>N°</th><th>Client</th><th>Montant</th><th>Statut</th><th>Créé le</th><th></th></tr></thead>
             <tbody>
                 ${list.map(q => `
                     <tr onclick="openQuoteDrawer(${q.id})">
+                        <td class="cell-muted">${escapeHtml(q.quoteNumber || '#' + q.id)}</td>
                         <td>${escapeHtml(q.clientName || q.clientEmail)}</td>
                         <td class="cell-muted">${(q.total || 0).toFixed(2)} €</td>
                         <td onclick="event.stopPropagation()">
@@ -3641,7 +3645,7 @@ function openQuoteDrawer(id) {
     const q = id ? quotesCache.find(x => x.id === id) : null;
     document.getElementById('drawer').innerHTML = `
         <div class="drawer-header">
-            <h3>${q ? 'Devis #' + q.id : 'Nouveau devis'}</h3>
+            <h3>${q ? 'Devis ' + (q.quoteNumber || '#' + q.id) : 'Nouveau devis'}</h3>
             <button class="drawer-close" onclick="closeDrawer()">✕</button>
         </div>
         <div class="drawer-field autocomplete-wrap">
@@ -4265,12 +4269,29 @@ async function loadBusinessSettings() {
         document.getElementById('bsPaymentDelayDays').value = b.paymentDelayDays || 30;
         document.getElementById('bsGoalMonthly').value = b.revenueGoalMonthly || '';
         document.getElementById('bsGoalAnnual').value = b.revenueGoalAnnual || '';
+        document.getElementById('bsLegalStatus').value = b.legalStatusMention || '';
+        document.getElementById('bsQuoteValidity').value = b.quoteValidityDays || 30;
+        renderLegalReadiness(b);
     } catch (e) { toast(e.message); }
+}
+
+function renderLegalReadiness(b) {
+    const missing = [];
+    if (!b.legalName) missing.push('Nom / raison sociale');
+    if (!b.siret) missing.push('N° SIRET');
+    if (!b.address) missing.push('Adresse');
+    if (!b.vatMention) missing.push('Mention TVA');
+    const panel = document.getElementById('legalReadinessPanel');
+    if (!missing.length) {
+        panel.innerHTML = `<div style="color:#22c55e;font-size:0.85rem;">✅ Toutes les mentions légales obligatoires sont renseignées — tes devis et factures sont conformes.</div>`;
+    } else {
+        panel.innerHTML = `<div style="color:#f59e0b;font-size:0.85rem;">⚠️ Mentions manquantes pour émettre des factures officielles : <strong>${missing.join(', ')}</strong>. Complète-les ci-dessus.</div>`;
+    }
 }
 
 document.getElementById('saveBusinessBtn').addEventListener('click', async () => {
     try {
-        await api('/api/business-settings', { method: 'PUT', body: JSON.stringify({
+        const payload = {
             legalName: document.getElementById('bsLegalName').value.trim(),
             address: document.getElementById('bsAddress').value.trim(),
             siret: document.getElementById('bsSiret').value.trim(),
@@ -4280,8 +4301,12 @@ document.getElementById('saveBusinessBtn').addEventListener('click', async () =>
             paymentDelayDays: Number(document.getElementById('bsPaymentDelayDays').value) || 30,
             revenueGoalMonthly: Number(document.getElementById('bsGoalMonthly').value) || 0,
             revenueGoalAnnual: Number(document.getElementById('bsGoalAnnual').value) || 0,
-        }) });
+            legalStatusMention: document.getElementById('bsLegalStatus').value.trim(),
+            quoteValidityDays: Number(document.getElementById('bsQuoteValidity').value) || 30,
+        };
+        await api('/api/business-settings', { method: 'PUT', body: JSON.stringify(payload) });
         toast('Informations enregistrées ✅');
+        renderLegalReadiness(payload);
     } catch (e) { toast(e.message); }
 });
 
