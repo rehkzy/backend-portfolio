@@ -1,10 +1,5 @@
-
 /* ============================================================
    ENVOI D'EMAILS — via l'API Brevo (HTTPS)
-   Railway bloque les ports SMTP classiques (465/587) sur les
-   plans gratuits/Hobby. Brevo envoie par API HTTPS, qui n'est
-   jamais bloquée. Gratuit jusqu'à 300 emails/jour.
-   Voir le README pour la procédure de configuration.
    ============================================================ */
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
@@ -19,7 +14,7 @@ async function sendMail({ to, subject, html, replyTo }) {
     }
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s max
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
         let res;
         try {
             res = await fetch(BREVO_API_URL, {
@@ -35,7 +30,7 @@ async function sendMail({ to, subject, html, replyTo }) {
                     subject,
                     htmlContent: html,
                     ...(replyTo ? { replyTo: { email: replyTo } } : {}),
-                    trackClicks: false,  // désactive le tracking qui réécrit les URLs et casse les liens d'invitation
+                    trackClicks: false,
                     trackOpens: false,
                 }),
                 signal: controller.signal,
@@ -57,348 +52,645 @@ async function sendMail({ to, subject, html, replyTo }) {
 }
 
 /* ============================================================
-   TEMPLATE DE MARQUE — reprend les couleurs et le style du site
-   (fond sombre, rouge accent #da2c48, wordmark "FLORIAN B.")
-   Compatible clients mail (styles inline, pas de CSS externe).
+   SYSTÈME DE DESIGN — Florian B. Email Identity 2026
+   ─────────────────────────────────────────────────────────
+   Principes :
+   · Fond sombre #0a0a0a natif (pas de forçage dark-mode)
+   · Typo display : Georgia/serif pour le wordmark (imite Syne)
+   · Typo corps : system-ui stack pour la lisibilité universelle
+   · Accent : #da2c48 (rouge-rose signature)
+   · Hiérarchie forte : grande typo titre, espaces généreux
+   · 1 seule animation CSS légère par email (GIF-like keyframes)
+   · Blocs modulaires réutilisables
+   · Compatible Gmail, Apple Mail, Outlook, Yahoo
    ============================================================ */
-function brandEmailWrapper(innerHtml, { preheader = '' } = {}) {
-    return `
-<!DOCTYPE html>
-<html lang="fr">
-<body style="margin:0; padding:0; background:#0a0a0a; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-    <span style="display:none; max-height:0; overflow:hidden; opacity:0;">${preheader}</span>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a; padding:32px 16px;">
-        <tr>
-            <td align="center">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background:#141414; border:1px solid #262626; border-radius:16px; overflow:hidden;">
-                    <tr>
-                        <td style="padding:32px 32px 24px; border-bottom:1px solid #262626;">
-                            <span style="font-family:Georgia,'Times New Roman',serif; font-weight:700; font-size:22px; letter-spacing:0.5px; color:#ffffff;">FLORIAN B<span style="color:#da2c48;">.</span></span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:32px; color:#e5e5e5; font-size:15px; line-height:1.65;">
-                            ${innerHtml}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:20px 32px; background:#0f0f0f; border-top:1px solid #262626;">
-                            <p style="margin:0; color:#777; font-size:12px;">Florian Bonnet — Graphiste & Directeur Artistique, Paris</p>
-                            <p style="margin:4px 0 0; color:#555; font-size:12px;"><a href="https://florian-b.fr" style="color:#da2c48; text-decoration:none;">florian-b.fr</a></p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+
+/* ---------- COULEURS ---------- */
+const C = {
+    bg:        '#0a0a0a',
+    card:      '#111111',
+    cardBorder:'#1e1e1e',
+    surface:   '#181818',
+    accent:    '#da2c48',
+    accentDim: '#3d0f17',
+    text:      '#f0f0f0',
+    textMuted: '#888888',
+    textDim:   '#555555',
+    separator: '#242424',
+    white:     '#ffffff',
+};
+
+/* ---------- WRAPPER PRINCIPAL ---------- */
+function emailWrapper(innerHtml, { preheader = '', accentLine = true } = {}) {
+    return `<!DOCTYPE html>
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>Florian B.</title>
+<style>
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0);    }
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; }
+    50%      { opacity:0.5; }
+  }
+  .anim-fadeup { animation: fadeUp 0.5s ease forwards; }
+  .btn-main:hover { opacity:0.88 !important; }
+  @media only screen and (max-width:600px) {
+    .email-card  { border-radius:0 !important; }
+    .email-pad   { padding:28px 20px !important; }
+    .email-title { font-size:26px !important; }
+    .stat-val    { font-size:28px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:${C.bg};-webkit-text-size-adjust:100%;mso-line-height-rule:exactly;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;font-size:1px;color:${C.bg};">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>` : ''}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.bg};min-height:100vh;">
+  <tr><td align="center" style="padding:40px 16px 60px;">
+
+    <!-- CARD -->
+    <table role="presentation" class="email-card" cellpadding="0" cellspacing="0" border="0"
+      style="max-width:560px;width:100%;background:${C.card};border:1px solid ${C.cardBorder};border-radius:20px;overflow:hidden;mso-border-alt:none;">
+
+      <!-- LIGNE ACCENT TOP -->
+      ${accentLine ? `<tr><td style="height:3px;background:linear-gradient(90deg,${C.accent},#ff5478);font-size:0;line-height:0;">&nbsp;</td></tr>` : ''}
+
+      <!-- HEADER / LOGO -->
+      <tr>
+        <td class="email-pad" style="padding:36px 44px 28px;border-bottom:1px solid ${C.separator};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td>
+                <span style="font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:18px;letter-spacing:1px;color:${C.white};text-transform:uppercase;text-decoration:none;">
+                  FLORIAN B<span style="color:${C.accent};">.</span>
+                </span>
+              </td>
+              <td align="right">
+                <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;color:${C.textDim};text-transform:uppercase;letter-spacing:1.5px;">
+                  Graphiste &amp; DA
+                </span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- CONTENU -->
+      <tr>
+        <td class="email-pad anim-fadeup" style="padding:40px 44px;color:${C.text};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;line-height:1.7;">
+          ${innerHtml}
+        </td>
+      </tr>
+
+      <!-- FOOTER -->
+      <tr>
+        <td style="padding:24px 44px 32px;border-top:1px solid ${C.separator};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textDim};line-height:1.6;">
+                <strong style="color:${C.textMuted};">Florian Bonnet</strong><br>
+                Graphiste &amp; Directeur Artistique · Paris<br>
+                <a href="https://florian-b.fr" style="color:${C.accent};text-decoration:none;">florian-b.fr</a>
+                &nbsp;·&nbsp;
+                <a href="mailto:contact@florian-b.fr" style="color:${C.textDim};text-decoration:none;">contact@florian-b.fr</a>
+              </td>
+              <td align="right" valign="bottom">
+                <span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:${C.separator};letter-spacing:1px;">FB.</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
     </table>
+    <!-- /CARD -->
+
+  </td></tr>
+</table>
 </body>
 </html>`;
 }
 
-function brandButton(label, url) {
-    return `<a href="${url}" style="display:inline-block; margin-top:20px; padding:12px 24px; background:#da2c48; color:#ffffff; text-decoration:none; border-radius:100px; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">${label}</a>`;
+/* ---------- COMPOSANTS RÉUTILISABLES ---------- */
+
+// Titre principal de l'email
+function emailTitle(text) {
+    return `<p class="email-title" style="margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:700;color:${C.white};line-height:1.2;letter-spacing:-0.5px;">${text}</p>`;
 }
 
-/* ---- Templates ---- */
+// Bouton CTA principal
+function emailCTA(label, url) {
+    return `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;">
+  <tr>
+    <td style="border-radius:100px;background:${C.accent};">
+      <a class="btn-main" href="${url}"
+        style="display:inline-block;padding:14px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;color:${C.white};text-decoration:none;border-radius:100px;text-transform:uppercase;letter-spacing:0.8px;mso-padding-alt:0;transition:opacity 0.2s;">
+        ${label}
+      </a>
+    </td>
+  </tr>
+</table>`;
+}
 
+// Bloc citation / message du client
+function emailQuote(text) {
+    return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+  <tr>
+    <td style="padding:20px 24px;background:${C.surface};border-left:3px solid ${C.accent};border-radius:0 12px 12px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;font-style:italic;color:#c0c0c0;line-height:1.7;">
+      « ${text} »
+    </td>
+  </tr>
+</table>`;
+}
+
+// Bloc de données structurées (label / valeur)
+function emailDataBlock(rows) {
+    const rowsHtml = rows.map(([label, value], i) => `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid ${C.separator};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${C.textMuted};white-space:nowrap;padding-right:24px;">${label}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${C.separator};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${C.white};font-weight:600;text-align:right;">${value}</td>
+    </tr>`).join('');
+    return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+  ${rowsHtml}
+</table>`;
+}
+
+// Carte KPI / stat (grosse valeur mise en avant)
+function emailStatCard(value, label, note = '') {
+    return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
+  <tr>
+    <td style="padding:24px;background:${C.accentDim};border:1px solid ${C.accent}33;border-radius:14px;text-align:center;">
+      <div class="stat-val" style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:700;color:${C.accent};line-height:1;">${value}</div>
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textMuted};margin-top:6px;text-transform:uppercase;letter-spacing:1px;">${label}</div>
+      ${note ? `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textDim};margin-top:4px;">${note}</div>` : ''}
+    </td>
+  </tr>
+</table>`;
+}
+
+// Grille 2 colonnes de stats (mobile: stack)
+function emailStatGrid(stats) {
+    return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+  <tr>
+    ${stats.map((s, i) => `
+    <td width="${Math.floor(100 / stats.length)}%" style="padding:${i > 0 ? '0 0 0 8px' : '0'};vertical-align:top;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:20px 16px;background:${C.surface};border:1px solid ${C.separator};border-radius:12px;text-align:center;">
+            <div style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:700;color:${C.white};line-height:1;">${s.value}</div>
+            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textMuted};margin-top:5px;text-transform:uppercase;letter-spacing:0.8px;">${s.label}</div>
+          </td>
+        </tr>
+      </table>
+    </td>`).join('')}
+  </tr>
+</table>`;
+}
+
+// Badge de rôle
+function emailRoleBadge(role) {
+    const labels = { admin: 'Administrateur', redacteur: 'Rédacteur', lecteur: 'Lecteur' };
+    return `<span style="display:inline-block;padding:4px 12px;background:${C.accentDim};border:1px solid ${C.accent}55;border-radius:100px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;color:${C.accent};text-transform:uppercase;letter-spacing:0.8px;">${labels[role] || role}</span>`;
+}
+
+// Ligne de séparation stylée
+function emailDivider() {
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td style="height:1px;background:${C.separator};font-size:0;line-height:0;">&nbsp;</td></tr></table>`;
+}
+
+// Texte signature
+function emailSignature(name = 'Florian B.') {
+    return `
+<p style="margin:28px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${C.textMuted};line-height:1.6;">
+  À bientôt,<br>
+  <strong style="color:${C.white};font-size:15px;">${name}</strong><br>
+  <span style="font-size:12px;color:${C.textDim};">Graphiste &amp; Directeur Artistique · Paris</span>
+</p>`;
+}
+
+/* ============================================================
+   TABLE DEVIS / FACTURE
+   ============================================================ */
+function quoteItemsHtml(items, forEmail = true) {
+    const bg    = forEmail ? C.surface    : '#f9f9f9';
+    const sep   = forEmail ? C.separator  : '#ebebeb';
+    const mutd  = forEmail ? C.textMuted  : '#888';
+    const main  = forEmail ? C.white      : '#111';
+    const rows = (items || []).map(i => `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${main};">${i.desc || ''}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${mutd};text-align:center;">${i.qty || 0}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${mutd};text-align:right;">${(Number(i.price) || 0).toFixed(2)} €</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${sep};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:${main};font-weight:700;text-align:right;">${((Number(i.qty)||0)*(Number(i.price)||0)).toFixed(2)} €</td>
+    </tr>`).join('');
+    return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;border-collapse:collapse;">
+  <thead>
+    <tr>
+      <th style="padding:0 0 10px;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Prestation</th>
+      <th style="padding:0 0 10px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Qté</th>
+      <th style="padding:0 0 10px;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">P.U.</th>
+      <th style="padding:0 0 10px;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${mutd};border-bottom:1px solid ${sep};">Total</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>`;
+}
+
+function quoteTotalRow(total, forEmail = true) {
+    return `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px;">
+  <tr>
+    <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${forEmail ? C.textMuted : '#888'};text-transform:uppercase;letter-spacing:0.8px;">Total</td>
+    <td style="text-align:right;">
+      <span style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:${forEmail ? C.white : '#0a0a0a'};">${(total || 0).toFixed(2)} <span style="font-size:16px;">€</span></span>
+    </td>
+  </tr>
+</table>`;
+}
+
+/* ============================================================
+   TEMPLATES
+   ============================================================ */
+
+/* — 1. Confirmation lead (client) — */
 function leadConfirmationEmail(lead) {
     return {
         to: lead.email,
-        subject: 'Votre message a bien été reçu — Florian B.',
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Merci ${lead.name || ''} !</p>
-            <p style="margin:0 0 16px;">Votre message a bien été reçu. Je reviens vers vous sous 24 à 48h.</p>
-            <div style="margin:20px 0; padding:16px; background:#1c1c1c; border-left:3px solid #da2c48; border-radius:8px; font-style:italic; color:#bbb;">
-                "${lead.message}"
-            </div>
-            <p style="margin:20px 0 0;">À très vite,<br><strong style="color:#fff;">Florian B.</strong><br><span style="color:#888; font-size:13px;">Graphiste & Directeur Artistique</span></p>
-        `, { preheader: 'Merci pour votre message, je reviens vers vous rapidement.' }),
+        subject: `Votre message est bien reçu — Florian B.`,
+        html: emailWrapper(`
+            ${emailTitle(`Merci${lead.name ? `, ${lead.name.split(' ')[0]}` : ''} !`)}
+            <p style="margin:0 0 20px;color:${C.textMuted};font-size:15px;">Votre message a bien atterri dans ma boîte. Je reviens vers vous <strong style="color:${C.white};">sous 24 à 48h</strong>.</p>
+            ${emailQuote(lead.message)}
+            ${emailDivider()}
+            <p style="margin:0;font-size:13px;color:${C.textDim};">En attendant, jetez un œil à mon portfolio :</p>
+            ${emailCTA('Voir florian-b.fr', 'https://florian-b.fr')}
+            ${emailSignature()}
+        `, { preheader: `Merci${lead.name ? ` ${lead.name}` : ''} — je reviens vers vous sous 24-48h.` }),
     };
 }
 
+/* — 2. Notification nouveau lead (interne) — */
 function leadNotificationEmail(lead) {
     return {
         to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
-        subject: `🔔 Nouveau lead : ${lead.name || lead.email}`,
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:18px; font-weight:700; color:#fff;">Nouveau message reçu</p>
-            <p style="margin:0 0 8px;"><span style="color:#888;">Nom :</span> ${lead.name || '(non renseigné)'}</p>
-            <p style="margin:0 0 8px;"><span style="color:#888;">Email :</span> ${lead.email}</p>
-            <p style="margin:0 0 8px;"><span style="color:#888;">Source :</span> ${lead.source}</p>
-            <div style="margin:16px 0; padding:16px; background:#1c1c1c; border-radius:8px;">${lead.message}</div>
-        `),
+        subject: `🔔 Nouveau lead — ${lead.name || lead.email}`,
+        html: emailWrapper(`
+            ${emailTitle('Nouveau message reçu')}
+            ${emailDataBlock([
+                ['Nom', lead.name || '—'],
+                ['Email', lead.email],
+                ['Source', lead.source || '—'],
+                ['Reçu le', new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })],
+            ])}
+            ${emailQuote(lead.message)}
+            ${emailCTA('Répondre dans le dashboard', (process.env.DASHBOARD_URL || 'https://florian-b.fr') + '/dashboard')}
+        `, { preheader: `Nouveau lead de ${lead.name || lead.email}` }),
         replyTo: lead.email,
     };
 }
 
+/* — 3. Confirmation RDV (client) — */
 function appointmentConfirmationEmail(appt) {
     return {
         to: appt.email,
-        subject: 'Votre demande de rendez-vous — Florian B.',
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Demande de RDV reçue</p>
-            <p style="margin:0 0 16px;">Je confirme votre créneau sous peu :</p>
-            <div style="margin:20px 0; padding:16px; background:#1c1c1c; border-radius:8px;">
-                <p style="margin:0 0 6px;">📅 ${appt.date_text || 'À définir'}</p>
-                <p style="margin:0 0 6px;">🕐 ${appt.time_text || 'À définir'}</p>
-                <p style="margin:0;">📝 ${appt.subject}</p>
-            </div>
-            <p style="margin:20px 0 0;">À très vite,<br><strong style="color:#fff;">Florian B.</strong></p>
+        subject: `Demande de rendez-vous reçue — Florian B.`,
+        html: emailWrapper(`
+            ${emailTitle('Votre demande est enregistrée')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Je confirme votre créneau dans les plus brefs délais. Voici ce que j'ai reçu :</p>
+            ${emailDataBlock([
+                ['📅 Date souhaitée', appt.date_text || 'À définir'],
+                ['🕐 Heure', appt.time_text || 'À définir'],
+                ['📋 Sujet', appt.subject],
+            ])}
+            ${emailDivider()}
+            <p style="margin:0;font-size:13px;color:${C.textDim};">Un email de confirmation suivra dès que le créneau est validé de mon côté.</p>
+            ${emailSignature()}
         `, { preheader: 'Votre demande de rendez-vous a bien été reçue.' }),
     };
 }
 
+/* — 4. Notification RDV (interne) — */
 function appointmentNotificationEmail(appt) {
     return {
         to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
-        subject: `📅 Nouvelle demande de RDV : ${appt.email}`,
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:18px; font-weight:700; color:#fff;">Nouvelle demande de rendez-vous</p>
-            <p style="margin:0 0 8px;"><span style="color:#888;">Email :</span> ${appt.email}</p>
-            <p style="margin:0 0 8px;"><span style="color:#888;">Date souhaitée :</span> ${appt.date_text || '—'}</p>
-            <p style="margin:0 0 8px;"><span style="color:#888;">Heure :</span> ${appt.time_text || '—'}</p>
-            <p style="margin:0 0 8px;"><span style="color:#888;">Sujet :</span> ${appt.subject}</p>
-        `),
+        subject: `📅 Nouveau RDV — ${appt.email}`,
+        html: emailWrapper(`
+            ${emailTitle('Nouvelle demande de RDV')}
+            ${emailDataBlock([
+                ['Email', appt.email],
+                ['Date souhaitée', appt.date_text || '—'],
+                ['Heure', appt.time_text || '—'],
+                ['Sujet', appt.subject],
+            ])}
+            ${emailCTA('Voir dans le dashboard', (process.env.DASHBOARD_URL || 'https://florian-b.fr') + '/dashboard')}
+        `, { preheader: `Nouvelle demande de RDV de ${appt.email}` }),
         replyTo: appt.email,
     };
 }
 
-// Réponse manuelle depuis le dashboard — le message est saisi par Florian,
-// habillé automatiquement avec le design de marque.
+/* — 5. Réponse manuelle à un lead (depuis le dashboard) — */
 function leadReplyEmail(lead, message) {
     return {
         to: lead.email,
-        subject: 'Re : votre message — Florian B.',
-        html: brandEmailWrapper(`
-            <div style="white-space:pre-wrap;">${message}</div>
-            <p style="margin:24px 0 0;">Florian B.<br><span style="color:#888; font-size:13px;">Graphiste & Directeur Artistique</span></p>
-        `),
+        subject: `Re : votre message — Florian B.`,
+        html: emailWrapper(`
+            ${emailTitle(`Bonjour${lead.name ? ` ${lead.name.split(' ')[0]}` : ''} 👋`)}
+            <div style="white-space:pre-wrap;font-size:15px;color:${C.text};line-height:1.75;">${message}</div>
+            ${emailSignature()}
+        `, { preheader: 'Florian B. vous répond.' }),
         replyTo: process.env.SENDER_EMAIL,
     };
 }
 
+/* — 6. Invitation équipe — */
 const ROLE_LABELS = { admin: 'Administrateur', redacteur: 'Rédacteur', lecteur: 'Lecteur' };
 
-// Invitation à rejoindre le dashboard — envoyée quand un admin ajoute un membre.
-// inviteToken est ajouté brut à l'URL, le lien mène à une page du dashboard qui
-// permet de définir son mot de passe. Le dashboard est servi par Railway, pas par
-// florian-b.fr (qui est le site statique OVH) — DASHBOARD_URL doit être configuré.
 function teamInviteEmail(user, inviteToken) {
     if (!process.env.DASHBOARD_URL) {
-        console.warn('⚠️  DASHBOARD_URL non configuré — le lien d\'invitation sera invalide. Ajoute-le dans les variables Railway.');
+        console.warn("⚠️  DASHBOARD_URL non configuré — le lien d'invitation sera invalide.");
     }
     const dashboardOrigin = (process.env.DASHBOARD_URL || '').replace(/\/$/, '');
     const link = `${dashboardOrigin}/dashboard/#invite=${inviteToken}`;
     return {
         to: user.email,
-        subject: 'Invitation au dashboard — Florian B.',
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Vous êtes invité(e) !</p>
-            <p style="margin:0 0 16px;">Florian vous donne accès au dashboard avec le rôle <strong style="color:#fff;">${ROLE_LABELS[user.role] || user.role}</strong>.</p>
-            <p style="margin:0 0 8px;">Cliquez sur le bouton ci-dessous pour définir votre mot de passe et accéder au dashboard :</p>
-            ${brandButton('Définir mon mot de passe', link)}
-            <p style="margin:24px 0 0; color:#888; font-size:13px;">Ce lien expire dans 7 jours. Si vous ne voyez pas le bouton, copiez ce lien dans votre navigateur :<br><span style="word-break:break-all;">${link}</span></p>
-        `, { preheader: 'Vous avez été invité(e) à rejoindre le dashboard.' }),
+        subject: `Invitation au dashboard — Florian B.`,
+        html: emailWrapper(`
+            ${emailTitle('Vous êtes invité·e')}
+            <p style="margin:0 0 20px;color:${C.textMuted};">Florian vous donne accès à son dashboard avec le rôle :</p>
+            <p style="margin:0 0 28px;">${emailRoleBadge(user.role)}</p>
+            <p style="margin:0 0 4px;color:${C.textMuted};font-size:14px;">Cliquez ci-dessous pour définir votre mot de passe et accéder au dashboard :</p>
+            ${emailCTA('Activer mon compte', link)}
+            ${emailDivider()}
+            <p style="margin:0;font-size:12px;color:${C.textDim};">Ce lien expire dans <strong style="color:${C.textMuted};">7 jours</strong>. Si le bouton ne fonctionne pas, copiez cette URL :<br>
+            <span style="word-break:break-all;color:${C.textDim};">${link}</span></p>
+        `, { preheader: `Florian B. vous invite à rejoindre son dashboard — rôle : ${ROLE_LABELS[user.role] || user.role}` }),
     };
 }
 
-// ---- Devis / Factures ----
-function quoteItemsHtml(items, forEmail = false) {
-    const rows = (items || []).map(i => `
-        <tr>
-            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'};">${i.desc || ''}</td>
-            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'}; text-align:center;">${i.qty || 0}</td>
-            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'}; text-align:right;">${(Number(i.price) || 0).toFixed(2)} €</td>
-            <td style="padding:10px 0; border-bottom:1px solid ${forEmail ? '#262626' : '#eee'}; text-align:right; font-weight:700;">${((Number(i.qty) || 0) * (Number(i.price) || 0)).toFixed(2)} €</td>
-        </tr>
-    `).join('');
-    return `
-        <table style="width:100%; border-collapse:collapse; margin:16px 0;">
-            <thead>
-                <tr style="text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:${forEmail ? '#888' : '#999'};">
-                    <th style="padding-bottom:8px;">Prestation</th>
-                    <th style="padding-bottom:8px; text-align:center;">Qté</th>
-                    <th style="padding-bottom:8px; text-align:right;">Prix unit.</th>
-                    <th style="padding-bottom:8px; text-align:right;">Total</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
-    `;
-}
-
+/* — 7. Devis client — */
 function quoteEmail(quote) {
     return {
         to: quote.clientEmail,
         subject: `Devis — ${quote.clientName || 'Votre projet'} — Florian B.`,
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Votre devis</p>
-            <p style="margin:0 0 16px;">Bonjour ${quote.clientName || ''},</p>
-            <p style="margin:0 0 16px;">Voici le détail de la proposition pour votre projet :</p>
+        html: emailWrapper(`
+            ${emailTitle('Votre devis')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${quote.clientName || ''},<br>Voici la proposition détaillée pour votre projet.</p>
             ${quoteItemsHtml(quote.items, true)}
-            <p style="text-align:right; font-size:18px; font-weight:700; color:#fff; margin:16px 0;">Total : ${(quote.total || 0).toFixed(2)} €</p>
-            ${quote.notes ? `<p style="margin:16px 0; color:#bbb; font-style:italic;">${quote.notes}</p>` : ''}
-            <p style="margin:24px 0 0;">N'hésitez pas si vous avez des questions.<br><strong style="color:#fff;">Florian B.</strong></p>
-        `, { preheader: `Votre devis - Total ${(quote.total || 0).toFixed(2)} €` }),
+            ${quoteTotalRow(quote.total, true)}
+            ${quote.notes ? `${emailDivider()}<p style="margin:0;font-size:14px;color:${C.textMuted};font-style:italic;">${quote.notes}</p>` : ''}
+            ${emailDivider()}
+            <p style="margin:0;font-size:14px;color:${C.textMuted};">Des questions ? Répondez directement à cet email, je suis là.</p>
+            ${emailSignature()}
+        `, { preheader: `Devis — Total ${(quote.total||0).toFixed(2)} €` }),
     };
 }
 
+/* — 8. Facture client — */
+function invoiceEmail(invoice, business = {}) {
+    return {
+        to: invoice.clientEmail,
+        subject: `Facture ${invoice.invoiceNumber} — Florian B.`,
+        html: emailWrapper(`
+            ${emailTitle(`Facture n°${invoice.invoiceNumber}`)}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour ${invoice.clientName || ''},<br>Veuillez trouver ci-dessous le détail de votre facture.</p>
+            ${quoteItemsHtml(invoice.items, true)}
+            ${quoteTotalRow(invoice.total, true)}
+            ${business.iban ? `${emailDivider()}<p style="margin:0;font-size:13px;color:${C.textMuted};">Règlement par virement :<br><strong style="color:${C.white};font-family:monospace;">${business.iban}</strong></p>` : ''}
+            ${emailDivider()}
+            <p style="margin:0;font-size:14px;color:${C.textMuted};">Merci pour votre confiance.</p>
+            ${emailSignature(business.legalName || 'Florian B.')}
+        `, { preheader: `Facture ${invoice.invoiceNumber} — Total ${(invoice.total||0).toFixed(2)} €` }),
+    };
+}
+
+/* — 9. Rapport mensuel (interne) — */
+function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
+    const monthName = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const convRate  = newLeads > 0 ? Math.round((wonLeads / newLeads) * 100) : 0;
+    const statsRow  = [
+        { value: String(newLeads), label: 'Nouveaux leads' },
+        { value: String(wonLeads), label: 'Projets gagnés' },
+        { value: `${convRate}%`, label: 'Taux de conversion' },
+    ];
+    return {
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
+        subject: `Rapport mensuel — ${monthName}`,
+        html: emailWrapper(`
+            ${emailTitle(`Ton mois en résumé`)}
+            <p style="margin:0 0 28px;color:${C.textMuted};font-size:13px;text-transform:uppercase;letter-spacing:1px;">${monthName}</p>
+            ${emailStatGrid(statsRow)}
+            ${emailStatCard(revenue.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €', 'Chiffre d\'affaires encaissé')}
+            ${visitors !== null ? emailStatCard(String(visitors), 'Visiteurs actifs', '30 derniers jours') : ''}
+            ${emailDivider()}
+            <p style="margin:0;font-size:12px;color:${C.textDim};">Rapport généré automatiquement le 1er de chaque mois.</p>
+        `, { preheader: `Ton résumé de ${monthName} — ${newLeads} leads · ${revenue.toFixed(0)} €` }),
+    };
+}
+
+/* — 10. Alerte analytics (interne) — */
+const GOAL_METRIC_LABELS = { activeUsers: 'visiteurs', sessions: 'sessions', pageViews: 'pages vues' };
+
+function analyticsAlertEmail(alert, value) {
+    const metricLabel    = GOAL_METRIC_LABELS[alert.metric] || alert.metric;
+    const conditionLabel = alert.condition === 'above' ? 'dépassé' : 'passé en dessous de';
+    const dashUrl        = (process.env.DASHBOARD_URL || 'https://florian-b.fr') + '/dashboard';
+    return {
+        to: alert.notifyEmail || process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
+        subject: `Alerte — ${metricLabel} ${conditionLabel} ${alert.threshold}`,
+        html: emailWrapper(`
+            ${emailTitle('Alerte déclenchée')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Le nombre de <strong style="color:${C.white};">${metricLabel}</strong> aujourd'hui a <strong style="color:${C.white};">${conditionLabel}</strong> ton seuil de <strong style="color:${C.white};">${alert.threshold}</strong>.</p>
+            ${emailStatCard(String(value), metricLabel + ' aujourd\'hui')}
+            ${emailCTA('Voir le dashboard', dashUrl)}
+        `, { preheader: `${metricLabel} : ${value} — seuil ${alert.threshold} ${conditionLabel}` }),
+    };
+}
+
+/* ============================================================
+   PAGES HTML IMPRIMABLES (devis / factures)
+   Fond blanc pour l'impression — design cohérent
+   ============================================================ */
 function quoteHtmlPage(quote) {
     return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <title>Devis — ${quote.clientName || ''}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
-    .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #da2c48; padding-bottom:20px; margin-bottom:30px; }
-    .logo { font-family: Georgia, serif; font-weight:700; font-size:24px; }
-    .logo span { color:#da2c48; }
-    .meta { text-align:right; font-size:13px; color:#666; }
-    .client { margin-bottom: 24px; }
-    .total-row { text-align:right; font-size:22px; font-weight:700; margin-top:16px; }
-    .status { display:inline-block; padding:4px 12px; border-radius:100px; font-size:12px; font-weight:700; text-transform:uppercase; }
-    @media print { body { margin: 0; } }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #fff; color: #111; max-width: 740px; margin: 48px auto; padding: 0 24px 80px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; margin-bottom: 32px; border-bottom: 2px solid #111; }
+  .logo { font-family: 'Syne', Georgia, serif; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+  .logo span { color: #da2c48; }
+  .meta { text-align: right; font-size: 13px; color: #666; line-height: 1.7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: #f0f0f0; color: #666; }
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 6px; }
+  .client-block { margin-bottom: 36px; }
+  .client-block strong { font-size: 16px; }
+  table.items { width: 100%; border-collapse: collapse; margin: 0 0 8px; }
+  table.items th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #999; padding: 0 0 10px; border-bottom: 1px solid #e5e5e5; }
+  table.items th:not(:first-child) { text-align: right; }
+  table.items td { padding: 13px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; line-height: 1.5; vertical-align: top; }
+  table.items td:not(:first-child) { text-align: right; color: #555; }
+  table.items td:last-child { font-weight: 700; color: #111; }
+  .total-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px; padding-top: 16px; border-top: 2px solid #111; }
+  .total-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; }
+  .total-amount { font-family: 'Syne', Georgia, serif; font-size: 30px; font-weight: 800; color: #da2c48; }
+  .notes { margin-top: 28px; padding: 16px 20px; background: #fafafa; border-left: 3px solid #da2c48; border-radius: 0 8px 8px 0; font-size: 13px; color: #666; font-style: italic; line-height: 1.7; }
+  .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #aaa; line-height: 1.7; }
+  @media print {
+    body { margin: 0; padding: 24px; }
+    .no-print { display: none; }
+  }
 </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">FLORIAN B<span>.</span></div>
-        <div class="meta">
-            Devis n°${quote.id}<br>
-            ${new Date(quote.created_at).toLocaleDateString('fr-FR')}<br>
-            <span class="status" style="background:#f0f0f0;">${quote.status === 'paid' ? 'Payé' : quote.status === 'sent' ? 'Envoyé' : 'Brouillon'}</span>
-        </div>
+  <div class="header">
+    <div class="logo">FLORIAN B<span>.</span></div>
+    <div class="meta">
+      Devis n°DEV-${String(quote.id).padStart(3,'0')}<br>
+      ${new Date(quote.created_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}<br>
+      <span class="badge">${quote.status === 'paid' ? 'Accepté & payé' : quote.status === 'sent' ? 'Envoyé' : 'Brouillon'}</span>
     </div>
-    <div class="client">
-        <strong>${quote.clientName || ''}</strong><br>
-        ${quote.clientEmail}
-    </div>
-    ${quoteItemsHtml(quote.items, false)}
-    <div class="total-row">Total : ${(quote.total || 0).toFixed(2)} €</div>
-    ${quote.notes ? `<p style="margin-top:24px; color:#666; font-style:italic;">${quote.notes}</p>` : ''}
-    <p style="margin-top:60px; font-size:12px; color:#999;">Florian Bonnet — Graphiste & Directeur Artistique, Paris — florian-b.fr</p>
-    <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
+  </div>
+  <div class="client-block">
+    <p class="section-label">Client</p>
+    <strong>${quote.clientName || ''}</strong><br>
+    <span style="color:#666;font-size:13px;">${quote.clientEmail}</span>
+  </div>
+  <table class="items">
+    <thead><tr><th style="text-align:left;">Prestation</th><th>Qté</th><th>Prix unit.</th><th>Total</th></tr></thead>
+    <tbody>
+      ${(quote.items||[]).map(i => `
+      <tr>
+        <td>${i.desc||''}</td>
+        <td>${i.qty||0}</td>
+        <td>${(Number(i.price)||0).toFixed(2)} €</td>
+        <td>${((Number(i.qty)||0)*(Number(i.price)||0)).toFixed(2)} €</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  <div class="total-row">
+    <span class="total-label">Total</span>
+    <span class="total-amount">${(quote.total||0).toFixed(2)} €</span>
+  </div>
+  ${quote.notes ? `<div class="notes">${quote.notes}</div>` : ''}
+  <div class="footer">
+    Florian Bonnet — Graphiste &amp; Directeur Artistique, Paris<br>
+    <a href="https://florian-b.fr" style="color:#da2c48;text-decoration:none;">florian-b.fr</a> · contact@florian-b.fr
+  </div>
+  <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
 </body>
 </html>`;
 }
 
-// ---- Facture officielle (avec mentions légales) ----
 function invoiceHtmlPage(invoice, business = {}) {
     return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <title>Facture ${invoice.invoiceNumber} — ${invoice.clientName || ''}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
-    .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #da2c48; padding-bottom:20px; margin-bottom:30px; }
-    .logo { font-family: Georgia, serif; font-weight:700; font-size:24px; }
-    .logo span { color:#da2c48; }
-    .meta { text-align:right; font-size:13px; color:#666; }
-    .parties { display:flex; justify-content:space-between; gap:40px; margin-bottom:30px; }
-    .parties > div { flex:1; font-size:13px; }
-    .parties h4 { font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#999; margin-bottom:6px; }
-    .total-row { text-align:right; font-size:22px; font-weight:700; margin-top:16px; }
-    .status { display:inline-block; padding:4px 12px; border-radius:100px; font-size:12px; font-weight:700; text-transform:uppercase; }
-    .legal { margin-top:50px; padding-top:20px; border-top:1px solid #eee; font-size:11px; color:#999; line-height:1.6; }
-    @media print { body { margin: 0; } }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #fff; color: #111; max-width: 740px; margin: 48px auto; padding: 0 24px 80px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; margin-bottom: 32px; border-bottom: 2px solid #111; }
+  .logo { font-family: 'Syne', Georgia, serif; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+  .logo span { color: #da2c48; }
+  .meta { text-align: right; font-size: 13px; color: #666; line-height: 1.7; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: #f0f0f0; color: #666; }
+  .badge.paid { background: #e7f3ec; color: #276749; }
+  .parties { display: flex; gap: 48px; margin-bottom: 36px; }
+  .parties > div { flex: 1; }
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #999; margin-bottom: 6px; }
+  table.items { width: 100%; border-collapse: collapse; margin: 0 0 8px; }
+  table.items th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #999; padding: 0 0 10px; border-bottom: 1px solid #e5e5e5; }
+  table.items th:not(:first-child) { text-align: right; }
+  table.items td { padding: 13px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; vertical-align: top; }
+  table.items td:not(:first-child) { text-align: right; color: #555; }
+  table.items td:last-child { font-weight: 700; color: #111; }
+  .total-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px; padding-top: 16px; border-top: 2px solid #111; }
+  .total-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; }
+  .total-amount { font-family: 'Syne', Georgia, serif; font-size: 30px; font-weight: 800; color: #da2c48; }
+  .iban-block { margin-top: 28px; padding: 16px 20px; background: #fafafa; border-radius: 10px; font-size: 13px; color: #666; }
+  .iban-block strong { font-family: monospace; font-size: 14px; color: #111; display: block; margin-top: 4px; letter-spacing: 1px; }
+  .legal { margin-top: 36px; padding-top: 20px; border-top: 1px solid #eee; font-size: 11px; color: #aaa; line-height: 1.8; }
+  @media print {
+    body { margin: 0; padding: 24px; }
+  }
 </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">FLORIAN B<span>.</span></div>
-        <div class="meta">
-            Facture n°${invoice.invoiceNumber}<br>
-            Émise le ${new Date(invoice.issue_date).toLocaleDateString('fr-FR')}<br>
-            <span class="status" style="background:#f0f0f0;">${invoice.status === 'paid' ? 'Payée' : invoice.status === 'sent' ? 'Envoyée' : 'Brouillon'}</span>
-        </div>
+  <div class="header">
+    <div class="logo">FLORIAN B<span>.</span></div>
+    <div class="meta">
+      Facture n°<strong>${invoice.invoiceNumber}</strong><br>
+      Émise le ${new Date(invoice.issue_date).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}<br>
+      <span class="badge ${invoice.status === 'paid' ? 'paid' : ''}">${invoice.status === 'paid' ? 'Payée' : invoice.status === 'sent' ? 'Envoyée' : 'Brouillon'}</span>
     </div>
-    <div class="parties">
-        <div>
-            <h4>Émetteur</h4>
-            <strong>${business.legalName || 'Florian Bonnet'}</strong><br>
-            ${business.address ? business.address.replace(/\n/g, '<br>') + '<br>' : ''}
-            ${business.siret ? `SIRET : ${business.siret}<br>` : ''}
-            ${business.vatMention || ''}
-        </div>
-        <div>
-            <h4>Client</h4>
-            <strong>${invoice.clientName || ''}</strong><br>
-            ${invoice.clientEmail}<br>
-            ${invoice.clientAddress ? invoice.clientAddress.replace(/\n/g, '<br>') : ''}
-        </div>
+  </div>
+  <div class="parties">
+    <div>
+      <p class="section-label">Émetteur</p>
+      <strong>${business.legalName || 'Florian Bonnet'}</strong><br>
+      ${business.address ? `<span style="color:#666;font-size:13px;">${business.address.replace(/\n/g,'<br>')}</span><br>` : ''}
+      ${business.siret ? `<span style="color:#888;font-size:12px;">SIRET : ${business.siret}</span><br>` : ''}
+      ${business.vatMention ? `<span style="color:#888;font-size:12px;">${business.vatMention}</span>` : ''}
     </div>
-    ${quoteItemsHtml(invoice.items, false)}
-    <div class="total-row">Total ${business.vatMention ? '' : 'TTC'} : ${(invoice.total || 0).toFixed(2)} €</div>
-    ${invoice.notes ? `<p style="margin-top:24px; color:#666; font-style:italic;">${invoice.notes}</p>` : ''}
-    <div class="legal">
-        ${business.iban ? `IBAN pour règlement : ${business.iban}<br><br>` : ''}
-        ${business.paymentTerms || ''}
+    <div>
+      <p class="section-label">Client</p>
+      <strong>${invoice.clientName || ''}</strong><br>
+      <span style="color:#666;font-size:13px;">${invoice.clientEmail}<br>
+      ${invoice.clientAddress ? invoice.clientAddress.replace(/\n/g,'<br>') : ''}</span>
     </div>
-    <p style="margin-top:20px; font-size:12px; color:#999;">${business.legalName || 'Florian Bonnet'} — Graphiste & Directeur Artistique, Paris — florian-b.fr</p>
-    <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
+  </div>
+  <table class="items">
+    <thead><tr><th style="text-align:left;">Prestation</th><th>Qté</th><th>Prix unit.</th><th>Total</th></tr></thead>
+    <tbody>
+      ${(invoice.items||[]).map(i => `
+      <tr>
+        <td>${i.desc||''}</td>
+        <td>${i.qty||0}</td>
+        <td>${(Number(i.price)||0).toFixed(2)} €</td>
+        <td>${((Number(i.qty)||0)*(Number(i.price)||0)).toFixed(2)} €</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  <div class="total-row">
+    <span class="total-label">Total ${business.vatMention ? '' : 'TTC'}</span>
+    <span class="total-amount">${(invoice.total||0).toFixed(2)} €</span>
+  </div>
+  ${business.iban ? `<div class="iban-block">Règlement par virement bancaire<strong>${business.iban}</strong></div>` : ''}
+  <div class="legal">
+    ${business.paymentTerms || ''}<br>
+    ${business.legalName || 'Florian Bonnet'} — Graphiste &amp; Directeur Artistique, Paris — <a href="https://florian-b.fr" style="color:#da2c48;text-decoration:none;">florian-b.fr</a>
+  </div>
+  <script>window.onload = () => { if (location.search.includes('print')) window.print(); };</script>
 </body>
 </html>`;
 }
 
-function invoiceEmail(invoice, business = {}) {
-    return {
-        to: invoice.clientEmail,
-        subject: `Facture ${invoice.invoiceNumber} — Florian B.`,
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Facture n°${invoice.invoiceNumber}</p>
-            <p style="margin:0 0 16px;">Bonjour ${invoice.clientName || ''},</p>
-            <p style="margin:0 0 16px;">Veuillez trouver ci-joint le détail de la facture pour votre projet :</p>
-            ${quoteItemsHtml(invoice.items, true)}
-            <p style="text-align:right; font-size:18px; font-weight:700; color:#fff; margin:16px 0;">Total : ${(invoice.total || 0).toFixed(2)} €</p>
-            ${business.iban ? `<p style="margin:16px 0; color:#bbb; font-size:13px;">IBAN pour règlement : ${business.iban}</p>` : ''}
-            <p style="margin:24px 0 0;">Merci de votre confiance.<br><strong style="color:#fff;">${business.legalName || 'Florian B.'}</strong></p>
-        `, { preheader: `Facture ${invoice.invoiceNumber} - Total ${(invoice.total || 0).toFixed(2)} €` }),
-    };
-}
-
-// ---- Rapport mensuel ----
-function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
-    const monthName = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    return {
-        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
-        subject: `📊 Rapport mensuel — ${monthName}`,
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 20px; font-size:20px; font-weight:700; color:#ffffff;">Votre mois en résumé</p>
-            <table style="width:100%; border-collapse:collapse;">
-                <tr><td style="padding:10px 0; border-bottom:1px solid #262626; color:#888;">Nouveaux leads</td><td style="padding:10px 0; border-bottom:1px solid #262626; text-align:right; font-weight:700; color:#fff;">${newLeads}</td></tr>
-                <tr><td style="padding:10px 0; border-bottom:1px solid #262626; color:#888;">Projets gagnés</td><td style="padding:10px 0; border-bottom:1px solid #262626; text-align:right; font-weight:700; color:#fff;">${wonLeads}</td></tr>
-                <tr><td style="padding:10px 0; border-bottom:1px solid #262626; color:#888;">Chiffre d'affaires encaissé</td><td style="padding:10px 0; border-bottom:1px solid #262626; text-align:right; font-weight:700; color:#fff;">${revenue.toFixed(2)} €</td></tr>
-                ${visitors !== null ? `<tr><td style="padding:10px 0; color:#888;">Visiteurs actifs (30j)</td><td style="padding:10px 0; text-align:right; font-weight:700; color:#fff;">${visitors}</td></tr>` : ''}
-            </table>
-            <p style="margin:24px 0 0; color:#888; font-size:13px;">Généré automatiquement le 1er de chaque mois.</p>
-        `),
-    };
-}
-
-// ---- Alerte Analytics ----
-const GOAL_METRIC_LABELS = { activeUsers: 'visiteurs', sessions: 'sessions', pageViews: 'pages vues' };
-function analyticsAlertEmail(alert, value) {
-    const metricLabel = GOAL_METRIC_LABELS[alert.metric] || alert.metric;
-    const conditionLabel = alert.condition === 'above' ? 'dépassé' : 'passé en dessous de';
-    return {
-        to: alert.notifyEmail || process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
-        subject: `🔔 Alerte Analytics — ${metricLabel} ${conditionLabel} ${alert.threshold}`,
-        html: brandEmailWrapper(`
-            <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Alerte déclenchée</p>
-            <p style="margin:0 0 16px;">Le nombre de <strong style="color:#fff;">${metricLabel}</strong> aujourd'hui a ${conditionLabel} ton seuil de <strong style="color:#fff;">${alert.threshold}</strong>.</p>
-            <div style="margin:20px 0; padding:16px; background:#1c1c1c; border-radius:8px; text-align:center;">
-                <span style="font-size:32px; font-weight:800; color:#da2c48;">${value}</span><br>
-                <span style="color:#888; font-size:13px;">${metricLabel} aujourd'hui</span>
-            </div>
-            ${brandButton('Voir le dashboard', 'https://florian-b.fr')}
-        `, { preheader: `${metricLabel} : ${value}` }),
-    };
-}
-
+/* ============================================================
+   EXPORTS
+   ============================================================ */
 module.exports = {
     sendMail,
+    isMailerConfigured,
     leadConfirmationEmail,
     leadNotificationEmail,
     appointmentConfirmationEmail,
