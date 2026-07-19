@@ -53,149 +53,111 @@ async function getRealtimeUsers() {
     return { configured: true, activeUsers: Number(activeUsers) || 0 };
 }
 
+// Cache court en mémoire — évite de refaire 15 appels GA à chaque clic sur "Analytics"
+// dans la même minute (Railway redémarre le process de temps en temps, donc ce n'est
+// qu'un confort, pas une garantie).
+const overviewCache = new Map(); // key: days -> { data, at }
+const OVERVIEW_CACHE_TTL_MS = 60 * 1000;
+
 // Vue d'ensemble sur une période (par défaut 28 derniers jours), avec comparaison
 // à la période équivalente précédente pour calculer les tendances (▲/▼).
+// Tous les rapports GA sont indépendants les uns des autres : on les lance
+// EN PARALLÈLE (Promise.all) plutôt que les uns après les autres, ce qui réduit
+// le temps de chargement total au temps du rapport le plus lent, pas à la somme.
 async function getOverview(days = 28) {
     const c = getClient();
     if (!c) return { configured: false };
 
+    const cached = overviewCache.get(days);
+    if (cached && Date.now() - cached.at < OVERVIEW_CACHE_TTL_MS) return cached.data;
+
     const currentRange = { startDate: `${days}daysAgo`, endDate: 'today' };
     const previousRange = { startDate: `${days * 2}daysAgo`, endDate: `${days + 1}daysAgo` };
+    const run = (params) => c.runReport({ property: `properties/${propertyId}`, ...params }).then(([r]) => r);
 
-    const [summary] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange, previousRange],
-        metrics: [
-            { name: 'activeUsers' },
-            { name: 'sessions' },
-            { name: 'screenPageViews' },
-            { name: 'averageSessionDuration' },
-            { name: 'bounceRate' },
-            { name: 'engagementRate' },
-            { name: 'screenPageViewsPerSession' },
-            { name: 'newUsers' },
-        ],
-    });
-
-    const [byDay] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'date' }],
-        metrics: [{ name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }],
-        orderBys: [{ dimension: { dimensionName: 'date' } }],
-    });
-
-    const [topPages] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'pagePath' }],
-        metrics: [{ name: 'screenPageViews' }, { name: 'averageSessionDuration' }],
-        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-        limit: 12,
-    });
-
-    const [landingPages] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'landingPage' }],
-        metrics: [{ name: 'sessions' }, { name: 'bounceRate' }],
-        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-        limit: 8,
-    });
-
-    const [sources] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'sessionDefaultChannelGroup' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-        limit: 8,
-    });
-
-    const [referrers] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'sessionSource' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-        limit: 8,
-    });
-
-    const [devices] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'deviceCategory' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-    });
-
-    const [browsers] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'browser' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-        limit: 6,
-    });
-
-    const [geo] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'country' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-        limit: 10,
-    });
-
-    const [cities] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'city' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-        limit: 8,
-    });
-
-    const [newVsReturning] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'newVsReturning' }],
-        metrics: [{ name: 'activeUsers' }],
-    });
-
-    const [hourly] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'hour' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: [{ dimension: { dimensionName: 'hour' } }],
-    });
-
-    const [dayOfWeek] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'dayOfWeek' }],
-        metrics: [{ name: 'sessions' }],
-        orderBys: [{ dimension: { dimensionName: 'dayOfWeek' } }],
-    });
-
-    const [operatingSystems] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'operatingSystem' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-        limit: 6,
-    });
-
-    const [languages] = await c.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [currentRange],
-        dimensions: [{ name: 'language' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-        limit: 6,
-    });
+    const [
+        summary, byDay, topPages, landingPages, sources, referrers,
+        devices, browsers, geo, cities, newVsReturning, hourly, dayOfWeek,
+        operatingSystems, languages,
+    ] = await Promise.all([
+        run({
+            dateRanges: [currentRange, previousRange],
+            metrics: [
+                { name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' },
+                { name: 'averageSessionDuration' }, { name: 'bounceRate' }, { name: 'engagementRate' },
+                { name: 'screenPageViewsPerSession' }, { name: 'newUsers' },
+            ],
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'date' }],
+            metrics: [{ name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }],
+            orderBys: [{ dimension: { dimensionName: 'date' } }],
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'pagePath' }],
+            metrics: [{ name: 'screenPageViews' }, { name: 'averageSessionDuration' }],
+            orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }], limit: 12,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'landingPage' }],
+            metrics: [{ name: 'sessions' }, { name: 'bounceRate' }],
+            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 8,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'sessionDefaultChannelGroup' }],
+            metrics: [{ name: 'sessions' }],
+            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 8,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'sessionSource' }],
+            metrics: [{ name: 'sessions' }],
+            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 8,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'deviceCategory' }],
+            metrics: [{ name: 'activeUsers' }],
+            orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'browser' }],
+            metrics: [{ name: 'activeUsers' }],
+            orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 6,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'country' }],
+            metrics: [{ name: 'activeUsers' }],
+            orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 10,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'city' }],
+            metrics: [{ name: 'activeUsers' }],
+            orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'newVsReturning' }],
+            metrics: [{ name: 'activeUsers' }],
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'hour' }],
+            metrics: [{ name: 'sessions' }],
+            orderBys: [{ dimension: { dimensionName: 'hour' } }],
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'dayOfWeek' }],
+            metrics: [{ name: 'sessions' }],
+            orderBys: [{ dimension: { dimensionName: 'dayOfWeek' } }],
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'operatingSystem' }],
+            metrics: [{ name: 'activeUsers' }],
+            orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 6,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'language' }],
+            metrics: [{ name: 'activeUsers' }],
+            orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 6,
+        }),
+    ]);
 
     const currentRow = summary.rows?.[0]?.metricValues || [];
     const previousRow = summary.rows?.[1]?.metricValues || [];
@@ -230,7 +192,7 @@ async function getOverview(days = 28) {
         bounceRate: pct(totals.bounceRate, previousTotals.bounceRate),
     };
 
-    return {
+    const result = {
         configured: true,
         totals,
         previousTotals,
@@ -263,6 +225,9 @@ async function getOverview(days = 28) {
         operatingSystems: (operatingSystems.rows || []).map(r => ({ os: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
         languages: (languages.rows || []).map(r => ({ language: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
     };
+
+    overviewCache.set(days, { data: result, at: Date.now() });
+    return result;
 }
 
 // Valeur d'une métrique pour "aujourd'hui" — utilisé par les alertes
