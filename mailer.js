@@ -7,9 +7,26 @@ function isMailerConfigured() {
     return Boolean(process.env.BREVO_API_KEY && process.env.SENDER_EMAIL);
 }
 
-async function sendMail({ to, subject, html, replyTo, attachments }) {
+const db = require('./db');
+
+function logEmail({ to, subject, sent, messageId, error, meta = {} }) {
+    try {
+        const entry = {
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+            to, subject, sent, messageId: messageId || null, error: error || null,
+            type: meta.type || 'other', relatedId: meta.relatedId ?? null,
+            sentAt: new Date().toISOString(),
+        };
+        db.get('emailLog').push(entry).write();
+        const logs = db.get('emailLog').value();
+        if (logs.length > 3000) db.set('emailLog', logs.slice(logs.length - 3000)).write();
+    } catch (e) { console.error('Erreur log email:', e.message); }
+}
+
+async function sendMail({ to, subject, html, replyTo, attachments, meta }) {
     if (!isMailerConfigured()) {
         console.warn('⚠️  Brevo non configuré (BREVO_API_KEY / SENDER_EMAIL manquants) — email non envoyé:', subject);
+        logEmail({ to, subject, sent: false, error: 'smtp_not_configured', meta });
         return { sent: false, reason: 'smtp_not_configured' };
     }
     try {
@@ -31,8 +48,9 @@ async function sendMail({ to, subject, html, replyTo, attachments }) {
                     htmlContent: html,
                     ...(replyTo ? { replyTo: { email: replyTo } } : {}),
                     ...(attachments && attachments.length ? { attachment: attachments } : {}),
-                    trackClicks: false,
-                    trackOpens: false,
+                    // Tracking activé — nécessaire pour remonter les statuts ouverture/clic dans le dashboard.
+                    trackClicks: true,
+                    trackOpens: true,
                 }),
                 signal: controller.signal,
             });
@@ -43,11 +61,14 @@ async function sendMail({ to, subject, html, replyTo, attachments }) {
             const errBody = await res.json().catch(() => ({}));
             throw new Error(errBody.message || `Erreur Brevo (${res.status})`);
         }
-        return { sent: true };
+        const data = await res.json().catch(() => ({}));
+        logEmail({ to, subject, sent: true, messageId: data.messageId, meta });
+        return { sent: true, messageId: data.messageId };
     } catch (err) {
         console.error('❌ Échec envoi email:', err.message);
         let reason = err.message;
         if (err.name === 'AbortError') reason = 'Délai dépassé (20s) — Brevo ne répond pas';
+        logEmail({ to, subject, sent: false, error: reason, meta });
         return { sent: false, reason };
     }
 }

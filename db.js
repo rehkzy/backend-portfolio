@@ -18,6 +18,7 @@ const DEFAULTS = {
     "invoices": [],
     "clients": [],
     "expenses": [],
+    "emailLog": [],
     "quoteTemplates": [
         {
             "id": 1, "name": "Branding / Identité visuelle",
@@ -128,7 +129,10 @@ const DEFAULTS = {
         "revenueGoalMonthly": 0,
         "revenueGoalAnnual": 0,
         "legalStatusMention": "Auto-entrepreneur — Dispensé d'immatriculation au RCS et au RM",
-        "quoteValidityDays": 30
+        "quoteValidityDays": 30,
+        "appointmentsPaused": false,
+        "appointmentsPauseReason": "",
+        "appointmentsPauseMessage": ""
     },
     "projects": [],
     "contentCalendar": [],

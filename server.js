@@ -268,7 +268,7 @@ app.post('/api/admin/users', auth, adminOnly, async (req, res) => {
         inviteTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 jours
     };
     db.get('users').push(user).write();
-    const result = await mailer.sendMail(mailer.teamInviteEmail(user, inviteToken));
+    const result = await mailer.sendMail({ ...mailer.teamInviteEmail(user, inviteToken), meta: { type: 'team_invite', relatedId: user.id } });
     logTeamAction(req, 'user_invited', `${cleanEmail} invité avec le rôle ${role}`, user.id);
     res.status(201).json({ id: user.id, emailSent: result.sent, emailError: result.sent ? null : result.reason });
 });
@@ -285,7 +285,7 @@ app.post('/api/admin/users/:id/resend-invite', auth, adminOnly, async (req, res)
         inviteToken,
         inviteTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     }).write();
-    const result = await mailer.sendMail(mailer.teamInviteEmail(user, inviteToken));
+    const result = await mailer.sendMail({ ...mailer.teamInviteEmail(user, inviteToken), meta: { type: 'team_invite_resend', relatedId: user.id } });
     res.json({ ok: true, emailSent: result.sent, emailError: result.sent ? null : result.reason });
 });
 
@@ -381,14 +381,45 @@ app.post('/api/leads', async (req, res) => {
             db.get('leads').find({ id: lead.id }).assign({ tracking: { ...tracking, geo } }).write();
             lead.tracking.geo = geo; // pour l'email de notif
         }
-        mailer.sendMail(mailer.leadConfirmationEmail(lead)).catch(() => {});
-        mailer.sendMail(mailer.leadNotificationEmail(lead)).catch(() => {});
+        mailer.sendMail({ ...mailer.leadConfirmationEmail(lead), meta: { type: 'lead_confirmation', relatedId: lead.id } }).catch(() => {});
+        mailer.sendMail({ ...mailer.leadNotificationEmail(lead), meta: { type: 'lead_notification', relatedId: lead.id } }).catch(() => {});
     })();
+});
+
+// Statut public de prise de RDV — consulté par le chat du site avant de proposer le calendrier
+app.get('/api/appointments-status', (req, res) => {
+    const b = db.get('businessSettings').value() || {};
+    res.set('Cache-Control', 'no-store');
+    res.json({
+        paused: Boolean(b.appointmentsPaused),
+        reason: b.appointmentsPauseReason || '',
+        message: b.appointmentsPauseMessage || '',
+    });
+});
+
+// Pilotage rapide de la pause RDV depuis le dashboard
+app.put('/api/admin/appointments-pause', auth, canWrite, (req, res) => {
+    const { paused, reason, message } = req.body || {};
+    db.get('businessSettings').assign({
+        appointmentsPaused: Boolean(paused),
+        appointmentsPauseReason: reason || '',
+        appointmentsPauseMessage: message || '',
+    }).write();
+    logTeamAction(req, 'appointments_pause_toggled', paused ? `RDV mis en pause (${reason || 'raison non précisée'})` : 'RDV réactivés');
+    res.json({ ok: true });
 });
 
 app.post('/api/appointments', async (req, res) => {
     const { date_text, time_text, subject, email } = req.body || {};
     if (!email || !subject) return res.status(400).json({ error: 'email et subject requis' });
+
+    const business = db.get('businessSettings').value() || {};
+    if (business.appointmentsPaused) {
+        return res.status(423).json({
+            error: 'appointments_paused',
+            message: business.appointmentsPauseMessage || "La prise de rendez-vous est temporairement suspendue.",
+        });
+    }
 
     const ip = getRealIp(req);
     const ua = req.headers['user-agent'] || null;
@@ -426,8 +457,8 @@ app.post('/api/appointments', async (req, res) => {
             db.get('appointments').find({ id: appt.id }).assign({ tracking: { ...tracking, geo } }).write();
             appt.tracking.geo = geo;
         }
-        mailer.sendMail(mailer.appointmentConfirmationEmail(appt)).catch(() => {});
-        mailer.sendMail(mailer.appointmentNotificationEmail(appt)).catch(() => {});
+        mailer.sendMail({ ...mailer.appointmentConfirmationEmail(appt), meta: { type: 'appointment_confirmation', relatedId: appt.id } }).catch(() => {});
+        mailer.sendMail({ ...mailer.appointmentNotificationEmail(appt), meta: { type: 'appointment_notification', relatedId: appt.id } }).catch(() => {});
     })();
 });
 
@@ -617,7 +648,7 @@ app.post('/api/leads/:id/reply', auth, canWrite, async (req, res) => {
     if (!message) return res.status(400).json({ error: 'message requis' });
     const lead = db.get('leads').find({ id }).value();
     if (!lead) return res.status(404).json({ error: 'Lead introuvable' });
-    const result = await mailer.sendMail(mailer.leadReplyEmail(lead, message));
+    const result = await mailer.sendMail({ ...mailer.leadReplyEmail(lead, message), meta: { type: 'lead_reply', relatedId: lead.id } });
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('leads').find({ id }).assign({ status: 'contacted' }).write();
     logTeamAction(req, 'lead_replied', `Réponse envoyée à ${lead.email}`, id);
@@ -1003,7 +1034,7 @@ async function checkAnalyticsAlerts() {
             if (value === null) continue;
             const triggered = alert.condition === 'above' ? value > alert.threshold : value < alert.threshold;
             if (triggered) {
-                await mailer.sendMail(mailer.analyticsAlertEmail(alert, value));
+                await mailer.sendMail({ ...mailer.analyticsAlertEmail(alert, value), meta: { type: 'analytics_alert', relatedId: alert.id } });
                 db.get('analyticsAlerts').find({ id: alert.id }).assign({ last_triggered_at: now() }).write();
             }
         } catch (err) {
@@ -1117,6 +1148,7 @@ app.post('/api/quotes/:id/send', auth, adminOnly, async (req, res) => {
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
     const business = db.get('businessSettings').value() || {};
     const mail = mailer.quoteEmail(quote, quoteAcceptToken(id));
+    mail.meta = { type: 'quote_sent', relatedId: id };
     try {
         const pdfBuffer = await pdfGen.generateQuotePdf(quote, business);
         mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Devis-${quote.quoteNumber || quote.id}.pdf` }];
@@ -1160,7 +1192,7 @@ app.get('/api/quotes/:id/accept', async (req, res) => {
     touchClient(quote.clientEmail, quote.clientName);
 
     // Notifie Florian — la facture reste en brouillon, à lui de vérifier puis de l'envoyer
-    mailer.sendMail(mailer.quoteAcceptedEmail(quote, invoice)).catch(() => {});
+    mailer.sendMail({ ...mailer.quoteAcceptedEmail(quote, invoice), meta: { type: 'quote_accepted', relatedId: quote.id } }).catch(() => {});
 
     res.send(simplePage('Devis accepté ✅', `Merci ! Votre acceptation a bien été transmise à Florian. Il finalise votre facture (n°${invoice.invoiceNumber}) et revient vers vous rapidement.`, true));
 });
@@ -1281,6 +1313,7 @@ app.post('/api/invoices/:id/send', auth, adminOnly, async (req, res) => {
         return res.status(400).json({ error: `Complète d'abord "Mon entreprise" avant d'envoyer une facture officielle — il manque : ${missing.join(', ')}.` });
     }
     const mail = mailer.invoiceEmail(invoice, business);
+    mail.meta = { type: 'invoice_sent', relatedId: id };
     try {
         const pdfBuffer = await pdfGen.generateInvoicePdf(invoice, business);
         mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Facture-${invoice.invoiceNumber}.pdf` }];
@@ -1317,6 +1350,7 @@ app.post('/api/quotes/:id/remind', auth, adminOnly, async (req, res) => {
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
     const business = db.get('businessSettings').value() || {};
     const mail = mailer.quoteReminderEmail(quote);
+    mail.meta = { type: 'quote_reminder', relatedId: id };
     try {
         const pdfBuffer = await pdfGen.generateQuotePdf(quote, business);
         mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Devis-${quote.quoteNumber || quote.id}.pdf` }];
@@ -1334,6 +1368,7 @@ app.post('/api/invoices/:id/remind', auth, adminOnly, async (req, res) => {
     if (!invoice) return res.status(404).json({ error: 'Facture introuvable' });
     const business = db.get('businessSettings').value() || {};
     const mail = mailer.invoiceReminderEmail(invoice, business);
+    mail.meta = { type: 'invoice_reminder', relatedId: id };
     try {
         const pdfBuffer = await pdfGen.generateInvoicePdf(invoice, business);
         mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Facture-${invoice.invoiceNumber}.pdf` }];
@@ -1556,6 +1591,53 @@ app.delete('/api/content-calendar/:id', auth, canWrite, (req, res) => {
 /* ============================================================
    LOGS ÉQUIPE — journal d'activité (admin uniquement)
    ============================================================ */
+/* ============================================================
+   EMAILS — journal local + statuts en direct via l'API Brevo
+   (envoyé, livré, ouvert, cliqué, échec) pour ne plus avoir
+   besoin d'aller consulter le tableau de bord Brevo.
+   ============================================================ */
+const EMAIL_TYPE_LABELS = {
+    lead_confirmation: 'Confirmation lead (client)', lead_notification: 'Notification lead (interne)',
+    lead_reply: 'Réponse à un lead', appointment_confirmation: 'Confirmation RDV (client)',
+    appointment_notification: 'Notification RDV (interne)', appointment_reminder: 'Rappel RDV (client)',
+    quote_sent: 'Devis envoyé', quote_reminder: 'Relance devis', quote_accepted: 'Devis accepté (interne)',
+    invoice_sent: 'Facture envoyée', invoice_reminder: 'Relance facture', monthly_report: 'Rapport mensuel',
+    daily_brief: 'Brief quotidien', analytics_alert: 'Alerte analytics', team_invite: 'Invitation équipe',
+    team_invite_resend: 'Invitation renvoyée', other: 'Autre',
+};
+
+app.get('/api/admin/emails', auth, adminOnly, (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 200, 1000);
+    const logs = [...db.get('emailLog').value()].reverse().slice(0, limit)
+        .map(e => ({ ...e, typeLabel: EMAIL_TYPE_LABELS[e.type] || e.type }));
+    res.json(logs);
+});
+
+// Statuts en direct (livré/ouvert/cliqué/échec) depuis l'API Brevo, sur une fenêtre de jours.
+// On récupère tous les évènements de la période en un seul appel, le dashboard fait la
+// correspondance avec les emails envoyés via leur messageId.
+app.get('/api/admin/email-events', auth, adminOnly, async (req, res) => {
+    if (!process.env.BREVO_API_KEY) return res.status(400).json({ error: 'Brevo non configuré (BREVO_API_KEY manquant)' });
+    const days = Math.min(Number(req.query.days) || 30, 90);
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const r = await fetch(`https://api.brevo.com/v3/smtp/statistics/events?limit=2500&days=${days}`, {
+            headers: { 'api-key': process.env.BREVO_API_KEY, 'Accept': 'application/json' },
+            signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+        if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            throw new Error(body.message || `Erreur Brevo (${r.status})`);
+        }
+        const data = await r.json();
+        res.json(data.events || []);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // Journal global toutes actions confondues
 app.get('/api/admin/team-logs', auth, adminOnly, (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 200, 500);
@@ -1605,6 +1687,7 @@ async function buildAndSendMonthlyReport() {
     const visitors = gaSummary?.configured ? gaSummary.totals.activeUsers : null;
 
     const mail = mailer.monthlyReportEmail({ newLeads, wonLeads, revenue, visitors });
+    mail.meta = { type: 'monthly_report' };
     try {
         const monthLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
         const pdfBuffer = await pdfGen.generateMonthlyReportPdf({ monthLabel, newLeads, wonLeads, revenue, visitors });
@@ -1694,9 +1777,10 @@ async function buildAndSendDailyBrief() {
     const alerts = computeProactiveAlerts();
     // Rien à signaler et aucune alerte : pas la peine d'encombrer la boîte mail.
     if (!cockpitLeads && !apptsToday.length && !quotesToRemind.length && !invoicesOverdue.length && !alerts.length) return;
-    await mailer.sendMail(mailer.dailyBriefEmail({
-        newLeadsToProcess: cockpitLeads, apptsToday, quotesToRemind, invoicesOverdue, alerts,
-    }));
+    await mailer.sendMail({
+        ...mailer.dailyBriefEmail({ newLeadsToProcess: cockpitLeads, apptsToday, quotesToRemind, invoicesOverdue, alerts }),
+        meta: { type: 'daily_brief' },
+    });
 }
 
 // Rapport mensuel automatique — le 1er de chaque mois à 8h (heure de Paris)
@@ -1730,7 +1814,7 @@ cron.schedule('0 * * * *', async () => {
             return hoursUntil > 23 && hoursUntil <= 25; // fenêtre d'1h autour de "24h avant", vu le cron horaire
         });
         for (const appt of in23to25h) {
-            const result = await mailer.sendMail(mailer.appointmentReminderEmail(appt));
+            const result = await mailer.sendMail({ ...mailer.appointmentReminderEmail(appt), meta: { type: 'appointment_reminder', relatedId: appt.id } });
             if (result.sent) db.get('appointments').find({ id: appt.id }).assign({ reminderSentAt: now() }).write();
         }
     } catch (err) { console.error('Erreur rappels RDV:', err.message); }

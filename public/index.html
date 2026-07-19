@@ -572,6 +572,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 Journal
             </div>
+            <div class="nav-item" data-view="emails" data-role="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Emails
+            </div>
         </div>
 
         <div class="nav-group">
@@ -950,8 +954,10 @@
                 <h2>Rendez-vous</h2>
                 <div class="topbar-actions">
                     <button class="btn-secondary" id="copyCalendarFeedBtn" style="width:auto; padding:0.6rem 1.2rem;">🔗 Lien calendrier (abonnement)</button>
+                    <button class="btn-primary" id="togglePauseBtn" style="width:auto; padding:0.6rem 1.2rem;">⏸️ Mettre en pause</button>
                 </div>
             </div>
+            <div id="pauseStatusBanner" style="display:none;"></div>
             <div class="toolbar">
                 <button class="filter-chip active" data-astatus="">Tous</button>
                 <button class="filter-chip" data-astatus="pending">En attente</button>
@@ -1375,6 +1381,29 @@
             <div id="journalWrap"></div>
         </section>
 
+        <!-- EMAILS — stats complètes sans avoir à aller sur Brevo -->
+        <section class="view" id="view-emails">
+            <div class="topbar">
+                <h2>Emails</h2>
+                <div class="topbar-actions">
+                    <button class="btn-secondary" id="refreshEmailsBtn" style="width:auto; padding:0.6rem 1.2rem;">🔄 Actualiser les statuts</button>
+                </div>
+            </div>
+            <div class="kpi-grid" style="margin-bottom:1.2rem;">
+                <div class="kpi-card"><div class="kpi-label">Envoyés (30j)</div><div class="kpi-value" id="emailsKpiSent">—</div></div>
+                <div class="kpi-card"><div class="kpi-label">Taux de livraison</div><div class="kpi-value" id="emailsKpiDelivered">—</div></div>
+                <div class="kpi-card"><div class="kpi-label">Taux d'ouverture</div><div class="kpi-value" id="emailsKpiOpened">—</div></div>
+                <div class="kpi-card"><div class="kpi-label">Taux de clic</div><div class="kpi-value" id="emailsKpiClicked">—</div></div>
+            </div>
+            <div class="toolbar">
+                <input type="text" id="emailsSearchInput" placeholder="Rechercher par destinataire ou sujet..." style="flex:1; min-width:200px; padding:0.55rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+                <button class="filter-chip active" data-efilter="">Tous</button>
+                <button class="filter-chip" data-efilter="failed">Échecs</button>
+            </div>
+            <div id="emailsTableWrap"></div>
+            <p class="cell-muted" style="margin-top:1rem;font-size:0.75rem;">Statuts remontés depuis Brevo (envoyé, livré, ouvert, cliqué). Détecter automatiquement si un client a <em>répondu</em> à un email nécessiterait de router tes emails entrants vers un service tiers (configuration DNS supplémentaire) — pas activé ici pour ne pas toucher à ta boîte mail actuelle.</p>
+        </section>
+
         <!-- MON COMPTE -->
         <section class="view" id="view-account">
             <div class="topbar">
@@ -1630,6 +1659,7 @@ function switchView(view) {
     if (view === 'team') loadTeam();
     if (view === 'account') loadAccount();
     if (view === 'journal') loadJournal();
+    if (view === 'emails') loadEmails();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => refreshCurrentView());
@@ -2632,6 +2662,75 @@ document.querySelectorAll('#view-appointments .filter-chip').forEach(chip => {
     });
 });
 
+/* ============================================================
+   PAUSE RDV — contrôle direct pour ne pas être saturé
+   ============================================================ */
+let pauseStatusCache = null;
+
+async function loadPauseStatus() {
+    try {
+        const b = await api('/api/business-settings');
+        pauseStatusCache = { paused: !!b.appointmentsPaused, reason: b.appointmentsPauseReason || '', message: b.appointmentsPauseMessage || '' };
+        renderPauseBanner();
+    } catch (e) { /* silencieux */ }
+}
+
+function renderPauseBanner() {
+    const banner = document.getElementById('pauseStatusBanner');
+    const btn = document.getElementById('togglePauseBtn');
+    if (!banner || !btn) return;
+    if (pauseStatusCache?.paused) {
+        banner.style.display = 'block';
+        banner.innerHTML = `<div class="panel" style="border-color:#f59e0b;margin-bottom:1rem;">⏸️ <strong>Prise de RDV en pause</strong> — ${escapeHtml(pauseStatusCache.reason || 'raison non précisée')}${pauseStatusCache.message ? ' · ' + escapeHtml(pauseStatusCache.message) : ''}</div>`;
+        btn.textContent = '▶️ Réactiver les RDV';
+    } else {
+        banner.style.display = 'none';
+        btn.textContent = '⏸️ Mettre en pause';
+    }
+}
+
+document.getElementById('togglePauseBtn')?.addEventListener('click', () => {
+    if (pauseStatusCache?.paused) {
+        savePauseStatus(false, '', '');
+        return;
+    }
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header"><h3>Mettre les RDV en pause</h3><button class="drawer-close" onclick="closeDrawer()">✕</button></div>
+        <p class="cell-muted" style="margin-bottom:1rem;">Le site n'affichera plus le calendrier de prise de RDV tant que la pause est active.</p>
+        <div class="drawer-field">
+            <label>Raison</label>
+            <select id="pauseReasonSelect">
+                <option value="En vacances">🏖️ En vacances</option>
+                <option value="Malade">🤒 Malade</option>
+                <option value="Trop de projets en cours">📦 Trop de projets en cours</option>
+                <option value="En pause">⏸️ Juste en pause</option>
+            </select>
+        </div>
+        <div class="drawer-field">
+            <label>Message affiché au visiteur (optionnel)</label>
+            <textarea id="pauseMessageInput" placeholder="Ex : De retour le 15 août, laissez-moi un message et je vous répondrai dès mon retour !"></textarea>
+        </div>
+        <div class="drawer-actions"><button class="btn-primary" onclick="confirmPause()">Activer la pause</button></div>
+    `;
+    openDrawer();
+});
+
+async function confirmPause() {
+    const reason = document.getElementById('pauseReasonSelect').value;
+    const message = document.getElementById('pauseMessageInput').value.trim();
+    await savePauseStatus(true, reason, message);
+    closeDrawer();
+}
+
+async function savePauseStatus(paused, reason, message) {
+    try {
+        await api('/api/admin/appointments-pause', { method: 'PUT', body: JSON.stringify({ paused, reason, message }) });
+        pauseStatusCache = { paused, reason, message };
+        renderPauseBanner();
+        toast(paused ? 'RDV mis en pause ⏸️' : 'RDV réactivés ▶️');
+    } catch (e) { toast(e.message); }
+}
+
 document.getElementById('copyCalendarFeedBtn')?.addEventListener('click', async () => {
     try {
         const { url } = await api('/api/appointments/calendar-feed-url');
@@ -2646,6 +2745,7 @@ async function loadAppointments() {
     try {
         apptCache = await api('/api/appointments?' + params.toString());
         renderApptTable();
+        loadPauseStatus();
     } catch (e) { toast(e.message); }
 }
 
@@ -4281,6 +4381,104 @@ function parseUASimple(ua) {
     else if (/Mac OS/i.test(ua)) os = 'macOS';
     return [browser, os].filter(Boolean).join(' · ') || null;
 }
+
+/* ============================================================
+   EMAILS — journal local + statuts Brevo (envoyé/livré/ouvert/cliqué)
+   ============================================================ */
+let emailsCache = [];
+let emailsEventsByMessageId = {};
+let emailsFilter = '';
+let emailsSearch = '';
+
+async function loadEmails() {
+    try {
+        emailsCache = await api('/api/admin/emails');
+        renderEmailsTable(); // affichage immédiat avec les statuts locaux (envoyé/échec)
+        await refreshEmailEvents(); // puis on enrichit avec Brevo (peut prendre 1-2s)
+    } catch (e) { toast(e.message); }
+}
+
+async function refreshEmailEvents() {
+    try {
+        const events = await api('/api/admin/email-events?days=30');
+        emailsEventsByMessageId = {};
+        events.forEach(ev => {
+            const id = ev.messageId || ev['message-id'];
+            if (!id) return;
+            if (!emailsEventsByMessageId[id]) emailsEventsByMessageId[id] = new Set();
+            emailsEventsByMessageId[id].add(ev.event);
+        });
+        computeEmailKpis();
+        renderEmailsTable();
+    } catch (e) {
+        // Brevo non configuré ou erreur réseau : on reste sur les statuts locaux, pas bloquant
+        console.warn('Statuts Brevo indisponibles:', e.message);
+    }
+}
+
+function emailStatus(e) {
+    if (!e.sent) return { label: 'Échec', color: '#ff2f76' };
+    const evts = e.messageId ? emailsEventsByMessageId[e.messageId] : null;
+    if (!evts) return { label: 'Envoyé', color: 'var(--text-muted)' };
+    if (evts.has('hardBounces') || evts.has('softBounces') || evts.has('blocked') || evts.has('invalid') || evts.has('error')) return { label: 'Échec livraison', color: '#ff2f76' };
+    if (evts.has('clicks')) return { label: 'Cliqué', color: '#22c55e' };
+    if (evts.has('uniqueOpens') || evts.has('opens')) return { label: 'Ouvert', color: '#22c55e' };
+    if (evts.has('delivered')) return { label: 'Livré', color: '#3b82f6' };
+    return { label: 'Envoyé', color: 'var(--text-muted)' };
+}
+
+function computeEmailKpis() {
+    const recent = emailsCache.filter(e => new Date(e.sentAt) >= new Date(Date.now() - 30 * 86400000));
+    const sent = recent.filter(e => e.sent);
+    const withEvents = sent.filter(e => e.messageId && emailsEventsByMessageId[e.messageId]);
+    const delivered = withEvents.filter(e => emailsEventsByMessageId[e.messageId].has('delivered')).length;
+    const opened = withEvents.filter(e => emailsEventsByMessageId[e.messageId].has('opens') || emailsEventsByMessageId[e.messageId].has('uniqueOpens')).length;
+    const clicked = withEvents.filter(e => emailsEventsByMessageId[e.messageId].has('clicks')).length;
+    document.getElementById('emailsKpiSent').textContent = sent.length;
+    document.getElementById('emailsKpiDelivered').textContent = withEvents.length ? Math.round((delivered / withEvents.length) * 100) + '%' : '—';
+    document.getElementById('emailsKpiOpened').textContent = withEvents.length ? Math.round((opened / withEvents.length) * 100) + '%' : '—';
+    document.getElementById('emailsKpiClicked').textContent = withEvents.length ? Math.round((clicked / withEvents.length) * 100) + '%' : '—';
+}
+
+function renderEmailsTable() {
+    const wrap = document.getElementById('emailsTableWrap');
+    let list = emailsCache;
+    if (emailsFilter === 'failed') list = list.filter(e => !e.sent);
+    if (emailsSearch) { const q = emailsSearch.toLowerCase(); list = list.filter(e => [e.to, e.subject].some(f => f && f.toLowerCase().includes(q))); }
+    if (!list.length) { wrap.innerHTML = emptyStateHTML('Aucun email dans le journal.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Statut</th><th>Type</th><th>Destinataire</th><th>Sujet</th><th>Envoyé le</th></tr></thead>
+            <tbody>
+                ${list.map(e => {
+                    const s = emailStatus(e);
+                    return `<tr>
+                        <td><span style="color:${s.color};font-weight:700;font-size:0.8rem;">● ${s.label}</span></td>
+                        <td class="cell-muted">${escapeHtml(e.typeLabel || e.type)}</td>
+                        <td class="cell-muted">${escapeHtml(e.to)}</td>
+                        <td class="cell-muted">${escapeHtml((e.subject || '').slice(0, 60))}</td>
+                        <td class="cell-muted">${formatDate(e.sentAt, true)}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+document.getElementById('emailsSearchInput')?.addEventListener('input', (e) => { emailsSearch = e.target.value.trim(); renderEmailsTable(); });
+document.querySelectorAll('#view-emails .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        document.querySelectorAll('#view-emails .filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        emailsFilter = chip.dataset.efilter;
+        renderEmailsTable();
+    });
+});
+document.getElementById('refreshEmailsBtn')?.addEventListener('click', async () => {
+    toast('Actualisation des statuts...');
+    await refreshEmailEvents();
+    toast('Statuts à jour ✅');
+});
 
 async function loadJournal() {
     try {
