@@ -1,57 +1,55 @@
-const nodemailer = require('nodemailer');
 
 /* ============================================================
-   ENVOI D'EMAILS — via la boîte mail OVH contact@florian-b.fr
-   Configuration SMTP standard OVH. Le mot de passe est celui
-   de la boîte mail (pas celui du manager OVH), à renseigner
-   dans la variable d'environnement SMTP_PASSWORD.
+   ENVOI D'EMAILS — via l'API Brevo (HTTPS)
+   Railway bloque les ports SMTP classiques (465/587) sur les
+   plans gratuits/Hobby. Brevo envoie par API HTTPS, qui n'est
+   jamais bloquée. Gratuit jusqu'à 300 emails/jour.
+   Voir le README pour la procédure de configuration.
    ============================================================ */
-let transporter = null;
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
-function getTransporter() {
-    if (transporter) return transporter;
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) return null;
-    transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'ssl0.ovh.net',
-        port: Number(process.env.SMTP_PORT) || 465,
-        secure: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) === 465 : true, // SSL/TLS sur le port 465 (standard OVH Zimbra)
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASSWORD,
-        },
-        connectionTimeout: 10000, // 10s max pour établir la connexion
-        greetingTimeout: 10000,   // 10s max pour la poignée de main SMTP
-        socketTimeout: 15000,     // 15s max pour l'envoi lui-même
-    });
-    return transporter;
+function isMailerConfigured() {
+    return Boolean(process.env.BREVO_API_KEY && process.env.SENDER_EMAIL);
 }
 
 async function sendMail({ to, subject, html, replyTo }) {
-    const t = getTransporter();
-    if (!t) {
-        console.warn('⚠️  SMTP non configuré (SMTP_USER / SMTP_PASSWORD manquants) — email non envoyé:', subject);
+    if (!isMailerConfigured()) {
+        console.warn('⚠️  Brevo non configuré (BREVO_API_KEY / SENDER_EMAIL manquants) — email non envoyé:', subject);
         return { sent: false, reason: 'smtp_not_configured' };
     }
     try {
-        // Filet de sécurité supplémentaire : si malgré les timeouts du transporteur
-        // l'envoi ne répond toujours pas sous 20s, on abandonne proprement plutôt
-        // que de bloquer la requête indéfiniment.
-        await Promise.race([
-            t.sendMail({
-                from: `"Florian B." <${process.env.SMTP_USER}>`,
-                to,
-                subject,
-                html,
-                replyTo: replyTo || undefined,
-            }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Délai dépassé (20s) — le serveur SMTP ne répond pas')), 20000)),
-        ]);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s max
+        let res;
+        try {
+            res = await fetch(BREVO_API_URL, {
+                method: 'POST',
+                headers: {
+                    'api-key': process.env.BREVO_API_KEY,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    sender: { name: process.env.SENDER_NAME || 'Florian B.', email: process.env.SENDER_EMAIL },
+                    to: [{ email: to }],
+                    subject,
+                    htmlContent: html,
+                    ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+                }),
+                signal: controller.signal,
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
+        if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(errBody.message || `Erreur Brevo (${res.status})`);
+        }
         return { sent: true };
     } catch (err) {
         console.error('❌ Échec envoi email:', err.message);
         let reason = err.message;
-        if (err.code === 'EAUTH') reason = 'Authentification SMTP refusée — vérifie SMTP_USER et SMTP_PASSWORD';
-        if (err.code === 'ECONNECTION' || err.code === 'ETIMEDOUT') reason = 'Connexion au serveur SMTP impossible — vérifie SMTP_HOST et SMTP_PORT';
+        if (err.name === 'AbortError') reason = 'Délai dépassé (20s) — Brevo ne répond pas';
         return { sent: false, reason };
     }
 }
@@ -118,7 +116,7 @@ function leadConfirmationEmail(lead) {
 
 function leadNotificationEmail(lead) {
     return {
-        to: process.env.NOTIFY_EMAIL || process.env.SMTP_USER,
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
         subject: `🔔 Nouveau lead : ${lead.name || lead.email}`,
         html: brandEmailWrapper(`
             <p style="margin:0 0 16px; font-size:18px; font-weight:700; color:#fff;">Nouveau message reçu</p>
@@ -150,7 +148,7 @@ function appointmentConfirmationEmail(appt) {
 
 function appointmentNotificationEmail(appt) {
     return {
-        to: process.env.NOTIFY_EMAIL || process.env.SMTP_USER,
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
         subject: `📅 Nouvelle demande de RDV : ${appt.email}`,
         html: brandEmailWrapper(`
             <p style="margin:0 0 16px; font-size:18px; font-weight:700; color:#fff;">Nouvelle demande de rendez-vous</p>
@@ -173,7 +171,7 @@ function leadReplyEmail(lead, message) {
             <div style="white-space:pre-wrap;">${message}</div>
             <p style="margin:24px 0 0;">Florian B.<br><span style="color:#888; font-size:13px;">Graphiste & Directeur Artistique</span></p>
         `),
-        replyTo: process.env.SMTP_USER,
+        replyTo: process.env.SENDER_EMAIL,
     };
 }
 
@@ -337,7 +335,7 @@ function invoiceEmail(invoice, business = {}) {
 function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
     const monthName = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
     return {
-        to: process.env.NOTIFY_EMAIL || process.env.SMTP_USER,
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
         subject: `📊 Rapport mensuel — ${monthName}`,
         html: brandEmailWrapper(`
             <p style="margin:0 0 20px; font-size:20px; font-weight:700; color:#ffffff;">Votre mois en résumé</p>
@@ -358,7 +356,7 @@ function analyticsAlertEmail(alert, value) {
     const metricLabel = GOAL_METRIC_LABELS[alert.metric] || alert.metric;
     const conditionLabel = alert.condition === 'above' ? 'dépassé' : 'passé en dessous de';
     return {
-        to: alert.notifyEmail || process.env.NOTIFY_EMAIL || process.env.SMTP_USER,
+        to: alert.notifyEmail || process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
         subject: `🔔 Alerte Analytics — ${metricLabel} ${conditionLabel} ${alert.threshold}`,
         html: brandEmailWrapper(`
             <p style="margin:0 0 16px; font-size:20px; font-weight:700; color:#ffffff;">Alerte déclenchée</p>

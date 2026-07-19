@@ -65,13 +65,44 @@ Dashboard : **http://localhost:4000/dashboard**
 | `ADMIN_PASSWORD_HASH` | Généré avec `npm run hash-password -- "motdepasse"` |
 | `ALLOWED_ORIGIN` | `https://florian-b.fr,https://www.florian-b.fr` |
 | `PORT` | Laisse Railway le définir automatiquement, sinon `4000` |
-| `SMTP_HOST` | `ssl0.ovh.net` (boîte mail Zimbra OVH) |
-| `SMTP_PORT` | `465` |
-| `SMTP_USER` | `contact@florian-b.fr` |
-| `SMTP_PASSWORD` | Le mot de passe de cette boîte mail |
-| `NOTIFY_EMAIL` | Adresse qui reçoit les notifications (par défaut = `SMTP_USER`) |
+| `BREVO_API_KEY` | Ta clé API Brevo — voir section 4bis |
+| `SENDER_EMAIL` | `contact@florian-b.fr` (doit être vérifié dans Brevo) |
+| `SENDER_NAME` | `Florian B.` |
+| `NOTIFY_EMAIL` | Adresse qui reçoit les notifications (par défaut = `SENDER_EMAIL`) |
 | `GA_PROPERTY_ID` | *(optionnel)* Property ID Google Analytics — voir section 7 |
 | `GA_SERVICE_ACCOUNT_JSON` | *(optionnel)* Clé de compte de service Google — voir section 7 |
+
+---
+
+## 4bis. Configurer l'envoi d'emails (Brevo)
+
+⚠️ **Railway bloque les ports SMTP classiques (465/587) sur les plans gratuits/Hobby.** C'est pour ça qu'on utilise **Brevo**, qui envoie par API HTTPS (jamais bloquée) — gratuit jusqu'à 300 emails/jour, largement suffisant.
+
+### Étape 1 — Créer un compte Brevo
+1. Va sur [brevo.com](https://www.brevo.com) → **"S'inscrire gratuitement"** (aucune carte bancaire demandée)
+2. Confirme ton email d'inscription
+
+### Étape 2 — Vérifier ton expéditeur
+1. Dans Brevo → menu ☰ → **"Expéditeurs, domaines et dédiabolisation"** (ou "Senders, Domains & Dedicated IPs")
+2. Onglet **"Expéditeurs"** → **"Ajouter un expéditeur"**
+3. Renseigne `contact@florian-b.fr` comme adresse et "Florian B." comme nom
+4. Un email de confirmation part sur `contact@florian-b.fr` → clique le lien de vérification dedans
+
+### Étape 3 — Générer ta clé API
+1. Dans Brevo → clique sur ton profil (en haut à droite) → **"SMTP & API"**
+2. Onglet **"API Keys"** → **"Générer une nouvelle clé API"**
+3. Nomme-la (ex: `dashboard-florianb`) → copie la clé générée (elle ne sera affichée qu'une fois)
+
+### Étape 4 — Configurer Railway
+Ajoute dans Railway → Variables :
+
+| Nom | Valeur |
+|---|---|
+| `BREVO_API_KEY` | la clé copiée à l'étape 3 |
+| `SENDER_EMAIL` | `contact@florian-b.fr` |
+| `SENDER_NAME` | `Florian B.` |
+
+Railway redémarre automatiquement — les emails (confirmations, notifications, devis, factures, alertes) passent désormais par Brevo.
 
 ---
 
