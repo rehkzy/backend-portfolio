@@ -62,13 +62,97 @@
     .login-logo { width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-display); font-weight: 800; margin-bottom: 1.2rem; box-shadow: 0 6px 20px var(--accent-glow); }
     .login-card h1 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; margin-bottom: 0.3rem; }
     .login-card p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.6rem; }
-    .field { margin-bottom: 1rem; }
-    .field label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.4px; }
-    .field input { width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-    .field input:focus { border-color: var(--accent); }
     .btn-primary { width: 100%; padding: 0.75rem; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 700; font-size: 0.88rem; transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease); box-shadow: 0 4px 16px var(--accent-glow); }
     .btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 6px 22px var(--accent-glow); }
     .login-error { background: var(--danger-bg); color: var(--danger); padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
+
+    /* ============================================================
+       CHAMPS DE FORMULAIRE — système unifié (inspiré Shopify/Linear)
+       Un seul jeu de règles pour TOUS les champs du dashboard : login,
+       tiroirs (.drawer-field), cartes d'édition (.edit-card-fields),
+       barres de recherche, filtres. Même hauteur, même radius, mêmes
+       états hover/focus/disabled — la cohérence est le détail qui
+       fait qu'un dashboard a l'air pro.
+       ============================================================ */
+    .field, .drawer-field { margin-bottom: 1.15rem; }
+    .field label, .drawer-field label, .edit-card-label {
+        display: flex; align-items: center; gap: 0.4rem;
+        font-size: 0.7rem; font-weight: 700; color: var(--text-muted);
+        margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .field-hint { display: block; margin-top: 0.4rem; font-size: 0.74rem; color: var(--text-muted); line-height: 1.5; }
+    .field-required::after { content: '*'; color: var(--accent); font-weight: 800; }
+
+    .field input, .field select,
+    .drawer-field input, .drawer-field select, .drawer-field textarea,
+    .edit-card-fields input, .edit-card-fields textarea,
+    .search-box input,
+    .dash-input, .dash-select, .dash-textarea {
+        width: 100%; appearance: none; -webkit-appearance: none;
+        padding: 0.68rem 0.9rem; border: 1.5px solid var(--border); border-radius: 10px;
+        background: var(--bg); color: var(--text); font-family: inherit;
+        font-size: 0.86rem; line-height: 1.4; outline: none;
+        transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), background 0.15s var(--ease);
+    }
+    .field textarea, .drawer-field textarea, .edit-card-fields textarea, .dash-textarea {
+        resize: vertical; min-height: 80px; line-height: 1.6;
+    }
+    .field input::placeholder, .field textarea::placeholder,
+    .drawer-field input::placeholder, .drawer-field textarea::placeholder,
+    .edit-card-fields input::placeholder, .edit-card-fields textarea::placeholder,
+    .search-box input::placeholder, .dash-input::placeholder, .dash-textarea::placeholder {
+        color: var(--text-muted); opacity: 0.7;
+    }
+    .field input:hover:not(:disabled):not(:focus), .field select:hover:not(:disabled):not(:focus),
+    .drawer-field input:hover:not(:disabled):not(:focus), .drawer-field select:hover:not(:disabled):not(:focus), .drawer-field textarea:hover:not(:disabled):not(:focus),
+    .edit-card-fields input:hover:not(:disabled):not(:focus), .edit-card-fields textarea:hover:not(:disabled):not(:focus),
+    .dash-input:hover:not(:disabled):not(:focus), .dash-select:hover:not(:disabled):not(:focus), .dash-textarea:hover:not(:disabled):not(:focus) {
+        border-color: var(--text-muted);
+    }
+    .field input:focus, .field select:focus,
+    .drawer-field input:focus, .drawer-field select:focus, .drawer-field textarea:focus,
+    .edit-card-fields input:focus, .edit-card-fields textarea:focus,
+    .search-box:focus-within,
+    .dash-input:focus, .dash-select:focus, .dash-textarea:focus {
+        border-color: var(--accent); background: var(--surface);
+        box-shadow: 0 0 0 3.5px var(--accent-glow);
+    }
+    .field input:disabled, .field select:disabled,
+    .drawer-field input:disabled, .drawer-field select:disabled, .drawer-field textarea:disabled,
+    .edit-card-fields input:disabled, .edit-card-fields textarea:disabled,
+    .dash-input:disabled, .dash-select:disabled, .dash-textarea:disabled {
+        opacity: 0.55; cursor: not-allowed; background: var(--surface-2);
+    }
+    .field input[readonly], .drawer-field input[readonly] { background: var(--surface-2); color: var(--text-muted); cursor: default; }
+    .field input.invalid, .drawer-field input.invalid, .dash-input.invalid {
+        border-color: var(--danger); background: var(--danger-bg);
+    }
+    .field input.invalid:focus, .drawer-field input.invalid:focus, .dash-input.invalid:focus { box-shadow: 0 0 0 3.5px rgba(179,38,30,0.16); }
+
+    /* Selects : chevron custom, jamais le rendu natif du navigateur */
+    .field select, .drawer-field select, .dash-select {
+        padding-right: 2.4rem; cursor: pointer;
+        background-repeat: no-repeat; background-position: right 0.85rem center; background-size: 11px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236c6c72' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    }
+    [data-theme="dark"] .field select, [data-theme="dark"] .drawer-field select, [data-theme="dark"] .dash-select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394949c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    }
+
+    /* Cases à cocher : coloris de marque, sans changer le HTML existant */
+    input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+    input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allowed; opacity: 0.5; }
+    label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { cursor: pointer; transition: color 0.15s; }
+    label:has(> input[type="checkbox"]):hover, label:has(> input[type="radio"]):hover { color: var(--text); }
+
+    /* Champs numériques / date : cohérence des spinners natifs */
+    input[type="number"] { font-variant-numeric: tabular-nums; }
+    input[type="date"], input[type="datetime-local"] { color-scheme: light; }
+    [data-theme="dark"] input[type="date"], [data-theme="dark"] input[type="datetime-local"] { color-scheme: dark; }
+
+    /* Groupe de champs sur une ligne (ex : délai + validité) */
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+    @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
 
     /* ============ SHELL ============ */
     /* Cadre applicatif à hauteur fixe (style Gmail/Notion/Shopify admin) :
@@ -140,9 +224,10 @@
 
     /* ============ TABLE ============ */
     .toolbar { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-    .search-box { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.8rem; }
+    .search-box { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 0.55rem; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 0.62rem 0.9rem; transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), background 0.15s var(--ease); }
+    .search-box:hover { border-color: var(--text-muted); }
     .search-box svg { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
-    .search-box input { border: none; background: none; outline: none; color: var(--text); font-size: 0.85rem; width: 100%; }
+    .search-box input { border: none; background: none; outline: none; color: var(--text); font-size: 0.86rem; width: 100%; padding: 0; box-shadow: none; }
     .filter-chip { padding: 0.5rem 0.9rem; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); font-size: 0.78rem; font-weight: 600; color: var(--text-muted); transition: 0.2s; }
     .reply-template-btn { padding: 0.4rem 0.8rem; border-radius: 100px; border: 1px solid var(--border); background: var(--bg); font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: 0.15s; }
     .reply-template-btn:hover { border-color: var(--accent); color: var(--text); }
@@ -313,7 +398,6 @@
     .edit-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.2rem; margin-bottom: 0.8rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: var(--shadow); }
     .edit-card-thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--bg); flex-shrink: 0; border: 1px solid var(--border); }
     .edit-card-fields { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
-    .edit-card-fields input, .edit-card-fields textarea { width: 100%; padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); font-size: 0.83rem; font-family: inherit; }
     .edit-card-fields textarea { resize: vertical; min-height: 50px; }
     .edit-card-actions { display: flex; flex-direction: column; gap: 0.4rem; flex-shrink: 0; }
     .edit-card-actions button { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.15s; }
@@ -349,7 +433,6 @@
     .drawer-field { margin-bottom: 1.1rem; }
     .drawer-field label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem; }
     .drawer-field .value { font-size: 0.9rem; padding: 0.6rem 0.8rem; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); word-break: break-word; }
-    .drawer-field select, .drawer-field textarea { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.85rem; outline: none; }
     .drawer-field textarea { resize: vertical; min-height: 80px; }
     .drawer-actions { display: flex; gap: 0.6rem; margin-top: 1.4rem; }
     .btn-secondary { flex: 1; padding: 0.65rem; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 600; font-size: 0.82rem; }
@@ -713,7 +796,7 @@
             <div class="topbar">
                 <h2>Analytics</h2>
                 <div class="topbar-actions">
-                    <select id="analyticsDaysSelect" style="padding:0.5rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+                    <select id="analyticsDaysSelect" class="dash-select" style="width:auto;">
                         <option value="7">7 derniers jours</option>
                         <option value="28" selected>28 derniers jours</option>
                         <option value="90">90 derniers jours</option>
@@ -1008,7 +1091,7 @@
             </div>
 
             <div class="toolbar">
-                <select id="eventsTypeFilter" style="padding:0.5rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.82rem;">
+                <select id="eventsTypeFilter" class="dash-select" style="width:auto;">
                     <option value="">Tous les types</option>
                 </select>
             </div>
@@ -1179,7 +1262,7 @@
                 <h2>Bibliothèque de visuels</h2>
             </div>
             <div class="toolbar">
-                <input type="text" id="mediaSearchInput" placeholder="Rechercher une image..." style="flex:1; min-width:200px; padding:0.55rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+                <input type="text" id="mediaSearchInput" class="dash-input" placeholder="Rechercher une image..." style="flex:1; min-width:200px;">
                 <button class="filter-chip active" data-mfilter="">Toutes</button>
                 <button class="filter-chip" data-mfilter="unused">Non utilisées</button>
             </div>
@@ -1224,7 +1307,7 @@
                 <h2>Clients</h2>
             </div>
             <div class="toolbar">
-                <input type="text" id="clientsSearchInput" placeholder="Rechercher un client (nom, email, tag)..." style="flex:1; min-width:200px; padding:0.55rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+                <input type="text" id="clientsSearchInput" class="dash-input" placeholder="Rechercher un client (nom, email, tag)..." style="flex:1; min-width:200px;">
             </div>
             <div id="clientsTableWrap"></div>
         </section>
@@ -1409,7 +1492,7 @@
                 <div class="kpi-card"><div class="kpi-label">Taux de clic</div><div class="kpi-value" id="emailsKpiClicked">—</div></div>
             </div>
             <div class="toolbar">
-                <input type="text" id="emailsSearchInput" placeholder="Rechercher par destinataire ou sujet..." style="flex:1; min-width:200px; padding:0.55rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+                <input type="text" id="emailsSearchInput" class="dash-input" placeholder="Rechercher par destinataire ou sujet..." style="flex:1; min-width:200px;">
                 <button class="filter-chip active" data-efilter="">Tous</button>
                 <button class="filter-chip" data-efilter="failed">Échecs</button>
             </div>
