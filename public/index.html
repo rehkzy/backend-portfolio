@@ -314,6 +314,43 @@
     .kpi-trend.down { color: var(--danger); }
     .kpi-trend.flat { color: var(--text-muted); }
 
+    /* ============================================================
+       INFOGRAPHIES — donuts, sparklines, anneaux de progression
+       Remplacent les listes de texte par des visuels façon Shopify :
+       un chiffre + une forme, jamais une phrase.
+       ============================================================ */
+    .chart-donut-wrap { position: relative; width: 148px; height: 148px; margin: 0 auto 1.1rem; }
+    .chart-donut-wrap canvas { width: 100% !important; height: 100% !important; }
+    .chart-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+    .chart-donut-center span { font-family: var(--font-display); font-size: 1.7rem; font-weight: 800; line-height: 1; }
+    .chart-donut-center small { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); font-weight: 700; margin-top: 0.25rem; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+    .legend-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 100px; background: var(--surface-2); border: 1px solid var(--border); font-size: 0.74rem; font-weight: 700; color: var(--text); }
+    .legend-chip .lc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-chip .lc-count { color: var(--text-muted); font-weight: 700; }
+
+    .kpi-sparkline { display: block; width: 100%; height: 34px; margin-top: 0.6rem; }
+    .kpi-card-ring .kpi-label { margin-bottom: 0.2rem; }
+    .chart-ring-wrap { position: relative; width: 88px; height: 88px; margin: 0.3rem auto 0; }
+    .chart-ring-wrap canvas { width: 100% !important; height: 100% !important; }
+    .chart-ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; pointer-events: none; }
+
+    .compare-chips { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1rem; }
+    .compare-chip { flex: 1; min-width: 140px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem; }
+    .compare-chip .cc-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem; }
+    .compare-chip .cc-value { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; }
+    .compare-chip .cc-delta { font-size: 0.75rem; font-weight: 700; margin-left: 0.4rem; }
+    .compare-chip .cc-delta.up { color: #22c55e; }
+    .compare-chip .cc-delta.down { color: #ff2f76; }
+    .compare-chip .cc-delta.flat { color: var(--text-muted); }
+
+    .mini-bar-list { display: flex; flex-direction: column; gap: 0.7rem; }
+    .mini-bar-row { display: grid; grid-template-columns: 108px 1fr 52px; align-items: center; gap: 0.7rem; }
+    .mini-bar-row .mb-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini-bar-row .mb-track { height: 8px; border-radius: 100px; background: var(--surface-2); overflow: hidden; }
+    .mini-bar-row .mb-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+    .mini-bar-row .mb-value { font-size: 0.78rem; font-weight: 700; text-align: right; }
+
     .goal-card, .alert-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.3rem; margin-bottom: 0.8rem; }
     .goal-progress-bar { width: 100%; height: 8px; border-radius: 100px; background: var(--bg); overflow: hidden; margin: 0.6rem 0; }
     .goal-progress-fill { height: 100%; background: var(--accent); border-radius: 100px; transition: width 0.4s var(--ease); }
@@ -763,6 +800,7 @@
                 <div class="kpi-card hero">
                     <div class="kpi-label">Nouveaux leads (7 derniers jours)</div>
                     <div class="kpi-value" id="kpiNewLeads">—</div>
+                    <canvas id="kpiSparkline" class="kpi-sparkline"></canvas>
                     <div class="kpi-delta up" id="kpiNewLeadsDelta"></div>
                 </div>
                 <div class="kpi-card">
@@ -773,9 +811,12 @@
                     <div class="kpi-label">RDV en attente</div>
                     <div class="kpi-value" id="kpiPendingAppt">—</div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card kpi-card-ring">
                     <div class="kpi-label">Taux de conversion</div>
-                    <div class="kpi-value" id="kpiConversion">—</div>
+                    <div class="chart-ring-wrap">
+                        <canvas id="conversionRing"></canvas>
+                        <div class="chart-ring-center" id="kpiConversion">—</div>
+                    </div>
                 </div>
             </div>
 
@@ -786,7 +827,11 @@
                 </div>
                 <div class="panel">
                     <h3>Répartition par statut</h3>
-                    <div id="statusBreakdown"></div>
+                    <div class="chart-donut-wrap">
+                        <canvas id="statusDonut"></canvas>
+                        <div class="chart-donut-center"><span id="statusDonutTotal">0</span><small>leads</small></div>
+                    </div>
+                    <div class="chart-legend" id="statusBreakdown"></div>
                 </div>
             </div>
         </section>
@@ -1298,6 +1343,10 @@
                     <div class="kpi-value" id="quotesTotalPending">—</div>
                 </div>
             </div>
+            <div class="panel" style="margin-bottom:1.2rem;">
+                <h3 style="margin:0 0 1rem;">Par statut</h3>
+                <div class="mini-bar-list" id="quotesStatusBars"></div>
+            </div>
             <div id="quotesTableWrap"></div>
         </section>
 
@@ -1342,6 +1391,10 @@
                     <div class="kpi-label">En attente</div>
                     <div class="kpi-value" id="invoicesTotalPending">—</div>
                 </div>
+            </div>
+            <div class="panel" style="margin-bottom:1.2rem;">
+                <h3 style="margin:0 0 1rem;">Par statut</h3>
+                <div class="mini-bar-list" id="invoicesStatusBars"></div>
             </div>
             <div id="invoicesTableWrap"></div>
         </section>
@@ -1416,6 +1469,7 @@
             </div>
             <div class="panel" style="margin-bottom:1.2rem;">
                 <h3 style="margin:0 0 1rem;">Comparaisons</h3>
+                <canvas id="treasuryCompareChart" height="90"></canvas>
                 <div id="treasuryComparisonWrap"></div>
             </div>
             <div class="panel" style="margin-bottom:1.2rem;">
@@ -1551,6 +1605,10 @@ let currentView = 'overview';
 let leadsCache = [];
 let apptCache = [];
 let leadsChartInstance = null;
+let statusDonutInstance = null;
+let kpiSparklineInstance = null;
+let conversionRingInstance = null;
+let treasuryCompareChartInstance = null;
 let gaChartInstance = null;
 let gaRealtimeInterval = null;
 
@@ -1705,6 +1763,10 @@ document.getElementById('themeToggle').addEventListener('click', () => {
     document.body.setAttribute('data-theme', next);
     localStorage.setItem('fb_theme', next);
     if (leadsChartInstance) renderLeadsChart(leadsChartInstance._lastData || []);
+    if (typeof statusDonutInstance !== 'undefined' && statusDonutInstance) renderStatusDonut(statusDonutInstance._lastData || []);
+    if (typeof kpiSparklineInstance !== 'undefined' && kpiSparklineInstance) renderKpiSparkline(kpiSparklineInstance._lastData || []);
+    if (typeof conversionRingInstance !== 'undefined' && conversionRingInstance) renderConversionRing(conversionRingInstance._lastData || 0);
+    if (typeof treasuryCompareChartInstance !== 'undefined' && treasuryCompareChartInstance) renderTreasuryCompareChart(treasuryCompareChartInstance._lastData || null);
 });
 
 /* ---------------- NAVIGATION ---------------- */
@@ -2497,30 +2559,96 @@ async function loadOverview() {
         document.getElementById('kpiTotalLeads').textContent = s.totalLeads;
         document.getElementById('kpiPendingAppt').textContent = s.pendingAppointments;
         const rate = s.totalLeads ? Math.round((s.wonLeads / s.totalLeads) * 100) : 0;
-        document.getElementById('kpiConversion').textContent = rate + '%';
-        document.getElementById('kpiNewLeadsDelta').textContent = s.chatOpens ? `${s.chatOpens} ouvertures du chat au total` : '';
+        document.getElementById('kpiNewLeadsDelta').textContent = s.chatOpens ? `${s.chatOpens} ouvertures du chat` : '';
 
         renderLeadsChart(s.byDay);
-
-        const colors = { new: 'var(--info)', contacted: 'var(--warning)', won: 'var(--success)', lost: 'var(--danger)' };
-        const labels = { new: 'Nouveau', contacted: 'Contacté', won: 'Gagné', lost: 'Perdu' };
-        const wrap = document.getElementById('statusBreakdown');
-        if (!s.byStatus.length) {
-            wrap.innerHTML = emptyStateHTML('Aucune donnée pour le moment');
-        } else {
-            wrap.innerHTML = s.byStatus.map(row => `
-                <div class="status-row">
-                    <span><span class="dot" style="background:${colors[row.status] || '#999'}"></span>${labels[row.status] || row.status}</span>
-                    <strong>${row.c}</strong>
-                </div>
-            `).join('');
-        }
+        renderKpiSparkline(s.byDay);
+        renderConversionRing(rate);
+        renderStatusDonut(s.byStatus);
 
         document.getElementById('leadsBadge').style.display = s.newLeads7d ? 'inline-flex' : 'none';
         document.getElementById('leadsBadge').textContent = s.newLeads7d;
         document.getElementById('apptBadge').style.display = s.pendingAppointments ? 'inline-flex' : 'none';
         document.getElementById('apptBadge').textContent = s.pendingAppointments;
     } catch (e) { toast(e.message); }
+}
+
+/* ---- Anneau de progression (taux de conversion) ---- */
+function renderConversionRing(pct) {
+    const el = document.getElementById('conversionRing');
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const track = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    if (conversionRingInstance) conversionRingInstance.destroy();
+    conversionRingInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: { datasets: [{ data: [pct, Math.max(0, 100 - pct)], backgroundColor: ['#da2c48', track], borderWidth: 0 }] },
+        options: { cutout: '76%', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 500 } },
+    });
+    conversionRingInstance._lastData = pct;
+    document.getElementById('kpiConversion').textContent = pct + '%';
+}
+
+/* ---- Sparkline (mini courbe dans la carte KPI héro) ---- */
+function renderKpiSparkline(byDay) {
+    const el = document.getElementById('kpiSparkline');
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    const last7 = byDay.slice(-7);
+    if (kpiSparklineInstance) kpiSparklineInstance.destroy();
+    kpiSparklineInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: last7.map(r => r.d), datasets: [{ data: last7.map(r => r.c), borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.22)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, animation: { duration: 500 } },
+    });
+    kpiSparklineInstance._lastData = byDay;
+}
+
+/* ---- Donut de répartition par statut + légende compacte (chips) ---- */
+function renderStatusDonut(byStatus) {
+    const el = document.getElementById('statusDonut');
+    const legend = document.getElementById('statusBreakdown');
+    const totalEl = document.getElementById('statusDonutTotal');
+    if (!el || !legend) return;
+    const colors = { new: '#35548f', contacted: '#8a5a10', won: '#276749', lost: '#b3261e' };
+    const labels = { new: 'Nouveau', contacted: 'Contacté', won: 'Gagné', lost: 'Perdu' };
+    const total = byStatus.reduce((s, r) => s + r.c, 0);
+    if (totalEl) totalEl.textContent = total;
+    if (!byStatus.length) {
+        legend.innerHTML = emptyStateHTML('Aucune donnée pour le moment');
+        if (statusDonutInstance) { statusDonutInstance.destroy(); statusDonutInstance = null; }
+        return;
+    }
+    const ctx = el.getContext('2d');
+    if (statusDonutInstance) statusDonutInstance.destroy();
+    statusDonutInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: byStatus.map(r => labels[r.status] || r.status),
+            datasets: [{ data: byStatus.map(r => r.c), backgroundColor: byStatus.map(r => colors[r.status] || '#999'), borderWidth: 2, borderColor: getComputedStyle(document.body).getPropertyValue('--surface') || '#fff' }],
+        },
+        options: { cutout: '68%', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, animation: { duration: 500 } },
+    });
+    statusDonutInstance._lastData = byStatus;
+    legend.innerHTML = byStatus.map(row => `
+        <span class="legend-chip"><span class="lc-dot" style="background:${colors[row.status] || '#999'}"></span>${labels[row.status] || row.status} <span class="lc-count">${row.c}</span></span>
+    `).join('');
+}
+
+/* ---- Liste de mini-barres (répartition par statut, sans donut, pour vues secondaires) ---- */
+function renderMiniBarList(containerId, rows) {
+    const wrap = document.getElementById(containerId);
+    if (!wrap) return;
+    const total = rows.reduce((s, r) => s + r.count, 0) || 1;
+    if (!rows.some(r => r.count)) { wrap.innerHTML = emptyStateHTML('Aucune donnée pour le moment'); return; }
+    wrap.innerHTML = rows.map(r => `
+        <div class="mini-bar-row">
+            <span class="mb-label">${escapeHtml(r.label)}</span>
+            <div class="mb-track"><div class="mb-fill" style="width:${Math.round((r.count / total) * 100)}%; background:${r.color || 'linear-gradient(90deg,var(--accent),var(--accent-2))'};"></div></div>
+            <span class="mb-value">${r.count}</span>
+        </div>
+    `).join('');
 }
 
 function renderLeadsChart(byDay) {
@@ -3851,17 +3979,49 @@ async function deleteExpense(id) {
 function renderTreasuryComparison(c) {
     const wrap = document.getElementById('treasuryComparisonWrap');
     const pctChange = (a, b) => b > 0 ? Math.round(((a - b) / b) * 100) : (a > 0 ? 100 : 0);
-    const row = (label, current, prev, unit = '€') => {
+    const chip = (label, current, prev, unit) => {
         const pct = pctChange(current, prev);
-        const color = pct > 0 ? '#22c55e' : pct < 0 ? '#ff2f76' : 'var(--text-muted)';
-        return `<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
-            <span>${label}</span>
-            <span>${current.toFixed(unit === '€' ? 0 : 0)}${unit} <span style="color:${color};font-weight:700;">(${pct >= 0 ? '+' : ''}${pct}%)</span></span>
+        const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+        return `<div class="compare-chip">
+            <div class="cc-label">${label}</div>
+            <div><span class="cc-value">${current.toFixed(0)}${unit}</span><span class="cc-delta ${cls}">${pct >= 0 ? '+' : ''}${pct}%</span></div>
         </div>`;
     };
-    wrap.innerHTML = row('CA — ce mois vs mois dernier', c.revenueThisMonth, c.revenueLastMonth)
-        + row('CA — cette année vs année dernière', c.revenueThisYear, c.revenueLastYear)
-        + row('Leads — ce mois vs mois dernier', c.leadsThisMonth, c.leadsLastMonth, '');
+    wrap.innerHTML = `<div class="compare-chips">
+        ${chip('CA — ce mois', c.revenueThisMonth, c.revenueLastMonth, ' €')}
+        ${chip('CA — cette année', c.revenueThisYear, c.revenueLastYear, ' €')}
+        ${chip('Leads — ce mois', c.leadsThisMonth, c.leadsLastMonth, '')}
+    </div>`;
+    renderTreasuryCompareChart(c);
+}
+
+function renderTreasuryCompareChart(c) {
+    const el = document.getElementById('treasuryCompareChart');
+    if (!el || !c) return;
+    const ctx = el.getContext('2d');
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const textColor = isDark ? '#96969e' : '#6b6b74';
+    if (treasuryCompareChartInstance) treasuryCompareChartInstance.destroy();
+    treasuryCompareChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['CA du mois', "CA de l'année"],
+            datasets: [
+                { label: 'Période précédente', data: [c.revenueLastMonth, c.revenueLastYear], backgroundColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.1)', borderRadius: 6 },
+                { label: 'Période actuelle', data: [c.revenueThisMonth, c.revenueThisYear], backgroundColor: '#da2c48', borderRadius: 6 },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, boxWidth: 10, usePointStyle: true } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+                y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
+            },
+        },
+    });
+    treasuryCompareChartInstance._lastData = c;
 }
 
 function renderTreasuryChart(monthly) {
@@ -3943,6 +4103,11 @@ async function loadQuotes() {
         document.getElementById('quotesTotalAll').textContent = total.toFixed(2) + ' €';
         document.getElementById('quotesTotalPaid').textContent = paid.toFixed(2) + ' €';
         document.getElementById('quotesTotalPending').textContent = pending.toFixed(2) + ' €';
+        renderMiniBarList('quotesStatusBars', [
+            { label: 'Brouillon', count: quotesCache.filter(q => q.status === 'draft').length, color: 'var(--info)' },
+            { label: 'Envoyé', count: quotesCache.filter(q => q.status === 'sent').length, color: 'var(--warning)' },
+            { label: 'Payé', count: quotesCache.filter(q => q.status === 'paid').length, color: 'var(--success)' },
+        ]);
         renderQuotesTable();
     } catch (e) { toast(e.message); }
 }
@@ -4943,6 +5108,11 @@ async function loadInvoices() {
         document.getElementById('invoicesTotalAll').textContent = total.toFixed(2) + ' €';
         document.getElementById('invoicesTotalPaid').textContent = paid.toFixed(2) + ' €';
         document.getElementById('invoicesTotalPending').textContent = pending.toFixed(2) + ' €';
+        renderMiniBarList('invoicesStatusBars', [
+            { label: 'Brouillon', count: invoicesCache.filter(i => i.status === 'draft').length, color: 'var(--info)' },
+            { label: 'Envoyée', count: invoicesCache.filter(i => i.status === 'sent').length, color: 'var(--warning)' },
+            { label: 'Payée', count: invoicesCache.filter(i => i.status === 'paid').length, color: 'var(--success)' },
+        ]);
         renderInvoicesTable();
     } catch (e) { toast(e.message); }
 }
