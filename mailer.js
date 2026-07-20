@@ -123,8 +123,8 @@ function emailWrapper(innerHtml, { preheader = '', accentLine = true } = {}) {
     from { opacity:0; }
     to   { opacity:1; }
   }
-  .anim-fadeup { animation: fadeUp 0.6s ease 0.15s forwards; opacity:0; }
-  .anim-fadein { animation: fadeIn 0.8s ease 0.05s forwards; opacity:0; }
+  .anim-fadeup { animation: fadeUp 0.6s ease 0.15s both; }
+  .anim-fadein { animation: fadeIn 0.8s ease 0.05s both; }
   .btn-main:hover { opacity:0.88 !important; }
   @media only screen and (max-width:600px) {
     .email-card  { border-radius:0 !important; }
