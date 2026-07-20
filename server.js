@@ -639,7 +639,10 @@ app.get('/api/leads', auth, (req, res) => {
     if (!includeArchived) leads = leads.filter(l => !l.archived);
     if (status) leads = leads.filter(l => l.status === status);
     if (q) { const lq = q.toLowerCase(); leads = leads.filter(l => [l.name, l.email, l.message].some(f => f && f.toLowerCase().includes(lq))); }
-    leads = leads.map(l => ({ ...l, priorityScore: computeLeadPriorityScore(l) }));
+    leads = leads.map(l => {
+        const priorityScore = computeLeadPriorityScore(l);
+        return { ...l, priorityScore, temperature: leadTemperature(priorityScore) };
+    });
     res.json(leads.reverse());
 });
 
@@ -649,12 +652,40 @@ app.patch('/api/leads/:id', auth, canWrite, (req, res) => {
     const lead = db.get('leads').find({ id });
     if (!lead.value()) return res.status(404).json({ error: 'Lead introuvable' });
     const prev = lead.value();
-    if (status) lead.assign({ status }).write();
+    if (status) {
+        const patch = { status };
+        if (status === 'contacted' && !prev.contactedAt) patch.contactedAt = now();
+        lead.assign(patch).write();
+    }
     if (notes !== undefined) lead.assign({ notes }).write();
     if (status && status !== prev.status)
         logTeamAction(req, 'lead_status_changed', `Lead #${id} (${prev.email}) : ${prev.status} → ${status}`, id);
     if (notes !== undefined)
         logTeamAction(req, 'lead_note_edited', `Lead #${id} (${prev.email})`, id);
+
+    // Lead passé en "Gagné" : on prépare un devis brouillon pour gagner du temps — jamais envoyé
+    // au client automatiquement, juste prêt à être complété et vérifié dans "Devis".
+    if (status === 'won' && prev.status !== 'won') {
+        const existingQuote = db.get('quotes').find({ leadId: id }).value();
+        if (!existingQuote) {
+            const validityDays = Number(db.get('businessSettings').value()?.quoteValidityDays) || 30;
+            const budgetGuess = { '> 6000€': 6000, '3000-6000€': 4500, '1000-3000€': 2000, '< 1000€': 800 }[prev.budget] || 0;
+            const quote = {
+                id: nextId('quotes'), created_at: now(), leadId: id,
+                quoteNumber: nextQuoteNumber(),
+                validUntil: new Date(Date.now() + validityDays * 86400000).toISOString(),
+                clientName: prev.name || '', clientEmail: prev.email,
+                items: budgetGuess ? [{ desc: 'Prestation à détailler', qty: 1, price: budgetGuess }] : [],
+                notes: `Devis brouillon généré automatiquement depuis le lead #${id} — à compléter avant envoi.`,
+                status: 'draft', sent_at: null, paid_at: null, accepted_at: null,
+            };
+            quote.total = computeQuoteTotal(quote.items);
+            db.get('quotes').push(quote).write();
+            touchClient(prev.email, prev.name);
+            logTeamAction(req, 'quote_created', `Devis brouillon ${quote.quoteNumber} pré-rempli automatiquement depuis le lead #${id} (${prev.email})`, quote.id);
+            mailer.sendMail({ ...mailer.quoteDraftReadyEmail(quote, prev), meta: { type: 'quote_draft_ready', relatedId: quote.id } }).catch(() => {});
+        }
+    }
     res.json({ ok: true });
 });
 
@@ -691,7 +722,7 @@ app.post('/api/leads/:id/reply', auth, canWrite, async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead introuvable' });
     const result = await mailer.sendMail({ ...mailer.leadReplyEmail(lead, message), meta: { type: 'lead_reply', relatedId: lead.id } });
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
-    db.get('leads').find({ id }).assign({ status: 'contacted' }).write();
+    db.get('leads').find({ id }).assign({ status: 'contacted', contactedAt: lead.contactedAt || now() }).write();
     logTeamAction(req, 'lead_replied', `Réponse envoyée à ${lead.email}`, id);
     res.json({ ok: true });
 });
@@ -785,7 +816,24 @@ function computeLeadPriorityScore(lead) {
     else if (hoursOld < 72) score += 10;
     if (lead.isReturningClient) score += 15;
     if (lead.status === 'new') score += 5;
+    // Signaux d'engagement déjà captés à la création du lead (voir `tracking` dans POST /api/leads)
+    const t = lead.tracking || {};
+    const pagesVisited = Number(t.pagesVisited) || 0;
+    const visitDuration = Number(t.visitDuration) || 0; // secondes
+    if (pagesVisited >= 3) score += 10;
+    else if (pagesVisited >= 2) score += 5;
+    if (visitDuration >= 120) score += 5;
+    // Un lead "Nouveau" qui traîne sans être contacté refroidit avec le temps
+    const followUpDays = Number(db.get('businessSettings').value()?.leadFollowUpDays) || 3;
+    if (lead.status === 'new' && hoursOld > followUpDays * 24) score -= 15;
     return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+// Traduction du score en repère simple pour Florian (dashboard) — chaud/tiède/froid
+function leadTemperature(score) {
+    if (score >= 65) return { key: 'hot', label: 'Chaud', emoji: '🔥', color: '#22c55e' };
+    if (score >= 40) return { key: 'warm', label: 'Tiède', emoji: '🌤️', color: '#f59e0b' };
+    return { key: 'cold', label: 'Froid', emoji: '❄️', color: '#888' };
 }
 
 function touchClient(email, name) {
@@ -1461,6 +1509,71 @@ app.post('/api/invoices/:id/remind', auth, adminOnly, async (req, res) => {
     res.json({ ok: true });
 });
 
+// Relances automatiques (opt-in, "Mon entreprise" → réglage "Relances automatiques") — réutilise
+// les mêmes emails que les boutons manuels "Relancer". Un devis/facture n'est jamais relancé plus
+// d'une fois par semaine automatiquement, pour ne pas harceler le client.
+async function runAutoReminders() {
+    const business = db.get('businessSettings').value() || {};
+    if (!business.autoRemindersEnabled) return;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const { quotesToRemind, invoicesOverdue } = getSuggestedReminders();
+
+    for (const quote of quotesToRemind.filter(q => !q.lastReminderAt || q.lastReminderAt <= sevenDaysAgo)) {
+        try {
+            const mail = mailer.quoteReminderEmail(quote);
+            mail.meta = { type: 'quote_reminder_auto', relatedId: quote.id };
+            try {
+                const pdfBuffer = await pdfGen.generateQuotePdf(quote, business);
+                mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Devis-${quote.quoteNumber || quote.id}.pdf` }];
+            } catch (err) { console.error('Erreur PDF devis (relance auto):', err.message); }
+            const result = await mailer.sendMail(mail);
+            if (result.sent) {
+                db.get('quotes').find({ id: quote.id }).assign({ lastReminderAt: now() }).write();
+                console.log(`📧 Relance auto devis ${quote.quoteNumber} envoyée à ${quote.clientEmail}`);
+            }
+        } catch (err) { console.error('Erreur relance auto devis:', err.message); }
+    }
+
+    for (const invoice of invoicesOverdue.filter(i => !i.lastReminderAt || i.lastReminderAt <= sevenDaysAgo)) {
+        try {
+            const mail = mailer.invoiceReminderEmail(invoice, business);
+            mail.meta = { type: 'invoice_reminder_auto', relatedId: invoice.id };
+            try {
+                const pdfBuffer = await pdfGen.generateInvoicePdf(invoice, business);
+                mail.attachments = [{ content: pdfBuffer.toString('base64'), name: `Facture-${invoice.invoiceNumber}.pdf` }];
+            } catch (err) { console.error('Erreur PDF facture (relance auto):', err.message); }
+            const result = await mailer.sendMail(mail);
+            if (result.sent) {
+                db.get('invoices').find({ id: invoice.id }).assign({ lastReminderAt: now() }).write();
+                console.log(`📧 Relance auto facture ${invoice.invoiceNumber} envoyée à ${invoice.clientEmail}`);
+            }
+        } catch (err) { console.error('Erreur relance auto facture:', err.message); }
+    }
+}
+
+// Relance automatique des leads "Nouveau" sans réponse (opt-in, "Mon entreprise" →
+// "Relancer automatiquement les leads sans réponse"). Un seul email par lead, jamais plus
+// — pas de harcèlement du prospect. Le délai est le même que celui utilisé pour le score
+// de priorité (leadFollowUpDays, 3 jours par défaut).
+async function runAutoLeadFollowUp() {
+    const business = db.get('businessSettings').value() || {};
+    if (!business.autoLeadFollowUpEnabled) return;
+    const followUpDays = Number(business.leadFollowUpDays) || 3;
+    const cutoff = new Date(Date.now() - followUpDays * 86400000).toISOString();
+    const staleLeads = db.get('leads').value().filter(l =>
+        !l.archived && l.status === 'new' && l.created_at <= cutoff && !l.autoFollowUpSentAt
+    );
+    for (const lead of staleLeads) {
+        try {
+            const result = await mailer.sendMail({ ...mailer.leadFollowUpEmail(lead), meta: { type: 'lead_follow_up_auto', relatedId: lead.id } });
+            if (result.sent) {
+                db.get('leads').find({ id: lead.id }).assign({ autoFollowUpSentAt: now() }).write();
+                console.log(`📧 Relance auto lead #${lead.id} envoyée à ${lead.email}`);
+            }
+        } catch (err) { console.error('Erreur relance auto lead:', err.message); }
+    }
+}
+
 app.get('/api/treasury', auth, (req, res) => {
     const invoices = db.get('invoices').value();
     const expenses = db.get('expenses').value();
@@ -1901,6 +2014,30 @@ app.get('/api/admin/monthly-report/pdf', auth, adminOnly, async (req, res) => {
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+/* ============================================================
+   RÉSUMÉ HEBDOMADAIRE — le lundi matin, en plus du rapport mensuel
+   ============================================================ */
+async function buildAndSendWeeklySummary() {
+    const leads = db.get('leads').value();
+    const invoices = db.get('invoices').value();
+    const now7 = new Date(Date.now() - 7 * 86400000).toISOString();
+    const prev7 = new Date(Date.now() - 14 * 86400000).toISOString();
+
+    const leadsThisWeek = leads.filter(l => l.created_at >= now7);
+    const leadsPrevWeek = leads.filter(l => l.created_at >= prev7 && l.created_at < now7);
+    const wonThisWeek = leads.filter(l => l.status === 'won' && l.created_at >= now7).length;
+    const revenueThisWeek = invoices.filter(i => i.status === 'paid' && i.paid_at && i.paid_at >= now7).reduce((s, i) => s + (i.total || 0), 0);
+
+    const mail = mailer.weeklySummaryEmail({
+        newLeads: leadsThisWeek.length,
+        newLeadsPrevWeek: leadsPrevWeek.length,
+        wonThisWeek,
+        revenueThisWeek,
+    });
+    mail.meta = { type: 'weekly_summary' };
+    return mailer.sendMail(mail);
+}
+
 // Archivage automatique — 1er de chaque mois à 3h : leads perdus et factures payées
 // depuis plus de 6 mois basculent en archive (ils restent dans les données/exports,
 // juste masqués des listes actives par défaut).
@@ -1933,6 +2070,12 @@ function computeProactiveAlerts() {
     if (!leads.some(l => l.created_at >= tenDaysAgo)) {
         alerts.push("Aucun nouveau lead depuis 10 jours — pense à relancer ta visibilité (Instagram, réseau).");
     }
+    const followUpDays = Number(db.get('businessSettings').value()?.leadFollowUpDays) || 3;
+    const followUpCutoff = new Date(Date.now() - followUpDays * 86400000).toISOString();
+    const staleLeads = leads.filter(l => !l.archived && l.status === 'new' && l.created_at <= followUpCutoff);
+    if (staleLeads.length) {
+        alerts.push(`${staleLeads.length} lead${staleLeads.length > 1 ? 's' : ''} "Nouveau" sans réponse depuis plus de ${followUpDays} jours — à relancer.`);
+    }
     const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
     const d60 = new Date(Date.now() - 60 * 86400000).toISOString();
     const last30 = leads.filter(l => l.created_at >= d30);
@@ -1963,6 +2106,19 @@ async function buildAndSendDailyBrief() {
 cron.schedule('0 8 1 * *', () => {
     console.log('📊 Envoi du rapport mensuel automatique...');
     buildAndSendMonthlyReport().catch(err => console.error('Erreur rapport mensuel:', err.message));
+}, { timezone: 'Europe/Paris' });
+
+// Résumé hebdomadaire — chaque lundi à 8h (heure de Paris)
+cron.schedule('0 8 * * 1', () => {
+    console.log('📅 Envoi du résumé hebdomadaire...');
+    buildAndSendWeeklySummary().catch(err => console.error('Erreur résumé hebdomadaire:', err.message));
+}, { timezone: 'Europe/Paris' });
+
+// Relances automatiques (devis sans réponse / factures en retard) — tous les jours à 9h,
+// seulement si activé dans "Mon entreprise" (désactivé par défaut)
+cron.schedule('0 9 * * *', () => {
+    runAutoReminders().catch(err => console.error('Erreur relances automatiques:', err.message));
+    runAutoLeadFollowUp().catch(err => console.error('Erreur relance auto leads:', err.message));
 }, { timezone: 'Europe/Paris' });
 
 // Vérification des alertes analytics — toutes les heures

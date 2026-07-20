@@ -144,7 +144,9 @@ const DEFAULTS = {
         "appointmentsPauseReason": "",
         "appointmentsPauseMessage": "",
         "googleReviewUrl": "",
-        "clarityId": ""
+        "clarityId": "",
+        "autoRemindersEnabled": false,
+        "leadFollowUpDays": 3
     },
     "projects": [],
     "contentCalendar": [],

@@ -457,6 +457,27 @@ function leadReplyEmail(lead, message) {
     };
 }
 
+/* — 5bis. Relance automatique d'un lead sans réponse (opt-in, "Mon entreprise") — */
+function leadFollowUpEmail(lead) {
+    return {
+        to: lead.email,
+        subject: `Toujours partant·e pour votre projet ?`,
+        html: emailWrapper(`
+            ${emailTitle(`Bonjour${lead.name ? ` ${lead.name.split(' ')[0]}` : ''} 👋`)}
+            <p style="font-size:15px;color:${C.text};line-height:1.75;">
+                Je me permets de revenir vers vous suite à votre message — je n'ai pas eu de retour de votre côté,
+                et je voulais simplement m'assurer qu'il ne s'était pas perdu dans les mails.
+            </p>
+            <p style="font-size:15px;color:${C.text};line-height:1.75;">
+                Si votre projet est toujours d'actualité, je suis disponible pour en discuter quand vous voulez.
+                Sinon, pas de souci, n'hésitez pas à me le dire — je ne vous relancerai pas davantage.
+            </p>
+            ${emailSignature()}
+        `, { preheader: 'Un petit mot pour prendre des nouvelles de votre projet.' }),
+        replyTo: process.env.SENDER_EMAIL,
+    };
+}
+
 /* — 6. Invitation équipe — */
 const ROLE_LABELS = { admin: 'Administrateur', redacteur: 'Rédacteur', lecteur: 'Lecteur' };
 
@@ -520,6 +541,20 @@ function quoteAcceptedEmail(quote, invoice) {
             <p style="margin:0 0 24px;color:${C.textMuted};"><strong style="color:${C.white};">${quote.clientName || quote.clientEmail}</strong> a accepté le devis de ${(quote.total||0).toFixed(2)} €. Une facture (${invoice.invoiceNumber}) a été créée automatiquement en brouillon — vérifie-la puis envoie-la depuis le dashboard.</p>
             ${emailCTA('Voir la facture', dashUrl)}
         `, { preheader: `${quote.clientName || quote.clientEmail} a accepté son devis` }),
+    };
+}
+
+/* — 8bis-b. Devis brouillon auto-généré (interne) — un lead vient de passer en "Gagné" */
+function quoteDraftReadyEmail(quote, lead) {
+    const dashUrl = (process.env.DASHBOARD_URL || 'https://florian-b.fr') + '/dashboard';
+    return {
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
+        subject: `📝 Devis brouillon prêt — ${lead.name || lead.email}`,
+        html: emailWrapper(`
+            ${emailTitle('Un devis brouillon t\'attend')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Le lead <strong style="color:${C.white};">${lead.name || lead.email}</strong> vient de passer en "Gagné". Un devis brouillon (${quote.quoteNumber}) a été pré-rempli pour te faire gagner du temps — complète-le et vérifie les lignes avant de l'envoyer, rien n'est parti au client pour l'instant.</p>
+            ${emailCTA('Compléter le devis', dashUrl)}
+        `, { preheader: `Devis brouillon ${quote.quoteNumber} à compléter` }),
     };
 }
 
@@ -663,6 +698,29 @@ function anniversaryEmail(project) {
             <p style="margin:0 0 24px;color:${C.textMuted};">Si un coup de neuf ou un nouveau projet vous trotte dans la tête, n'hésitez pas à revenir vers moi — ce serait un plaisir de retravailler ensemble.</p>
             ${emailSignature()}
         `, { preheader: 'Un an après notre collaboration' }),
+    };
+}
+
+/* — 8noniens. Résumé hebdomadaire (interne) — le lundi matin */
+function weeklySummaryEmail({ newLeads, newLeadsPrevWeek, wonThisWeek, revenueThisWeek }) {
+    const weekLabel = `Semaine du ${new Date(Date.now() - 6 * 86400000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+    const delta = newLeadsPrevWeek > 0 ? Math.round(((newLeads - newLeadsPrevWeek) / newLeadsPrevWeek) * 100) : null;
+    const deltaLabel = delta === null ? '' : delta >= 0 ? ` (+${delta}% vs semaine dernière)` : ` (${delta}% vs semaine dernière)`;
+    const statsRow = [
+        { value: String(newLeads), label: 'Nouveaux leads' + deltaLabel },
+        { value: String(wonThisWeek), label: 'Projets gagnés' },
+    ];
+    return {
+        to: process.env.NOTIFY_EMAIL || process.env.SENDER_EMAIL,
+        subject: `Ta semaine en résumé — ${newLeads} lead${newLeads > 1 ? 's' : ''}`,
+        html: emailWrapper(`
+            ${emailTitle('Ta semaine en résumé')}
+            <p style="margin:0 0 28px;color:${C.textMuted};font-size:13px;text-transform:uppercase;letter-spacing:1px;">${weekLabel}</p>
+            ${emailStatGrid(statsRow)}
+            ${emailStatCard(revenueThisWeek.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €', 'Encaissé cette semaine')}
+            ${emailDivider()}
+            <p style="margin:0;font-size:12px;color:${C.textDim};">Résumé généré automatiquement chaque lundi matin. Le rapport détaillé arrive le 1er du mois.</p>
+        `, { preheader: `${newLeads} nouveaux leads cette semaine` }),
     };
 }
 
@@ -978,9 +1036,11 @@ module.exports = {
     appointmentReminderEmail,
     appointmentNotificationEmail,
     leadReplyEmail,
+    leadFollowUpEmail,
     teamInviteEmail,
     quoteEmail,
     quoteAcceptedEmail,
+    quoteDraftReadyEmail,
     quoteReminderEmail,
     invoiceReminderEmail,
     remindersDigestEmail,
@@ -994,4 +1054,5 @@ module.exports = {
     invoiceEmail,
     analyticsAlertEmail,
     monthlyReportEmail,
+    weeklySummaryEmail,
 };
