@@ -119,16 +119,18 @@ function emailWrapper(innerHtml, { preheader = '', accentLine = true } = {}) {
     from { opacity:0; transform:translateY(12px); }
     to   { opacity:1; transform:translateY(0);    }
   }
-  @keyframes pulse {
-    0%,100% { opacity:1; }
-    50%      { opacity:0.5; }
+  @keyframes fadeIn {
+    from { opacity:0; }
+    to   { opacity:1; }
   }
-  .anim-fadeup { animation: fadeUp 0.5s ease forwards; }
+  .anim-fadeup { animation: fadeUp 0.6s ease 0.15s forwards; opacity:0; }
+  .anim-fadein { animation: fadeIn 0.8s ease 0.05s forwards; opacity:0; }
   .btn-main:hover { opacity:0.88 !important; }
   @media only screen and (max-width:600px) {
     .email-card  { border-radius:0 !important; }
     .email-pad   { padding:28px 20px !important; }
     .email-title { font-size:26px !important; }
+    .hero-fb     { font-size:34px !important; }
     .stat-val    { font-size:28px !important; }
   }
 </style>
@@ -145,23 +147,13 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
       <!-- LIGNE ACCENT TOP -->
       ${accentLine ? `<tr><td style="height:3px;background:linear-gradient(90deg,${C.accent},#ff5478);font-size:0;line-height:0;">&nbsp;</td></tr>` : ''}
 
-      <!-- HEADER / LOGO -->
+      <!-- HERO / SIGNATURE DE MARQUE -->
       <tr>
-        <td class="email-pad" style="padding:36px 44px 28px;border-bottom:1px solid ${C.separator};">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-              <td>
-                <span style="font-family:'Syne',Georgia,'Times New Roman',serif;font-weight:700;font-size:18px;letter-spacing:1px;color:${C.white};text-transform:uppercase;text-decoration:none;">
-                  FLORIAN B<span style="color:${C.accent};">.</span>
-                </span>
-              </td>
-              <td align="right">
-                <span style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;color:${C.textDim};text-transform:uppercase;letter-spacing:1.5px;">
-                  Graphiste &amp; DA
-                </span>
-              </td>
-            </tr>
-          </table>
+        <td align="center" style="padding:44px 32px 30px;background:${C.card};background-color:${C.card};border-bottom:1px solid ${C.separator};">
+          <img src="https://florian-b.fr/assets/florian-b-fb-animation.gif" width="230" height="56" alt="Florian B." style="display:block;margin:0 auto;border:0;outline:none;max-width:230px;height:auto;">
+          <p style="margin:14px 0 0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:2.2px;text-transform:uppercase;color:${C.textMuted};">
+            Les pixels sont nos atomes créatifs
+          </p>
         </td>
       </tr>
 
@@ -180,12 +172,10 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
               <td style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textDim};line-height:1.6;">
                 <strong style="color:${C.textMuted};">Florian Bonnet</strong><br>
                 Graphiste &amp; Directeur Artistique · Paris<br>
-                <a href="https://florian-b.fr" style="color:${C.accent};text-decoration:none;">florian-b.fr</a>
-                &nbsp;·&nbsp;
                 <a href="mailto:contact@florian-b.fr" style="color:${C.textDim};text-decoration:none;">contact@florian-b.fr</a>
               </td>
-              <td align="right" valign="bottom">
-                <span style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:${C.separator};letter-spacing:1px;">FB.</span>
+              <td align="right" valign="middle">
+                <a href="https://florian-b.fr" style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:14px;font-weight:700;letter-spacing:0.3px;color:${C.accent};text-decoration:none;">florian-b.fr →</a>
               </td>
             </tr>
           </table>
@@ -205,7 +195,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
 
 // Titre principal de l'email
 function emailTitle(text) {
-    return `<p class="email-title" style="margin:0 0 24px;font-family:'Syne',Georgia,'Times New Roman',serif;font-size:30px;font-weight:700;color:${C.white};line-height:1.2;letter-spacing:-0.5px;">${text}</p>`;
+    return `<p class="email-title" style="margin:0 0 24px;font-family:'Syne',Georgia,'Times New Roman',serif;font-size:32px;font-weight:700;color:${C.white};line-height:1.25;letter-spacing:-0.5px;">${text}</p>`;
 }
 
 // Bouton CTA principal
