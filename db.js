@@ -19,6 +19,16 @@ const DEFAULTS = {
     "clients": [],
     "expenses": [],
     "emailLog": [],
+    "timeLogs": [],
+    "projectChecklistTemplate": [
+        "Brief signé / validé par le client",
+        "Accès Drive / fichiers partagés",
+        "Moodboard envoyé",
+        "Premières maquettes présentées",
+        "Retours client intégrés",
+        "Livraison finale envoyée",
+        "Facture soldée"
+    ],
     "quoteTemplates": [
         {
             "id": 1, "name": "Branding / Identité visuelle",
@@ -132,7 +142,9 @@ const DEFAULTS = {
         "quoteValidityDays": 30,
         "appointmentsPaused": false,
         "appointmentsPauseReason": "",
-        "appointmentsPauseMessage": ""
+        "appointmentsPauseMessage": "",
+        "googleReviewUrl": "",
+        "clarityId": ""
     },
     "projects": [],
     "contentCalendar": [],

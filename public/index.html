@@ -748,6 +748,7 @@
                     <button class="filter-chip" data-atab="pages">Pages & trafic</button>
                     <button class="filter-chip" data-atab="goals">🎯 Objectifs</button>
                     <button class="filter-chip" data-atab="alerts">🔔 Alertes</button>
+                    <button class="filter-chip" data-atab="funnel">🔻 Funnel & sources</button>
                 </div>
 
                 <!-- ONGLET : VUE D'ENSEMBLE -->
@@ -910,6 +911,14 @@
                         <button class="btn-primary" id="addAlertBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouvelle alerte</button>
                     </div>
                     <div id="alertsListWrap"></div>
+                </div>
+
+                <!-- ONGLET : FUNNEL & SOURCES -->
+                <div class="analytics-tab" id="atab-funnel" style="display:none;">
+                    <h3 style="margin:0 0 1rem;font-size:0.9rem;">Funnel de conversion — 30 derniers jours</h3>
+                    <div id="funnelWrap" style="margin-bottom:2rem;"></div>
+                    <h3 style="margin:0 0 1rem;font-size:0.9rem;">Qualité des leads par source</h3>
+                    <div id="leadsQualityWrap"></div>
                 </div>
             </div>
         </section>
@@ -1275,6 +1284,8 @@
                 <div class="drawer-field"><label>Objectif de CA annuel (€)</label><input type="number" id="bsGoalAnnual" min="0" placeholder="36000"></div>
                 <div class="drawer-field"><label>Statut juridique (mention légale)</label><input type="text" id="bsLegalStatus" placeholder="Auto-entrepreneur — Dispensé d'immatriculation au RCS et au RM"></div>
                 <div class="drawer-field"><label>Validité des devis (jours)</label><input type="number" id="bsQuoteValidity" min="0" placeholder="30"></div>
+                <div class="drawer-field"><label>Lien avis Google (pour la demande automatique post-livraison)</label><input type="text" id="bsGoogleReview" placeholder="https://g.page/r/.../review"></div>
+                <div class="drawer-field"><label>ID Microsoft Clarity (heatmap du site, optionnel)</label><input type="text" id="bsClarityId" placeholder="ex: abcdefg123"></div>
             </div>
             <div class="panel" id="legalReadinessPanel" style="max-width:560px;margin-top:1.2rem;"></div>
         </section>
@@ -1349,9 +1360,11 @@
             <div class="topbar">
                 <h2>Calendrier de contenu</h2>
                 <div class="topbar-actions">
+                    <button class="btn-secondary" id="contentIdeasBtn" style="width:auto; padding:0.6rem 1.2rem;">💡 Suggestions</button>
                     <button class="btn-primary" id="addContentBtn" data-write-action style="width:auto; padding:0.6rem 1.2rem;">+ Idée de post</button>
                 </div>
             </div>
+            <div id="contentIdeasWrap" style="display:none;margin-bottom:1.2rem;"></div>
             <div id="calendarListWrap"></div>
         </section>
 
@@ -1679,7 +1692,58 @@ function updateLastRefreshLabel() {
 }
 
 /* ---------------- OVERVIEW ---------------- */
-/* ---------------- ANALYTICS (Google Analytics en direct, détaillé) ---------------- */
+/* ---------------- FUNNEL & SOURCES ---------------- */
+async function loadFunnelAndSources() {
+    try {
+        const [funnel, quality] = await Promise.all([
+            api('/api/analytics/funnel'),
+            api('/api/analytics/leads-quality'),
+        ]);
+        renderFunnel(funnel.steps);
+        renderLeadsQuality(quality);
+    } catch (e) { toast(e.message); }
+}
+
+function renderFunnel(steps) {
+    const wrap = document.getElementById('funnelWrap');
+    const max = Math.max(1, ...steps.map(s => s.count));
+    wrap.innerHTML = steps.map((s, i) => {
+        const pct = Math.round((s.count / max) * 100);
+        const dropoff = i > 0 && steps[i-1].count > 0 ? Math.round(((steps[i-1].count - s.count) / steps[i-1].count) * 100) : null;
+        return `
+            <div style="margin-bottom:0.9rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.3rem;">
+                    <span>${escapeHtml(s.label)}</span>
+                    <span class="cell-muted">${s.count}${dropoff !== null && dropoff > 0 ? ` <span style="color:#ff2f76;">(-${dropoff}%)</span>` : ''}</span>
+                </div>
+                <div style="height:10px;border-radius:100px;background:var(--surface-2);overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:100px;"></div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function renderLeadsQuality(list) {
+    const wrap = document.getElementById('leadsQualityWrap');
+    if (!list.length) { wrap.innerHTML = emptyStateHTML('Pas encore assez de données.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Source</th><th>Leads</th><th>Taux de conversion</th><th>Score budget moyen</th></tr></thead>
+            <tbody>
+                ${list.map(s => `
+                    <tr>
+                        <td>${escapeHtml(s.source)}</td>
+                        <td class="cell-muted">${s.count}</td>
+                        <td class="cell-muted">${s.conversionRate}%</td>
+                        <td class="cell-muted">${s.avgBudgetScore !== null ? priorityBadge(s.avgBudgetScore) : '—'}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+
 document.getElementById('analyticsDaysSelect').addEventListener('change', () => loadAnalytics());
 
 document.querySelectorAll('#view-analytics .toolbar .filter-chip').forEach(chip => {
@@ -1690,6 +1754,7 @@ document.querySelectorAll('#view-analytics .toolbar .filter-chip').forEach(chip 
         document.getElementById('atab-' + chip.dataset.atab).style.display = 'block';
         if (chip.dataset.atab === 'goals') loadGoals();
         if (chip.dataset.atab === 'alerts') loadAlerts();
+        if (chip.dataset.atab === 'funnel') loadFunnelAndSources();
     });
 });
 
@@ -3535,6 +3600,7 @@ async function openClientDrawer(email) {
             </div>
             <div class="drawer-actions">
                 <button class="btn-secondary" onclick="saveClientMeta('${escapeAttr(c.email)}')">Enregistrer</button>
+                <button class="btn-secondary" onclick="copyClientPortalLink('${escapeAttr(c.email)}')">🔗 Lien du portail client</button>
             </div>
             <div class="drawer-actions" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--border);">
                 <div class="kpi-value" style="font-size:1rem;">${(c.invoices.reduce((s,i)=>s+(i.total||0),0)).toFixed(2)} € facturés · ${(c.invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.total||0),0)).toFixed(2)} € encaissés</div>
@@ -3560,6 +3626,14 @@ async function saveClientMeta(email) {
         toast('Fiche client mise à jour ✅');
         closeDrawer();
         loadClients();
+    } catch (e) { toast(e.message); }
+}
+
+async function copyClientPortalLink(email) {
+    try {
+        const { url } = await api('/api/clients/' + encodeURIComponent(email) + '/portal-link');
+        await navigator.clipboard.writeText(url);
+        toast('Lien du portail copié ✅ — envoie-le au client, il verra ses devis/factures/projets en direct.');
     } catch (e) { toast(e.message); }
 }
 
@@ -4027,12 +4101,67 @@ function openProjectTrackDrawer(id) {
             </select>
         </div>
         <div class="drawer-field"><label>Notes</label><textarea id="ptNotes" placeholder="Détails, liens de fichiers...">${escapeHtml(p?.notes || '')}</textarea></div>
+        ${p ? `<div class="drawer-field">
+            <label>Checklist de démarrage</label>
+            <div id="ptChecklistWrap">${(p.checklist || []).map((c, i) => `
+                <label style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;font-size:0.85rem;">
+                    <input type="checkbox" data-idx="${i}" class="pt-check" ${c.done ? 'checked' : ''}> ${escapeHtml(c.label)}
+                </label>`).join('')}</div>
+        </div>` : ''}
         <div class="drawer-actions">
             <button class="btn-secondary" onclick="saveProjectTrack(${p ? p.id : 'null'})">Enregistrer</button>
             ${p ? `<button class="btn-danger" onclick="deleteProjectTrack(${p.id})">Supprimer</button>` : ''}
         </div>
+        ${p ? `
+        <div class="drawer-field" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+            <label>⏱️ Suivi du temps — <span id="ptTimeTotal">—</span></label>
+            <div id="ptTimeLogsWrap" style="margin-bottom:0.6rem;"></div>
+            <div style="display:flex;gap:0.4rem;">
+                <input type="text" id="ptTimeDesc" placeholder="Description" style="flex:2;padding:0.5rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:0.8rem;">
+                <input type="number" id="ptTimeMinutes" placeholder="Minutes" style="width:90px;padding:0.5rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:0.8rem;">
+                <button type="button" class="btn-secondary" style="width:auto;padding:0.5rem 0.8rem;" onclick="addTimeLog(${p.id})">+</button>
+            </div>
+        </div>` : ''}
     `;
     openDrawer();
+    if (p) loadTimeLogsForProject(p.id);
+}
+
+let timeLogsCacheByProject = [];
+async function loadTimeLogsForProject(projectId) {
+    try {
+        timeLogsCacheByProject = await api('/api/time-logs?projectId=' + projectId);
+        renderTimeLogs();
+    } catch (e) { /* silencieux */ }
+}
+
+function renderTimeLogs() {
+    const wrap = document.getElementById('ptTimeLogsWrap');
+    if (!wrap) return;
+    const totalMinutes = timeLogsCacheByProject.reduce((s, t) => s + (t.minutes || 0), 0);
+    document.getElementById('ptTimeTotal').textContent = (totalMinutes / 60).toFixed(1) + ' h';
+    wrap.innerHTML = timeLogsCacheByProject.length ? timeLogsCacheByProject.map(t => `
+        <div style="display:flex;justify-content:space-between;padding:0.3rem 0;font-size:0.8rem;border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(t.description || 'Sans description')} <span class="cell-muted">(${formatDate(t.date)})</span></span>
+            <span>${(t.minutes/60).toFixed(1)}h <button class="icon-btn danger" style="width:20px;height:20px;padding:0;" onclick="deleteTimeLog(${t.id}, ${t.projectId})">✕</button></span>
+        </div>`).join('') : '<p class="cell-muted" style="font-size:0.8rem;">Aucun temps enregistré.</p>';
+}
+
+async function addTimeLog(projectId) {
+    const description = document.getElementById('ptTimeDesc').value.trim();
+    const minutes = Number(document.getElementById('ptTimeMinutes').value);
+    if (!minutes) { toast('Indique une durée en minutes.'); return; }
+    try {
+        await api('/api/time-logs', { method: 'POST', body: JSON.stringify({ projectId, description, minutes }) });
+        document.getElementById('ptTimeDesc').value = '';
+        document.getElementById('ptTimeMinutes').value = '';
+        loadTimeLogsForProject(projectId);
+    } catch (e) { toast(e.message); }
+}
+
+async function deleteTimeLog(id, projectId) {
+    try { await api('/api/time-logs/' + id, { method: 'DELETE' }); loadTimeLogsForProject(projectId); }
+    catch (e) { toast(e.message); }
 }
 
 async function saveProjectTrack(id) {
@@ -4040,6 +4169,12 @@ async function saveProjectTrack(id) {
     const clientEmail = document.getElementById('ptEmail').value.trim();
     if (!name || !clientEmail) { toast('Nom et email sont obligatoires.'); return; }
     const payload = { name, clientEmail, stage: document.getElementById('ptStage').value, notes: document.getElementById('ptNotes').value.trim() };
+    const checkEls = document.querySelectorAll('.pt-check');
+    if (checkEls.length) {
+        const p = projectsTrackCache.find(x => x.id === id);
+        const checklist = (p?.checklist || []).map((c, i) => ({ label: c.label, done: document.querySelector(`.pt-check[data-idx="${i}"]`)?.checked || false }));
+        payload.checklist = checklist;
+    }
     try {
         if (id) await api('/api/projects/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
         else await api('/api/projects', { method: 'POST', body: JSON.stringify(payload) });
@@ -4085,6 +4220,38 @@ function renderCalendarList() {
 }
 
 document.getElementById('addContentBtn').addEventListener('click', () => openCalendarDrawer(null));
+
+document.getElementById('contentIdeasBtn')?.addEventListener('click', async () => {
+    const wrap = document.getElementById('contentIdeasWrap');
+    const isOpen = wrap.style.display === 'block';
+    if (isOpen) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    wrap.innerHTML = '<p class="cell-muted">Génération des suggestions...</p>';
+    try {
+        const ideas = await api('/api/content-ideas');
+        wrap.innerHTML = `
+            <div class="panel">
+                <p class="cell-muted" style="margin-bottom:0.8rem;font-size:0.75rem;">💡 Suggestions générées à partir de tes projets — pas une vraie IA connectée, juste des formats de post éprouvés appliqués à ton portfolio. À toi de les adapter !</p>
+                ${ideas.map(idea => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.8rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
+                        <span style="font-size:0.85rem;">${escapeHtml(idea.title)}</span>
+                        <button class="btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.75rem;flex-shrink:0;" onclick="addIdeaToCalendar('${escapeAttr(idea.title)}', '${idea.suggestedPlatform}')">+ Ajouter</button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (e) { wrap.innerHTML = `<p class="cell-muted">${e.message}</p>`; }
+});
+
+function addIdeaToCalendar(title, platform) {
+    openCalendarDrawer(null);
+    setTimeout(() => {
+        const titleEl = document.getElementById('ccTitle');
+        const platformEl = document.getElementById('ccPlatform');
+        if (titleEl) titleEl.value = title;
+        if (platformEl) platformEl.value = platform;
+    }, 0);
+}
 
 function openCalendarDrawer(id) {
     const c = id ? calendarCache.find(x => x.id === id) : null;
@@ -4625,6 +4792,8 @@ async function loadBusinessSettings() {
         document.getElementById('bsGoalAnnual').value = b.revenueGoalAnnual || '';
         document.getElementById('bsLegalStatus').value = b.legalStatusMention || '';
         document.getElementById('bsQuoteValidity').value = b.quoteValidityDays || 30;
+        document.getElementById('bsGoogleReview').value = b.googleReviewUrl || '';
+        document.getElementById('bsClarityId').value = b.clarityId || '';
         renderLegalReadiness(b);
     } catch (e) { toast(e.message); }
 }
@@ -4657,6 +4826,8 @@ document.getElementById('saveBusinessBtn').addEventListener('click', async () =>
             revenueGoalAnnual: Number(document.getElementById('bsGoalAnnual').value) || 0,
             legalStatusMention: document.getElementById('bsLegalStatus').value.trim(),
             quoteValidityDays: Number(document.getElementById('bsQuoteValidity').value) || 30,
+            googleReviewUrl: document.getElementById('bsGoogleReview').value.trim(),
+            clarityId: document.getElementById('bsClarityId').value.trim(),
         };
         await api('/api/business-settings', { method: 'PUT', body: JSON.stringify(payload) });
         toast('Informations enregistrées ✅');
@@ -5070,9 +5241,14 @@ async function deleteMediaFile(filename) {
 
 /* ---------------- COMMAND PALETTE ---------------- */
 const commands = [
+    { label: "Aller à Aujourd'hui", icon: 'grid', action: () => switchView('cockpit') },
     { label: 'Aller à Overview', icon: 'grid', action: () => switchView('overview') },
     { label: 'Aller à Leads', icon: 'inbox', action: () => switchView('leads') },
     { label: 'Aller à Rendez-vous', icon: 'calendar', action: () => switchView('appointments') },
+    { label: 'Aller à Clients', icon: 'grid', action: () => switchView('clients') },
+    { label: 'Aller à Trésorerie', icon: 'grid', action: () => switchView('treasury') },
+    { label: 'Aller à Emails', icon: 'grid', action: () => switchView('emails') },
+    { label: 'Aller à Bibliothèque de visuels', icon: 'grid', action: () => switchView('media-library') },
     { label: 'Aller à Hero', icon: 'grid', action: () => switchView('content-hero') },
     { label: 'Aller à Projets', icon: 'grid', action: () => switchView('content-projects') },
     { label: 'Aller à Galeries des projets', icon: 'grid', action: () => switchView('content-project-galleries') },

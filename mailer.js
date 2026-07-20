@@ -619,6 +619,53 @@ function dailyBriefEmail({ newLeadsToProcess, apptsToday, quotesToRemind, invoic
     };
 }
 
+/* — 8sexies. Enquête de satisfaction (client) — envoyée à la livraison d'un projet — */
+function satisfactionSurveyEmail(project, token) {
+    const base = (process.env.DASHBOARD_URL || '') + `/api/projects/${project.id}/rate?token=${token}&score=`;
+    const stars = [1, 2, 3, 4, 5].map(n => `<a href="${base}${n}" style="text-decoration:none;font-size:26px;margin:0 4px;">${'⭐'.repeat(n)}</a>`).join('');
+    return {
+        to: project.clientEmail,
+        subject: `Votre avis compte — projet livré !`,
+        html: emailWrapper(`
+            ${emailTitle('Projet livré 🎉')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour, votre projet « ${project.name} » vient d'être marqué comme livré. J'espère que le résultat vous plaît !</p>
+            <p style="margin:0 0 16px;color:${C.textMuted};">Une note en un clic m'aiderait beaucoup :</p>
+            <div style="text-align:center;margin:20px 0;">${stars}</div>
+            <p style="margin:20px 0 0;font-size:13px;color:${C.textDim};">Un souci, une retouche à prévoir ? Répondez simplement à cet email.</p>
+            ${emailSignature()}
+        `, { preheader: 'Une note en un clic sur votre projet livré' }),
+    };
+}
+
+/* — 8septies. Demande d'avis Google (client) — envoyée quelques jours après livraison — */
+function googleReviewRequestEmail(project, googleReviewUrl) {
+    return {
+        to: project.clientEmail,
+        subject: `Un avis Google, ça vous dit ?`,
+        html: emailWrapper(`
+            ${emailTitle('Un petit coup de pouce ?')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour, j'espère que vous êtes toujours satisfait(e) du résultat sur « ${project.name} ». Si vous avez deux minutes, un avis Google m'aiderait énormément à me faire connaître.</p>
+            ${emailCTA('Laisser un avis Google', googleReviewUrl)}
+            <p style="margin:20px 0 0;font-size:13px;color:${C.textDim};">Merci infiniment pour votre soutien 🙏</p>
+            ${emailSignature()}
+        `, { preheader: 'Un avis Google m\'aiderait beaucoup' }),
+    };
+}
+
+/* — 8octies. Anniversaire de collaboration (client) — 1 an après livraison — */
+function anniversaryEmail(project) {
+    return {
+        to: project.clientEmail,
+        subject: `Ça fait déjà 1 an !`,
+        html: emailWrapper(`
+            ${emailTitle('Un an déjà 🎂')}
+            <p style="margin:0 0 24px;color:${C.textMuted};">Bonjour, ça fait tout juste un an que nous avons travaillé ensemble sur « ${project.name} ». J'espère que tout se passe bien de votre côté !</p>
+            <p style="margin:0 0 24px;color:${C.textMuted};">Si un coup de neuf ou un nouveau projet vous trotte dans la tête, n'hésitez pas à revenir vers moi — ce serait un plaisir de retravailler ensemble.</p>
+            ${emailSignature()}
+        `, { preheader: 'Un an après notre collaboration' }),
+    };
+}
+
 /* — 9. Rapport mensuel (interne) — */
 function monthlyReportEmail({ newLeads, wonLeads, revenue, visitors }) {
     const monthName = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -841,6 +888,87 @@ function invoiceHtmlPage(invoice, business = {}) {
 /* ============================================================
    EXPORTS
    ============================================================ */
+/* ============================================================
+   PORTAIL CLIENT — page publique en lecture seule
+   ============================================================ */
+function clientPortalPage() {
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon espace — Florian B.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #0a0a0a; color: #f0f0f0; min-height: 100vh; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 48px 24px 80px; }
+  .logo { font-family: 'Syne', Georgia, serif; font-size: 24px; font-weight: 800; margin-bottom: 40px; }
+  .logo span { color: #da2c48; }
+  h1 { font-family: 'Syne', Georgia, serif; font-size: 22px; font-weight: 700; margin: 32px 0 16px; }
+  .card { background: #111; border: 1px solid #1e1e1e; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
+  .card-title { font-weight: 700; font-size: 14px; }
+  .card-sub { color: #888; font-size: 12px; margin-top: 4px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 10px; font-weight: 700; text-transform: uppercase; background: #181818; color: #888; }
+  .badge.paid, .badge.livre, .badge.accepted { background: #10321f; color: #4ade80; }
+  .empty { color: #666; font-size: 13px; padding: 20px 0; }
+  .checklist-item { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; color: #ccc; }
+  .checklist-item.done { color: #4ade80; text-decoration: line-through; }
+  #loading, #error { color: #888; font-size: 14px; }
+  #error { color: #ff2f76; display: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">FLORIAN B<span>.</span></div>
+    <div id="loading">Chargement de votre espace...</div>
+    <div id="error"></div>
+    <div id="content" style="display:none;">
+      <h1>Vos projets</h1>
+      <div id="projectsWrap"></div>
+      <h1>Vos devis</h1>
+      <div id="quotesWrap"></div>
+      <h1>Vos factures</h1>
+      <div id="invoicesWrap"></div>
+    </div>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const email = params.get('email'), token = params.get('token');
+    const statusLabels = { draft: 'Brouillon', sent: 'Envoyé', accepted: 'Accepté', paid: 'Payé', brief: 'Brief', maquettes: 'Maquettes', revisions: 'Révisions', livre: 'Livré' };
+    function money(n) { return (Number(n)||0).toFixed(2) + ' €'; }
+    function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : ''; }
+    async function load() {
+      if (!email || !token) { document.getElementById('loading').style.display='none'; document.getElementById('error').textContent='Lien invalide.'; document.getElementById('error').style.display='block'; return; }
+      try {
+        const res = await fetch('/api/portal?email=' + encodeURIComponent(email) + '&token=' + encodeURIComponent(token));
+        if (!res.ok) throw new Error('Lien invalide ou expiré.');
+        const data = await res.json();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+        document.getElementById('projectsWrap').innerHTML = data.projects.length ? data.projects.map(p => \`
+          <div class="card">
+            <div class="card-title">\${p.name}</div>
+            <span class="badge \${p.stage}">\${statusLabels[p.stage] || p.stage}</span>
+            <div style="margin-top:10px;">\${(p.checklist||[]).map(c => \`<div class="checklist-item \${c.done?'done':''}">\${c.done?'✅':'⬜'} \${c.label}</div>\`).join('')}</div>
+          </div>\`).join('') : '<div class="empty">Aucun projet pour le moment.</div>';
+        document.getElementById('quotesWrap').innerHTML = data.quotes.length ? data.quotes.map(q => \`
+          <div class="card"><div class="card-title">\${q.quoteNumber || ('#'+q.id)} — \${money(q.total)}</div><div class="card-sub">\${fmtDate(q.created_at)}</div><span class="badge \${q.status}">\${statusLabels[q.status]||q.status}</span></div>\`).join('') : '<div class="empty">Aucun devis pour le moment.</div>';
+        document.getElementById('invoicesWrap').innerHTML = data.invoices.length ? data.invoices.map(i => \`
+          <div class="card"><div class="card-title">\${i.invoiceNumber} — \${money(i.total)}</div><div class="card-sub">Émise le \${fmtDate(i.issue_date)}</div><span class="badge \${i.status}">\${statusLabels[i.status]||i.status}</span></div>\`).join('') : '<div class="empty">Aucune facture pour le moment.</div>';
+      } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').textContent = e.message;
+        document.getElementById('error').style.display = 'block';
+      }
+    }
+    load();
+  </script>
+</body>
+</html>`;
+}
+
 module.exports = {
     sendMail,
     isMailerConfigured,
@@ -857,8 +985,12 @@ module.exports = {
     invoiceReminderEmail,
     remindersDigestEmail,
     dailyBriefEmail,
+    satisfactionSurveyEmail,
+    googleReviewRequestEmail,
+    anniversaryEmail,
     quoteHtmlPage,
     invoiceHtmlPage,
+    clientPortalPage,
     invoiceEmail,
     analyticsAlertEmail,
     monthlyReportEmail,

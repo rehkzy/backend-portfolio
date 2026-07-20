@@ -521,6 +521,47 @@ app.delete('/api/events/:id', auth, canWrite, (req, res) => {
 });
 
 /* ============================================================
+   FUNNEL DE CONVERSION — où les visiteurs abandonnent, sur 30 jours
+   ============================================================ */
+app.get('/api/analytics/funnel', auth, (req, res) => {
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const events = db.get('events').value().filter(e => e.created_at >= since);
+    const leads = db.get('leads').value().filter(l => l.created_at >= since);
+    const appointments = db.get('appointments').value().filter(a => a.created_at >= since);
+    const chatOpened = new Set(events.filter(e => e.type === 'chat_opened').map(e => e.sessionId)).size;
+    const rdvFlowStarted = new Set(events.filter(e => e.type === 'rdv_flow_started' || e.type === 'contact_flow_started').map(e => e.sessionId)).size;
+    res.json({
+        steps: [
+            { label: 'Chat ouvert', count: chatOpened },
+            { label: 'Formulaire démarré', count: rdvFlowStarted || (leads.length + appointments.length) },
+            { label: 'Message envoyé', count: leads.length },
+            { label: 'RDV demandé', count: appointments.length },
+        ],
+    });
+});
+
+/* ============================================================
+   QUALITÉ DES LEADS PAR SOURCE — pour savoir où investir ton temps
+   ============================================================ */
+app.get('/api/analytics/leads-quality', auth, (req, res) => {
+    const leads = db.get('leads').value();
+    const bySource = {};
+    leads.forEach(l => {
+        const src = l.source || 'inconnu';
+        if (!bySource[src]) bySource[src] = { source: src, count: 0, won: 0, budgetScores: [] };
+        bySource[src].count++;
+        if (l.status === 'won') bySource[src].won++;
+        if (l.budget && BUDGET_SCORES[l.budget] !== undefined) bySource[src].budgetScores.push(BUDGET_SCORES[l.budget]);
+    });
+    const result = Object.values(bySource).map(s => ({
+        source: s.source, count: s.count,
+        conversionRate: s.count ? Math.round((s.won / s.count) * 100) : 0,
+        avgBudgetScore: s.budgetScores.length ? Math.round(s.budgetScores.reduce((a, b) => a + b, 0) / s.budgetScores.length) : null,
+    })).sort((a, b) => b.count - a.count);
+    res.json(result);
+});
+
+/* ============================================================
    DONNÉES PROTÉGÉES — dashboard admin
    ============================================================ */
 /* ============================================================
@@ -848,6 +889,13 @@ app.patch('/api/clients/:email', auth, canWrite, (req, res) => {
     res.json({ ok: true });
 });
 
+app.get('/api/clients/:email/portal-link', auth, (req, res) => {
+    const email = clientKey(req.params.email);
+    if (!email) return res.status(400).json({ error: 'email requis' });
+    const base = process.env.DASHBOARD_URL || `${req.protocol}://${req.get('host')}`;
+    res.json({ url: `${base}/portal?email=${encodeURIComponent(email)}&token=${clientPortalToken(email)}` });
+});
+
 
 /* ============================================================
    CONTENU DU SITE — theme builder
@@ -856,7 +904,9 @@ app.patch('/api/clients/:email', auth, canWrite, (req, res) => {
    ============================================================ */
 app.get('/api/content', (req, res) => {
     res.set('Cache-Control', 'no-store');
-    res.json(db.get('site_content').value());
+    const content = db.get('site_content').value();
+    const clarityId = db.get('businessSettings').value()?.clarityId || null;
+    res.json({ ...content, clarityId });
 });
 
 app.put('/api/admin/content', auth, canWrite, (req, res) => {
@@ -1075,6 +1125,34 @@ function checkLegalReadiness(business) {
 function quoteAcceptToken(id) {
     return crypto.createHmac('sha256', JWT_SECRET).update('quote-accept-' + id).digest('hex').slice(0, 32);
 }
+
+// Token signé pour le portail client — pas de compte à créer, le lien (email + token) fait foi.
+function clientPortalToken(email) {
+    return crypto.createHmac('sha256', JWT_SECRET).update('client-portal-' + clientKey(email)).digest('hex').slice(0, 32);
+}
+
+/* ============================================================
+   PORTAIL CLIENT — page publique en lecture seule (devis, factures,
+   avancement de projet) accessible via un lien signé, sans compte.
+   ============================================================ */
+app.get('/api/portal', (req, res) => {
+    const email = clientKey(req.query.email);
+    if (!email || req.query.token !== clientPortalToken(email)) return res.status(403).json({ error: 'Lien invalide' });
+    const quotes = db.get('quotes').value().filter(q => clientKey(q.clientEmail) === email);
+    const invoices = db.get('invoices').value().filter(i => clientKey(i.clientEmail) === email);
+    const projects = db.get('projects').value().filter(p => clientKey(p.clientEmail) === email);
+    res.json({
+        email,
+        quotes: quotes.map(q => ({ id: q.id, quoteNumber: q.quoteNumber, total: q.total, status: q.status, created_at: q.created_at })),
+        invoices: invoices.map(i => ({ id: i.id, invoiceNumber: i.invoiceNumber, total: i.total, status: i.status, issue_date: i.issue_date, dueDate: i.dueDate })),
+        projects: projects.map(p => ({ id: p.id, name: p.name, stage: p.stage, checklist: p.checklist || [] })),
+    });
+});
+
+app.get('/portal', (req, res) => {
+    res.set('Content-Type', 'text/html');
+    res.send(mailer.clientPortalPage());
+});
 
 // Modèles de devis — pré-remplissage rapide par type de prestation
 app.get('/api/quote-templates', auth, (req, res) => {
@@ -1522,25 +1600,42 @@ app.get('/api/projects', auth, (req, res) => {
 app.post('/api/projects', auth, adminOnly, (req, res) => {
     const { name, clientEmail, leadId, stage } = req.body || {};
     if (!name || !clientEmail) return res.status(400).json({ error: 'name et clientEmail requis' });
+    const template = db.get('projectChecklistTemplate').value() || [];
     const project = {
         id: nextId('projects'), created_at: now(), leadId: leadId || null,
         name, clientEmail, stage: PROJECT_STAGES.includes(stage) ? stage : 'brief', notes: '',
+        checklist: template.map(label => ({ label, done: false })),
+        deliveredAt: null, satisfactionRequestedAt: null, reviewRequestedAt: null, anniversarySentAt: null,
     };
     db.get('projects').push(project).write();
     res.status(201).json(project);
 });
 
-app.patch('/api/projects/:id', auth, adminOnly, (req, res) => {
+app.patch('/api/projects/:id', auth, adminOnly, async (req, res) => {
     const id = Number(req.params.id);
     const p = db.get('projects').find({ id });
     if (!p.value()) return res.status(404).json({ error: 'Projet introuvable' });
-    const { name, clientEmail, stage, notes } = req.body || {};
+    const prev = p.value();
+    const { name, clientEmail, stage, notes, checklist } = req.body || {};
     const patch = {};
     if (name !== undefined) patch.name = name;
     if (clientEmail !== undefined) patch.clientEmail = clientEmail;
     if (notes !== undefined) patch.notes = notes;
-    if (stage !== undefined && PROJECT_STAGES.includes(stage)) patch.stage = stage;
+    if (checklist !== undefined) patch.checklist = checklist;
+    if (stage !== undefined && PROJECT_STAGES.includes(stage)) {
+        patch.stage = stage;
+        if (stage === 'livre' && prev.stage !== 'livre') patch.deliveredAt = now();
+    }
     p.assign(patch).write();
+
+    // Passage à "Livré" → déclenche l'enquête de satisfaction (immédiate)
+    if (stage === 'livre' && prev.stage !== 'livre') {
+        const updated = p.value();
+        mailer.sendMail({
+            ...mailer.satisfactionSurveyEmail(updated, satisfactionToken(id)),
+            meta: { type: 'satisfaction_survey', relatedId: id },
+        }).then(r => { if (r.sent) db.get('projects').find({ id }).assign({ satisfactionRequestedAt: now() }).write(); }).catch(() => {});
+    }
     res.json({ ok: true });
 });
 
@@ -1549,9 +1644,86 @@ app.delete('/api/projects/:id', auth, adminOnly, (req, res) => {
     res.json({ ok: true });
 });
 
+// Token signé pour le lien de notation de satisfaction (clic direct, sans compte)
+function satisfactionToken(projectId) {
+    return crypto.createHmac('sha256', JWT_SECRET).update('satisfaction-' + projectId).digest('hex').slice(0, 32);
+}
+
+app.get('/api/projects/:id/rate', (req, res) => {
+    const id = Number(req.params.id);
+    const score = Number(req.query.score);
+    const project = db.get('projects').find({ id }).value();
+    const page = (msg) => `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Merci</title>
+        <style>body{font-family:-apple-system,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:2rem;text-align:center;}p{color:#aaa;}</style></head>
+        <body><div><h1>Merci ! 🙏</h1><p>${msg}</p></div></body></html>`;
+    if (!project || req.query.token !== satisfactionToken(id) || !(score >= 1 && score <= 5)) {
+        return res.status(400).send(page("Ce lien n'est plus valide."));
+    }
+    db.get('projects').find({ id }).assign({ satisfactionScore: score, satisfactionRatedAt: now() }).write();
+    res.send(page('Votre note a bien été enregistrée. Florian vous en remercie sincèrement.'));
+});
+
+/* ============================================================
+   SUIVI DU TEMPS — par projet, pour affiner le chiffrage des devis
+   ============================================================ */
+app.get('/api/time-logs', auth, (req, res) => {
+    const { projectId } = req.query;
+    let logs = db.get('timeLogs').value();
+    if (projectId) logs = logs.filter(t => t.projectId === Number(projectId));
+    res.json([...logs].reverse());
+});
+
+app.post('/api/time-logs', auth, canWrite, (req, res) => {
+    const { projectId, description, minutes, date } = req.body || {};
+    if (!projectId || !minutes) return res.status(400).json({ error: 'projectId et minutes requis' });
+    const entry = {
+        id: nextId('timeLogs'), created_at: now(),
+        projectId: Number(projectId), description: description || '',
+        minutes: Number(minutes) || 0, date: date || now().slice(0, 10),
+    };
+    db.get('timeLogs').push(entry).write();
+    res.status(201).json(entry);
+});
+
+app.delete('/api/time-logs/:id', auth, canWrite, (req, res) => {
+    db.get('timeLogs').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+
 /* ============================================================
    CALENDRIER DE CONTENU (Instagram etc.)
    ============================================================ */
+// Suggestions d'idées de contenu — génération par modèles à partir de tes projets réels
+// (PAS une vraie IA connectée : rotation de formats éprouvés appliqués à ton portfolio).
+const CONTENT_IDEA_TEMPLATES = [
+    p => `Avant/après sur le projet "${p.title}" — montre l'évolution du brief au résultat final`,
+    p => `Behind the scenes : 3 étapes clés du processus créatif sur "${p.title}"`,
+    p => `Zoom sur un détail du projet "${p.title}" qui fait toute la différence`,
+    p => `Carrousel "3 choses que j'ai apprises" en travaillant sur "${p.title}"`,
+    p => `Story "Cette semaine dans mon studio" avec un aperçu de "${p.title}"`,
+];
+const GENERIC_CONTENT_IDEAS = [
+    'Partage un avant/après de ton propre site ou identité visuelle',
+    'FAQ en story : réponds à une question fréquente de tes clients',
+    'Carrousel "Les erreurs de branding les plus fréquentes"',
+    'Présente ton setup / tes outils de travail (Figma, Procreate...)',
+    'Témoignage client mis en scène en citation visuelle',
+];
+
+app.get('/api/content-ideas', auth, (req, res) => {
+    const projects = db.get('site_content').value()?.projects || [];
+    const sample = [...projects].sort(() => Math.random() - 0.5).slice(0, 3);
+    const ideas = [];
+    sample.forEach(p => {
+        const tpl = CONTENT_IDEA_TEMPLATES[Math.floor(Math.random() * CONTENT_IDEA_TEMPLATES.length)];
+        ideas.push({ title: tpl(p), suggestedPlatform: 'instagram' });
+    });
+    const genericPicks = [...GENERIC_CONTENT_IDEAS].sort(() => Math.random() - 0.5).slice(0, 2);
+    genericPicks.forEach(g => ideas.push({ title: g, suggestedPlatform: 'linkedin' }));
+    res.json(ideas);
+});
+
 app.get('/api/content-calendar', auth, (req, res) => {
     res.json([...db.get('contentCalendar').value()].sort((a, b) => (a.date || '').localeCompare(b.date || '')));
 });
@@ -1603,7 +1775,8 @@ const EMAIL_TYPE_LABELS = {
     quote_sent: 'Devis envoyé', quote_reminder: 'Relance devis', quote_accepted: 'Devis accepté (interne)',
     invoice_sent: 'Facture envoyée', invoice_reminder: 'Relance facture', monthly_report: 'Rapport mensuel',
     daily_brief: 'Brief quotidien', analytics_alert: 'Alerte analytics', team_invite: 'Invitation équipe',
-    team_invite_resend: 'Invitation renvoyée', other: 'Autre',
+    team_invite_resend: 'Invitation renvoyée', satisfaction_survey: 'Enquête de satisfaction',
+    google_review_request: 'Demande d\'avis Google', anniversary: 'Anniversaire collaboration', other: 'Autre',
 };
 
 app.get('/api/admin/emails', auth, adminOnly, (req, res) => {
@@ -1818,6 +1991,29 @@ cron.schedule('0 * * * *', async () => {
             if (result.sent) db.get('appointments').find({ id: appt.id }).assign({ reminderSentAt: now() }).write();
         }
     } catch (err) { console.error('Erreur rappels RDV:', err.message); }
+}, { timezone: 'Europe/Paris' });
+
+// Suivi post-livraison — une fois par jour à 10h : demande d'avis Google (3 jours après
+// la livraison) et email d'anniversaire de collaboration (1 an après, une seule fois).
+cron.schedule('0 10 * * *', async () => {
+    try {
+        const business = db.get('businessSettings').value() || {};
+        const projects = db.get('projects').value().filter(p => p.stage === 'livre' && p.deliveredAt);
+        const threeDaysAgo = new Date(Date.now() - 3 * 86400000);
+        const oneYearAgo = new Date(Date.now() - 365 * 86400000);
+
+        for (const p of projects) {
+            const delivered = new Date(p.deliveredAt);
+            if (business.googleReviewUrl && !p.reviewRequestedAt && delivered <= threeDaysAgo) {
+                const r = await mailer.sendMail({ ...mailer.googleReviewRequestEmail(p, business.googleReviewUrl), meta: { type: 'google_review_request', relatedId: p.id } });
+                if (r.sent) db.get('projects').find({ id: p.id }).assign({ reviewRequestedAt: now() }).write();
+            }
+            if (!p.anniversarySentAt && delivered <= oneYearAgo) {
+                const r = await mailer.sendMail({ ...mailer.anniversaryEmail(p), meta: { type: 'anniversary', relatedId: p.id } });
+                if (r.sent) db.get('projects').find({ id: p.id }).assign({ anniversarySentAt: now() }).write();
+            }
+        }
+    } catch (err) { console.error('Erreur suivi post-livraison:', err.message); }
 }, { timezone: 'Europe/Paris' });
 
 app.listen(PORT, () => console.log(`✅ Backend Florian B. sur http://localhost:${PORT}`));
