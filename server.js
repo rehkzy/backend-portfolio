@@ -1283,7 +1283,10 @@ app.get('/api/business-settings', auth, (req, res) => {
 });
 
 app.put('/api/business-settings', auth, adminOnly, (req, res) => {
-    db.set('businessSettings', req.body || {}).write();
+    // Fusion (pas remplacement complet) : la page "Mon entreprise" n'envoie qu'un
+    // sous-ensemble de champs — un remplacement total effacerait silencieusement
+    // les champs gérés ailleurs (pause RDV, Clarity...) à chaque enregistrement.
+    db.get('businessSettings').assign(req.body || {}).write();
     logTeamAction(req, 'business_settings_updated', 'Paramètres entreprise modifiés');
     res.json({ ok: true });
 });
