@@ -150,7 +150,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
       <!-- HERO / SIGNATURE DE MARQUE -->
       <tr>
         <td align="center" style="padding:44px 32px 30px;background:${C.card};background-color:${C.card};border-bottom:1px solid ${C.separator};">
-          <img src="https://florian-b.fr/assets/florian-b-fb-animation.gif" width="230" height="56" alt="Florian B." style="display:block;margin:0 auto;border:0;outline:none;max-width:230px;height:auto;">
+          <img src="https://florian-b.fr/assets/florian-b-fb-animation-v2.gif" width="230" height="56" alt="Florian B." style="display:block;margin:0 auto;border:0;outline:none;max-width:230px;height:auto;">
           <p style="margin:14px 0 0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:2.2px;text-transform:uppercase;color:${C.textMuted};">
             Les pixels sont nos atomes créatifs
           </p>
@@ -175,7 +175,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
                 <a href="mailto:contact@florian-b.fr" style="color:${C.textDim};text-decoration:none;">contact@florian-b.fr</a>
               </td>
               <td align="right" valign="middle">
-                <a href="https://florian-b.fr" style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:14px;font-weight:700;letter-spacing:0.3px;color:${C.accent};text-decoration:none;">florian-b.fr →</a>
+                <a href="https://florian-b.fr" style="font-family:'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:700;letter-spacing:0.3px;color:${C.accent};text-decoration:none;">florian-b.fr →</a>
               </td>
             </tr>
           </table>
@@ -195,7 +195,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:al
 
 // Titre principal de l'email
 function emailTitle(text) {
-    return `<p class="email-title" style="margin:0 0 24px;font-family:'Syne',Georgia,'Times New Roman',serif;font-size:32px;font-weight:700;color:${C.white};line-height:1.25;letter-spacing:-0.5px;">${text}</p>`;
+    return `<p class="email-title" style="margin:0 0 24px;font-family:'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;font-size:32px;font-weight:700;color:${C.white};line-height:1.25;letter-spacing:-0.5px;">${text}</p>`;
 }
 
 // Bouton CTA principal
@@ -244,7 +244,7 @@ function emailStatCard(value, label, note = '') {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0;">
   <tr>
     <td style="padding:24px;background:${C.accentDim};border:1px solid ${C.accent}33;border-radius:14px;text-align:center;">
-      <div class="stat-val" style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:36px;font-weight:700;color:${C.accent};line-height:1;">${value}</div>
+      <div class="stat-val" style="font-family:'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;font-size:36px;font-weight:700;color:${C.accent};line-height:1;">${value}</div>
       <div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:${C.textMuted};margin-top:6px;text-transform:uppercase;letter-spacing:1px;">${label}</div>
       ${note ? `<div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textDim};margin-top:4px;">${note}</div>` : ''}
     </td>
@@ -262,7 +262,7 @@ function emailStatGrid(stats) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="padding:20px 16px;background:${C.surface};border:1px solid ${C.separator};border-radius:12px;text-align:center;">
-            <div style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:28px;font-weight:700;color:${C.white};line-height:1;">${s.value}</div>
+            <div style="font-family:'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;font-size:28px;font-weight:700;color:${C.white};line-height:1;">${s.value}</div>
             <div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:11px;color:${C.textMuted};margin-top:5px;text-transform:uppercase;letter-spacing:0.8px;">${s.label}</div>
           </td>
         </tr>
@@ -328,7 +328,7 @@ function quoteTotalRow(total, forEmail = true) {
   <tr>
     <td style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:${forEmail ? C.textMuted : '#888'};text-transform:uppercase;letter-spacing:0.8px;">Total</td>
     <td style="text-align:right;">
-      <span style="font-family:'Syne',Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:${forEmail ? C.white : '#0a0a0a'};">${(total || 0).toFixed(2)} <span style="font-size:16px;">€</span></span>
+      <span style="font-family:'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;font-size:26px;font-weight:700;color:${forEmail ? C.white : '#0a0a0a'};">${(total || 0).toFixed(2)} <span style="font-size:16px;">€</span></span>
     </td>
   </tr>
 </table>`;
