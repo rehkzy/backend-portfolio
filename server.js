@@ -462,6 +462,48 @@ app.get('/api/local-context', auth, async (req, res) => {
     res.json(out);
 });
 
+/* ============================================================
+   VISITEURS EN DIRECT — carte précise, IP, appareil, durée...
+   Une session est considérée "en ligne" si un heartbeat est arrivé
+   il y a moins de 45s (le tracker en envoie un toutes les 15s).
+   ============================================================ */
+const LIVE_ONLINE_WINDOW_MS = 45 * 1000;
+const LIVE_SESSION_KEEP_MS = 30 * 60 * 1000; // on garde 30 min l'historique "récemment parti"
+
+app.get('/api/live-visitors', auth, (req, res) => {
+    const nowMs = Date.now();
+    const all = db.get('liveSessions').value();
+
+    // Purge des sessions trop vieilles pour ne pas faire grossir le fichier
+    const kept = all.filter(s => nowMs - new Date(s.lastSeenAt).getTime() < LIVE_SESSION_KEEP_MS);
+    if (kept.length !== all.length) db.set('liveSessions', kept).write();
+
+    const enriched = kept.map(s => {
+        const lastSeenMs = new Date(s.lastSeenAt).getTime();
+        const online = (nowMs - lastSeenMs) < LIVE_ONLINE_WINDOW_MS;
+        // Petit décalage déterministe (basé sur l'IP) pour éviter que plusieurs
+        // visiteurs de la même ville se superposent exactement sur la carte
+        let jitterLat = 0, jitterLon = 0;
+        if (s.geo && s.geo.lat != null) {
+            const h = crypto.createHash('md5').update(s.sessionId).digest();
+            jitterLat = ((h[0] / 255) - 0.5) * 0.06;
+            jitterLon = ((h[1] / 255) - 0.5) * 0.06;
+        }
+        return {
+            ...s,
+            online,
+            secondsSinceSeen: Math.round((nowMs - lastSeenMs) / 1000),
+            mapLat: s.geo && s.geo.lat != null ? s.geo.lat + jitterLat : null,
+            mapLon: s.geo && s.geo.lon != null ? s.geo.lon + jitterLon : null,
+        };
+    }).sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt));
+
+    res.json({
+        online: enriched.filter(s => s.online).length,
+        sessions: enriched,
+    });
+});
+
 app.post('/api/leads', async (req, res) => {
     const { name, email, message, source, budget } = req.body || {};
     if (!email || !message) return res.status(400).json({ error: 'email et message requis' });
@@ -601,7 +643,7 @@ app.post('/api/appointments', async (req, res) => {
 // consultation de projet, ouverture du chat, FAQ, téléchargements, etc.)
 // Format envoyé par le site : { event, sessionId, path, referrer, timestamp, ...données propres à l'événement }
 // Reste compatible avec l'ancien format { type, meta } utilisé par le code existant.
-app.post('/api/events', (req, res) => {
+app.post('/api/events', async (req, res) => {
     const body = req.body || {};
     const type = body.event || body.type;
     if (!type) return res.status(400).json({ error: 'event (ou type) requis' });
@@ -621,6 +663,45 @@ app.post('/api/events', (req, res) => {
     const events = db.get('events').value();
     if (events.length > 5000) db.set('events', events.slice(events.length - 5000)).write();
     res.status(201).json({ ok: true });
+
+    // Mise à jour de la session en direct (carte "Visiteurs en direct") — seulement
+    // pour les événements de suivi de navigation (page_view / heartbeat) porteurs de sessionId
+    if ((type === 'page_view' || type === 'heartbeat') && body.sessionId) {
+        const ip = getRealIp(req);
+        const ua = req.headers['user-agent'] || null;
+        const sessions = db.get('liveSessions');
+        const existing = sessions.find({ sessionId: body.sessionId }).value();
+        const uaParsed = parseUA(ua);
+        const patch = {
+            sessionId: body.sessionId,
+            ip,
+            ...uaParsed,
+            lang: body.lang || (existing && existing.lang) || null,
+            timezone: body.timezone || (existing && existing.timezone) || null,
+            screen: body.screen || (existing && existing.screen) || null,
+            connection: body.connection || (existing && existing.connection) || null,
+            referrer: body.referrer || (existing && existing.referrer) || null,
+            utmSource: body.utmSource || (existing && existing.utmSource) || null,
+            utmMedium: body.utmMedium || (existing && existing.utmMedium) || null,
+            utmCampaign: body.utmCampaign || (existing && existing.utmCampaign) || null,
+            currentPath: body.path || null,
+            pagesVisited: body.pagesVisited || (existing && existing.pagesVisited) || null,
+            visitDuration: body.visitDuration != null ? body.visitDuration : (existing && existing.visitDuration) || 0,
+            lastSeenAt: now(),
+            firstSeenAt: (existing && existing.firstSeenAt) || now(),
+            geo: (existing && existing.geo) || null,
+        };
+        if (existing) sessions.find({ sessionId: body.sessionId }).assign(patch).write();
+        else sessions.push(patch).write();
+
+        // Géolocalisation IP une seule fois par session (pas à chaque heartbeat, pour
+        // rester sous la limite gratuite de 45 requêtes/min du service de géoloc)
+        if (!patch.geo) {
+            geolocateIp(ip).then((geo) => {
+                if (geo) db.get('liveSessions').find({ sessionId: body.sessionId }).assign({ geo }).write();
+            }).catch(() => {});
+        }
+    }
 });
 
 app.get('/api/events', auth, (req, res) => {

@@ -14,6 +14,7 @@ const DEFAULTS = {
     "leads": [],
     "appointments": [],
     "events": [],
+    "liveSessions": [],
     "quotes": [],
     "invoices": [],
     "clients": [],

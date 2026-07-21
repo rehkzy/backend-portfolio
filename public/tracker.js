@@ -48,7 +48,7 @@
 
     // Pages suivantes (SPA-friendly)
     const _origPushState = history.pushState.bind(history);
-    history.pushState = function (...args) { _origPushState(...args); recordPage(); };
+    history.pushState = function (...args) { _origPushState(...args); recordPage(); heartbeat('page_view'); };
     window.addEventListener('popstate', recordPage);
 
     /* ---- Détection type connexion (si disponible) ---- */
@@ -82,26 +82,34 @@
         getSessionId,
     };
 
-    /* ---- Ping d'activité pour le suivi de session (optionnel) ---- */
-    // Envoie un event 'page_view' discret à chaque nouvelle page visitée
+    /* ---- Ping d'activité pour le suivi de session en direct ---- */
+    // Envoie régulièrement un heartbeat complet (position dans le site, durée,
+    // parcours...) pour alimenter la carte "Visiteurs en direct" du dashboard.
     const BACKEND_URL = (window.BACKEND_URL || '').replace(/\/$/, '');
-    function ping(path) {
+    function heartbeat(eventType) {
         if (!BACKEND_URL) return;
         try {
             fetch(BACKEND_URL + '/api/events', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    event: 'page_view',
+                    event: eventType || 'heartbeat',
                     sessionId: getSessionId(),
-                    path: path || location.pathname,
+                    path: location.pathname + location.search,
                     referrer: document.referrer || null,
+                    ...getPayload(),
                 }),
                 keepalive: true,
             }).catch(() => {});
         } catch {}
     }
-    ping(location.pathname);
-    history.pushState = function (...args) { _origPushState(...args); recordPage(); ping(location.pathname); };
+
+    heartbeat('page_view');
+    window.addEventListener('popstate', () => heartbeat('page_view'));
+
+    // Heartbeat toutes les 15s tant que l'onglet est actif, pour que la carte en
+    // direct sache qu'un visiteur est toujours là (et depuis combien de temps).
+    setInterval(() => { if (document.visibilityState === 'visible') heartbeat('heartbeat'); }, 15000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') heartbeat('heartbeat'); });
 
 })();

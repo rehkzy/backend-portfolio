@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <title>Dashboard — Florian B.</title>
 <link rel="manifest" href="/dashboard/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/dashboard/apple-touch-icon.png">
@@ -13,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
     :root {
         --accent: #da2c48;
@@ -599,6 +601,10 @@
         .login-card { padding: 1.8rem 1.4rem; }
         .kanban-col { min-width: 78vw; }
     }
+    #liveMap { border-radius: var(--radius-lg); }
+    .leaflet-popup-content-wrapper { border-radius: 10px; }
+    .leaflet-popup-content { margin: 0.8rem 0.9rem; }
+    .leaflet-container { font-family: 'Inter', sans-serif; background: #0a0a0a; }
 </style>
 </head>
 <body data-theme="light">
@@ -672,6 +678,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
                 Analytics
                 <span class="badge" id="realtimeBadge" style="display:none; background:#22c55e;"></span>
+            </div>
+            <div class="nav-item" data-view="live-map">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                Visiteurs en direct
+                <span class="badge" id="liveMapBadge" style="display:none; background:#22c55e;"></span>
             </div>
         </div>
 
@@ -1652,6 +1663,27 @@
             <div id="expensesTableWrap"></div>
         </section>
 
+        <section class="view" id="view-live-map">
+            <div class="topbar">
+                <h2>Visiteurs en direct</h2>
+                <div class="topbar-actions">
+                    <span class="cell-muted" style="font-size:0.78rem; display:flex; align-items:center; gap:0.4rem;">
+                        <span id="liveMapDot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                        <span id="liveMapCount">0 en ligne</span>
+                    </span>
+                </div>
+            </div>
+            <p class="cell-muted" style="font-size:0.8rem; margin-bottom:1rem;">
+                Position, IP, appareil et durée de visite de chaque visiteur actuellement sur florian-b.fr — mis à jour automatiquement toutes les 8 secondes. Basé sur la géolocalisation de l'adresse IP : précision généralement à l'échelle de la ville, pas de l'adresse exacte.
+            </p>
+            <div class="panel" style="padding:0; overflow:hidden; margin-bottom:1.2rem;">
+                <div id="liveMap" style="width:100%; height:480px; background:#0a0a0a;"></div>
+            </div>
+            <div class="panel" style="padding:0;">
+                <div id="liveMapTableWrap"></div>
+            </div>
+        </section>
+
         <!-- CALENDRIER DE CONTENU -->
         <section class="view" id="view-calendar">
             <div class="topbar">
@@ -2017,6 +2049,8 @@ function switchView(view) {
     if (view === 'business-settings') loadBusinessSettings();
     if (view === 'projects') loadProjectsTrack();
     if (view === 'calendar') loadContentCalendar();
+    if (view === 'live-map') loadLiveMap();
+    else stopLiveMapPolling();
     if (view === 'team') loadTeam();
     if (view === 'account') { loadAccount(); refreshPushUI(); }
     if (view === 'journal') loadJournal();
@@ -6078,8 +6112,132 @@ function toast(msg) {
 })();
 
 /* ============================================================
-   NOTIFICATIONS PUSH — activation depuis "Mon compte"
+   VISITEURS EN DIRECT — carte Leaflet réelle (tuiles OpenStreetMap
+   sombres), IP, appareil, durée, position précise par ville.
    ============================================================ */
+let liveMapInstance = null;
+let liveMapMarkers = {};
+let liveMapPollTimer = null;
+
+const DEVICE_ICON = { mobile: '📱', tablet: '📲', desktop: '💻' };
+
+function ensureLiveMap() {
+    if (liveMapInstance) return liveMapInstance;
+    liveMapInstance = L.map('liveMap', { worldCopyJump: true }).setView([46.6, 2.4], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19,
+        subdomains: 'abcd',
+    }).addTo(liveMapInstance);
+    return liveMapInstance;
+}
+
+function liveMapPopupHTML(s) {
+    const geo = s.geo || {};
+    const flag = geo.countryCode ? countryFlag(geo.countryCode) : '';
+    const loc = geo.city ? `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country || ''}` : 'Localisation inconnue';
+    const dur = formatDuration(s.visitDuration || 0);
+    const since = s.online ? "à l'instant" : `il y a ${formatDuration(s.secondsSinceSeen)}`;
+    return `
+        <div style="min-width:240px; font-family:Inter,sans-serif;">
+            <div style="font-weight:800; font-size:0.9rem; margin-bottom:0.35rem;">${flag} ${escapeHtml(loc)}</div>
+            <div style="font-size:0.78rem; line-height:1.7; color:#333;">
+                <div><strong>IP :</strong> ${escapeHtml(s.ip || '—')}</div>
+                ${geo.isp ? `<div><strong>Opérateur :</strong> ${escapeHtml(geo.isp)}</div>` : ''}
+                <div><strong>Appareil :</strong> ${DEVICE_ICON[s.device] || ''} ${escapeHtml(s.device || '—')} · ${escapeHtml(s.browser || '—')} · ${escapeHtml(s.os || '—')}</div>
+                <div><strong>Fuseau :</strong> ${escapeHtml(geo.timezone || s.timezone || '—')}</div>
+                <div><strong>Temps sur le site :</strong> ${dur}</div>
+                <div><strong>Page actuelle :</strong> ${escapeHtml(s.currentPath || '—')}</div>
+                ${s.referrer ? `<div><strong>Venu depuis :</strong> ${escapeHtml(s.referrer)}</div>` : ''}
+                <div style="margin-top:0.3rem; color:${s.online ? '#16a34a' : '#888'};">${s.online ? '🟢 En ligne' : '⚪ Vu ' + since}</div>
+            </div>
+        </div>`;
+}
+
+function formatDuration(sec) {
+    sec = Math.max(0, Math.round(sec || 0));
+    if (sec < 60) return sec + 's';
+    const m = Math.floor(sec / 60), s2 = sec % 60;
+    if (m < 60) return `${m}min ${s2}s`;
+    return `${Math.floor(m / 60)}h ${m % 60}min`;
+}
+
+function renderLiveMapMarkers(sessions) {
+    const map = ensureLiveMap();
+    const seen = new Set();
+    sessions.forEach(s => {
+        if (s.mapLat == null || s.mapLon == null) return;
+        seen.add(s.sessionId);
+        const html = `<div style="width:16px;height:16px;border-radius:50%;background:${s.online ? '#22c55e' : '#666'};border:2px solid #fff;box-shadow:0 0 0 4px ${s.online ? 'rgba(34,197,94,0.35)' : 'rgba(150,150,150,0.25)'};"></div>`;
+        const icon = L.divIcon({ html, className: '', iconSize: [16, 16] });
+        if (liveMapMarkers[s.sessionId]) {
+            liveMapMarkers[s.sessionId].setLatLng([s.mapLat, s.mapLon]);
+            liveMapMarkers[s.sessionId].setIcon(icon);
+            liveMapMarkers[s.sessionId].setPopupContent(liveMapPopupHTML(s));
+        } else {
+            liveMapMarkers[s.sessionId] = L.marker([s.mapLat, s.mapLon], { icon })
+                .addTo(map)
+                .bindPopup(liveMapPopupHTML(s));
+        }
+    });
+    Object.keys(liveMapMarkers).forEach(id => {
+        if (!seen.has(id)) { map.removeLayer(liveMapMarkers[id]); delete liveMapMarkers[id]; }
+    });
+}
+
+function renderLiveMapTable(sessions) {
+    const wrap = document.getElementById('liveMapTableWrap');
+    if (!sessions.length) { wrap.innerHTML = emptyStateHTML('Aucun visiteur suivi pour le moment.'); return; }
+    wrap.innerHTML = `
+    <table class="data-table">
+        <thead><tr>
+            <th></th><th>Localisation</th><th>IP</th><th>Appareil</th><th>Page actuelle</th><th>Depuis</th><th>Durée</th>
+        </tr></thead>
+        <tbody>
+            ${sessions.map(s => {
+                const geo = s.geo || {};
+                const flag = geo.countryCode ? countryFlag(geo.countryCode) : '';
+                const loc = geo.city ? `${geo.city}, ${geo.country || ''}` : '—';
+                return `<tr onclick="flyToLiveVisitor('${s.sessionId}')" style="cursor:pointer;">
+                    <td>${s.online ? '<span title="En ligne" style="color:#22c55e;">●</span>' : '<span title="Récemment" style="color:#666;">●</span>'}</td>
+                    <td>${flag} ${escapeHtml(loc)}</td>
+                    <td class="cell-muted">${escapeHtml(s.ip || '—')}</td>
+                    <td>${DEVICE_ICON[s.device] || ''} ${escapeHtml(s.browser || '—')} · ${escapeHtml(s.os || '—')}</td>
+                    <td class="cell-muted">${escapeHtml(s.currentPath || '—')}</td>
+                    <td class="cell-muted">${formatDate(s.firstSeenAt, true)}</td>
+                    <td class="cell-muted">${formatDuration(s.visitDuration || 0)}</td>
+                </tr>`;
+            }).join('')}
+        </tbody>
+    </table>`;
+}
+
+function flyToLiveVisitor(sessionId) {
+    const m = liveMapMarkers[sessionId];
+    if (!m || !liveMapInstance) return;
+    liveMapInstance.flyTo(m.getLatLng(), 11, { duration: 0.8 });
+    setTimeout(() => m.openPopup(), 700);
+}
+
+async function loadLiveMap() {
+    ensureLiveMap();
+    try {
+        const data = await api('/api/live-visitors');
+        document.getElementById('liveMapCount').textContent = `${data.online} en ligne · ${data.sessions.length} suivi(s)`;
+        document.getElementById('liveMapBadge').style.display = data.online > 0 ? 'inline-block' : 'none';
+        if (data.online > 0) document.getElementById('liveMapBadge').textContent = data.online;
+        renderLiveMapMarkers(data.sessions);
+        renderLiveMapTable(data.sessions);
+    } catch (e) { toast(e.message); }
+    if (liveMapPollTimer) clearTimeout(liveMapPollTimer);
+    liveMapPollTimer = setTimeout(loadLiveMap, 8000);
+}
+
+function stopLiveMapPolling() {
+    if (liveMapPollTimer) { clearTimeout(liveMapPollTimer); liveMapPollTimer = null; }
+}
+
+
 const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const IS_STANDALONE = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
