@@ -183,6 +183,8 @@ async function getOverview(days = 28) {
         pageViews: Number(previousRow[2]?.value || 0),
         avgSessionDuration: Math.round(Number(previousRow[3]?.value || 0)),
         bounceRate: Number(previousRow[4]?.value || 0),
+        engagementRate: Number(previousRow[5]?.value || 0),
+        pagesPerSession: Number(previousRow[6]?.value || 0),
     };
     const trends = {
         activeUsers: pct(totals.activeUsers, previousTotals.activeUsers),
@@ -190,6 +192,8 @@ async function getOverview(days = 28) {
         pageViews: pct(totals.pageViews, previousTotals.pageViews),
         avgSessionDuration: pct(totals.avgSessionDuration, previousTotals.avgSessionDuration),
         bounceRate: pct(totals.bounceRate, previousTotals.bounceRate),
+        engagementRate: pct(totals.engagementRate, previousTotals.engagementRate),
+        pagesPerSession: pct(totals.pagesPerSession, previousTotals.pagesPerSession),
     };
 
     const result = {

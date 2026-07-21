@@ -204,10 +204,14 @@
     .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem 1.3rem; box-shadow: var(--shadow); transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s; }
     .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
     @keyframes pulseDot { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); } 50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34,197,94,0); } }
-    .ga-list-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .ga-list-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; position: relative; overflow: hidden; border-radius: 6px; text-decoration: none; color: inherit; }
     .ga-list-row:last-child { border-bottom: none; }
-    .ga-list-row .label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
-    .ga-list-row .value { font-weight: 700; }
+    .ga-list-row .label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; position: relative; z-index: 1; }
+    .ga-list-row .value { font-weight: 700; position: relative; z-index: 1; display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+    .ga-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-glow); z-index: 0; border-radius: 6px; transition: width 0.4s var(--ease); }
+    .ga-share { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 100px; padding: 0.1rem 0.4rem; }
+    a.ga-list-row:hover { background: var(--surface-2); }
+    a.ga-list-row:hover .label { color: var(--accent); }
     .kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
     .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; background: linear-gradient(135deg, var(--text), var(--text)); -webkit-background-clip: text; background-clip: text; }
     .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
@@ -894,16 +898,19 @@
                             <div class="kpi-label">Visiteurs</div>
                             <div class="kpi-value" id="gaUsers">—</div>
                             <div class="kpi-trend" id="gaUsersTrend"></div>
+                            <div class="kpi-sparkline-wrap"><canvas id="gaUsersSparkline"></canvas></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Sessions</div>
                             <div class="kpi-value" id="gaSessions">—</div>
                             <div class="kpi-trend" id="gaSessionsTrend"></div>
+                            <div class="kpi-sparkline-wrap"><canvas id="gaSessionsSparkline"></canvas></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Pages vues</div>
                             <div class="kpi-value" id="gaPageviews">—</div>
                             <div class="kpi-trend" id="gaPageviewsTrend"></div>
+                            <div class="kpi-sparkline-wrap"><canvas id="gaPageviewsSparkline"></canvas></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Durée moy. session</div>
@@ -918,10 +925,12 @@
                         <div class="kpi-card">
                             <div class="kpi-label">Taux d'engagement</div>
                             <div class="kpi-value" id="gaEngagement">—</div>
+                            <div class="kpi-trend" id="gaEngagementTrend"></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Pages / session</div>
                             <div class="kpi-value" id="gaPagesPerSession">—</div>
+                            <div class="kpi-trend" id="gaPagesPerSessionTrend"></div>
                         </div>
                     </div>
 
@@ -1620,6 +1629,9 @@ let kpiSparklineInstance = null;
 let conversionRingInstance = null;
 let treasuryCompareChartInstance = null;
 let gaChartInstance = null;
+let gaUsersSparkInstance = null;
+let gaSessionsSparkInstance = null;
+let gaPageviewsSparkInstance = null;
 let gaRealtimeInterval = null;
 
 /* ---------------- API HELPERS ---------------- */
@@ -1947,14 +1959,19 @@ async function loadAnalytics() {
         renderTrend('gaPageviewsTrend', overview.trends.pageViews);
         renderTrend('gaAvgDurationTrend', overview.trends.avgSessionDuration);
         renderTrend('gaBounceTrend', overview.trends.bounceRate, true); // rebond : baisse = bon signe
+        renderTrend('gaEngagementTrend', overview.trends.engagementRate);
+        renderTrend('gaPagesPerSessionTrend', overview.trends.pagesPerSession);
 
         renderGaChart(overview.byDay);
         renderHourlyChart(overview.hourly);
+        gaUsersSparkInstance = renderKpiMiniSparkline('gaUsersSparkline', gaUsersSparkInstance, overview.byDay.map(d => d.users), '#da2c48');
+        gaSessionsSparkInstance = renderKpiMiniSparkline('gaSessionsSparkline', gaSessionsSparkInstance, overview.byDay.map(d => d.sessions), '#3b82f6');
+        gaPageviewsSparkInstance = renderKpiMiniSparkline('gaPageviewsSparkline', gaPageviewsSparkInstance, overview.byDay.map(d => d.pageViews), '#22c55e');
 
         renderGaList('gaSources', overview.sources.map(s => ({ label: channelLabel(s.channel), value: s.sessions })));
         renderGaList('gaReferrers', overview.referrers.map(r => ({ label: r.source, value: r.sessions })));
-        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views, sub: formatDuration(p.avgDuration) })));
-        renderGaList('gaLandingPages', overview.landingPages.map(p => ({ label: p.path, value: p.sessions, sub: Math.round(p.bounceRate * 100) + '% rebond' })));
+        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views, sub: formatDuration(p.avgDuration), href: SITE_URL + p.path })));
+        renderGaList('gaLandingPages', overview.landingPages.map(p => ({ label: p.path, value: p.sessions, sub: Math.round(p.bounceRate * 100) + '% rebond', href: SITE_URL + p.path })));
         renderGaList('gaDevices', overview.devices.map(d => ({ label: deviceLabel(d.device), value: d.users })));
         renderGaList('gaBrowsers', overview.browsers.map(b => ({ label: b.browser, value: b.users })));
         renderGaList('gaGeo', overview.geo.map(g => ({ label: g.country, value: g.users })));
@@ -1969,6 +1986,18 @@ async function loadAnalytics() {
         if (gaRealtimeInterval) clearInterval(gaRealtimeInterval);
         gaRealtimeInterval = setInterval(refreshRealtime, 15000); // toutes les 15s
     } catch (e) { loadingEl.style.display = 'none'; toast(e.message); }
+}
+
+function renderKpiMiniSparkline(canvasId, currentInstance, values, color) {
+    const el = document.getElementById(canvasId);
+    if (!el) return null;
+    if (currentInstance) currentInstance.destroy();
+    const ctx = el.getContext('2d');
+    return new Chart(ctx, {
+        type: 'line',
+        data: { labels: values.map((_, i) => i), datasets: [{ data: values, borderColor: color, backgroundColor: color + '33', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, animation: { duration: 400 } },
+    });
 }
 
 function renderTrend(elId, value, invert = false) {
@@ -2353,12 +2382,20 @@ function initMapInteractions() {
 function renderGaList(elId, items) {
     const wrap = document.getElementById(elId);
     if (!items.length) { wrap.innerHTML = '<p class="cell-muted">Pas encore de données.</p>'; return; }
-    wrap.innerHTML = items.slice(0, 10).map(i => `
-        <div class="ga-list-row">
-            <span class="label">${escapeHtml(i.label)}</span>
-            <span class="value">${i.value.toLocaleString('fr-FR')}${i.sub ? ` <span class="cell-muted" style="font-weight:400;">· ${i.sub}</span>` : ''}</span>
-        </div>
-    `).join('');
+    const max = Math.max(...items.map(i => i.value), 1);
+    const total = items.reduce((s, i) => s + i.value, 0) || 1;
+    wrap.innerHTML = items.map(i => {
+        const pct = Math.round((i.value / max) * 100);
+        const share = Math.round((i.value / total) * 100);
+        const inner = `
+            <span class="ga-bar" style="width:${pct}%"></span>
+            <span class="label" title="${escapeHtml(i.label)}">${escapeHtml(i.label)}</span>
+            <span class="value">${i.value.toLocaleString('fr-FR')}${i.sub ? ` <span class="cell-muted" style="font-weight:400;">· ${i.sub}</span>` : ''}<span class="ga-share">${share}%</span></span>
+        `;
+        return i.href
+            ? `<a class="ga-list-row" href="${i.href}" target="_blank" rel="noopener" title="Ouvrir la page">${inner}</a>`
+            : `<div class="ga-list-row">${inner}</div>`;
+    }).join('');
 }
 
 function formatDuration(seconds) {
