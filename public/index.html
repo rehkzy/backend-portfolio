@@ -1811,8 +1811,8 @@ document.getElementById('sidebarOverlay').addEventListener('click', closeMobileS
 
 function switchView(view) {
     currentView = view;
+    const mainEl = document.querySelector('.main');
     const resetScroll = () => {
-        const mainEl = document.querySelector('.main');
         if (mainEl) mainEl.scrollTop = 0;
         window.scrollTo(0, 0);
         document.documentElement.scrollTop = 0;
@@ -1821,6 +1821,14 @@ function switchView(view) {
     resetScroll();
     requestAnimationFrame(resetScroll);
     setTimeout(resetScroll, 150);
+    // Contournement d'un bug de rendu Safari/WebKit : un conteneur en overflow-y:auto
+    // ne repeint pas toujours correctement son contenu visible après un changement
+    // brusque de display sur ses enfants — on force un reflow complet.
+    if (mainEl) {
+        mainEl.style.display = 'none';
+        void mainEl.offsetHeight;
+        mainEl.style.display = '';
+    }
     document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.toggle('active', i.dataset.view === view));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
