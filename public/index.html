@@ -1811,6 +1811,8 @@ document.getElementById('sidebarOverlay').addEventListener('click', closeMobileS
 
 function switchView(view) {
     currentView = view;
+    const mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.scrollTop = 0;
     document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.toggle('active', i.dataset.view === view));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
