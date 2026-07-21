@@ -258,3 +258,16 @@ Variable Railway `ANTHROPIC_API_KEY` (cle creee sur console.anthropic.com, paiem
 - **Raccourci Siri (rien a installer cote serveur)** : iPhone → app Raccourcis → "+" → "Ajouter une action" → "Ouvrir l'app" → choisis "Florian B." → renomme le raccourci "Mes leads". Tu peux ensuite dire "Dis Siri, mes leads".
 
 La seule idee de la liste initiale non retenue : le mini-rapport quotidien en image pour iPhone — redondant avec le digest push du matin et le brief email quotidien deja en place.
+
+
+## SERP enrichi — toutes les donnees SerpApi exploitees
+
+Chaque releve hebdomadaire stocke desormais, sans consommer de recherche supplementaire :
+- **Concurrents** : qui occupe le top 5 sur chacun de tes mots-cles (domaine + titre de page)
+- **Questions posees** (People Also Ask) : les vraies questions que les gens tapent — bouton "Brouillon d'article" pour transformer chaque question en article de blog en un clic
+- **Recherches associees** : idees de mots-cles connexes
+- **Pack local Google Maps** : indique si un pack Maps s'affiche sur la recherche et si tu y figures (sinon : cree/optimise ta fiche Google Business, c'est gratuit et tres efficace en local)
+
+Clique sur un mot-cle du tableau (onglet Blog SEO) pour deplier ces details.
+
+Bouton "Idees de mots-cles" : suggestions Google Autocomplete a partir d'un mot de depart (consomme 1 recherche SerpApi par utilisation).

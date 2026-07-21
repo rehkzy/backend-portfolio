@@ -2386,7 +2386,22 @@ async function runSerpCheck() {
             const organic = d.organic_results || [];
             const hit = organic.find(x => (x.link || '').includes(domain));
             const position = hit ? hit.position : null; // null = pas dans le top 50
-            db.get('serpRankings').push({ id: nextId('serpRankings'), date: now().slice(0, 10), keyword, position }).write();
+            // Tout ce que la même réponse contient d'utile (aucune recherche supplémentaire) :
+            const topResults = organic.slice(0, 5).map(x => ({
+                position: x.position,
+                title: (x.title || '').slice(0, 90),
+                domain: (() => { try { return new URL(x.link).hostname.replace(/^www\./, ''); } catch { return x.link || ''; } })(),
+            }));
+            const relatedQuestions = (d.related_questions || []).map(q => (q.question || '').slice(0, 140)).filter(Boolean).slice(0, 6);
+            const relatedSearches = (d.related_searches || []).map(r => (r.query || '').slice(0, 80)).filter(Boolean).slice(0, 8);
+            const localResults = (d.local_results && (d.local_results.places || d.local_results)) || [];
+            const inLocalPack = Array.isArray(localResults) && localResults.some(p => /florian/i.test(p.title || ''));
+            const hasLocalPack = Array.isArray(localResults) && localResults.length > 0;
+            db.get('serpRankings').push({
+                id: nextId('serpRankings'), date: now().slice(0, 10), keyword, position,
+                topResults, relatedQuestions, relatedSearches,
+                localPack: hasLocalPack ? { present: inLocalPack } : null,
+            }).write();
         } catch (err) { console.error('SERP:', keyword, err.message); }
     }
     // Notifie les belles progressions
@@ -2406,6 +2421,22 @@ cron.schedule('30 7 * * 1', () => {
 app.get('/api/serp-rankings', auth, (req, res) => {
     res.json({ enabled: Boolean(process.env.SERPAPI_KEY), rankings: db.get('serpRankings').value() || [] });
 });
+// Idées de mots-clés via Google Autocomplete (consomme 1 recherche SerpApi par appel)
+app.post('/api/serp-suggest', auth, adminOnly, async (req, res) => {
+    if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway' });
+    const seed = String(req.body?.seed || '').trim().slice(0, 80);
+    if (!seed) return res.status(400).json({ error: 'Indique un mot-clé de départ' });
+    try {
+        const params = new URLSearchParams({ engine: 'google_autocomplete', q: seed, gl: 'fr', hl: 'fr', api_key: process.env.SERPAPI_KEY });
+        const r = await fetch('https://serpapi.com/search.json?' + params, { signal: AbortSignal.timeout(15000) });
+        const d = await r.json();
+        if (d.error) return res.status(502).json({ error: d.error });
+        res.json({ suggestions: (d.suggestions || []).map(x => x.value).filter(Boolean).slice(0, 12) });
+    } catch (err) {
+        res.status(502).json({ error: 'SerpApi injoignable : ' + err.message });
+    }
+});
+
 app.post('/api/serp-run', auth, adminOnly, async (req, res) => {
     if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway (clé gratuite sur serpapi.com)' });
     await runSerpCheck();

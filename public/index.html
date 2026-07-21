@@ -1595,7 +1595,11 @@
             <div class="panel" id="serpPanel" style="margin-top:1.5rem;">
                 <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">📈 Positions Google (SERP)</h3>
                 <div id="serpWrap"><p class="cell-muted" style="font-size:0.8rem;">Chargement…</p></div>
-                <button type="button" class="btn-secondary" id="serpRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;margin-top:0.6rem;">Vérifier maintenant</button>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.6rem;">
+                    <button type="button" class="btn-secondary" id="serpRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;">Vérifier maintenant</button>
+                    <button type="button" class="btn-secondary" id="serpSuggestBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;">💡 Idées de mots-clés</button>
+                </div>
+                <div id="serpSuggestWrap" style="margin-top:0.8rem;"></div>
             </div>
         </section>
 
@@ -5681,21 +5685,59 @@ async function loadSerp() {
         }
         const byKw = {};
         rankings.forEach(r => { (byKw[r.keyword] = byKw[r.keyword] || []).push(r); });
-        wrap.innerHTML = `<table class="data-table"><thead><tr><th>Mot-clé</th><th>Position</th><th>Évolution</th><th>Dernier relevé</th></tr></thead><tbody>
-            ${Object.entries(byKw).map(([kw, hist]) => {
+        window.__serpByKw = byKw;
+        wrap.innerHTML = `<table class="data-table"><thead><tr><th>Mot-clé</th><th>Position</th><th>Évolution</th><th>Maps</th><th>Dernier relevé</th></tr></thead><tbody>
+            ${Object.entries(byKw).map(([kw, hist], idx) => {
                 const last = hist[hist.length - 1];
                 const prev = hist.length > 1 ? hist[hist.length - 2] : null;
                 const delta = prev && prev.position && last.position ? prev.position - last.position : null;
-                return `<tr>
-                    <td>${escapeHtml(kw)}</td>
+                const hasDetails = (last.topResults && last.topResults.length) || (last.relatedQuestions && last.relatedQuestions.length);
+                return `<tr ${hasDetails ? `onclick="toggleSerpDetails(${idx})" style="cursor:pointer;"` : ''}>
+                    <td>${hasDetails ? '▸ ' : ''}${escapeHtml(kw)}</td>
                     <td>${last.position ? '<strong>#' + last.position + '</strong>' : '<span class="cell-muted">hors top 50</span>'}</td>
                     <td>${delta === null ? '<span class="cell-muted">—</span>' : delta > 0 ? `<span style="color:#22c55e;">▲ +${delta}</span>` : delta < 0 ? `<span style="color:#f59e0b;">▼ ${delta}</span>` : '='}</td>
+                    <td>${last.localPack ? (last.localPack.present ? '📍 Oui !' : '<span class="cell-muted" title="Un pack Google Maps s\'affiche sur cette recherche mais tu n\'y es pas — crée/optimise ta fiche Google Business">📍 Absent</span>') : '<span class="cell-muted">—</span>'}</td>
                     <td class="cell-muted">${formatDate(last.date)}</td>
-                </tr>`;
+                </tr>
+                <tr id="serpDetails${idx}" style="display:none;"><td colspan="5" style="background:var(--bg);">
+                    ${last.topResults && last.topResults.length ? `<div style="margin:0.5rem 0;"><div class="tc-label">🥇 Qui occupe le haut de la page</div>${last.topResults.map(t => `<div style="font-size:0.78rem;padding:0.2rem 0;"><strong>#${t.position}</strong> ${escapeHtml(t.domain)} <span class="cell-muted">— ${escapeHtml(t.title)}</span></div>`).join('')}</div>` : ''}
+                    ${last.relatedQuestions && last.relatedQuestions.length ? `<div style="margin:0.8rem 0;"><div class="tc-label">❓ Questions que les gens posent (idées d'articles en or)</div>${last.relatedQuestions.map(q => `<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;font-size:0.78rem;padding:0.25rem 0;"><span>${escapeHtml(q)}</span><button class="btn-secondary" style="width:auto;padding:0.25rem 0.6rem;font-size:0.7rem;flex-shrink:0;" onclick="event.stopPropagation();createDraftFromQuestion('${escapeAttr(q)}')">→ Brouillon d'article</button></div>`).join('')}</div>` : ''}
+                    ${last.relatedSearches && last.relatedSearches.length ? `<div style="margin:0.8rem 0;"><div class="tc-label">🔎 Recherches associées</div><div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.3rem;">${last.relatedSearches.map(r => `<span class="badge contacted">${escapeHtml(r)}</span>`).join('')}</div></div>` : ''}
+                </td></tr>`;
             }).join('')}
-        </tbody></table>`;
+        </tbody></table>
+        <p class="cell-muted" style="font-size:0.72rem;margin-top:0.5rem;">Clique sur un mot-clé pour voir les concurrents, les questions posées et les recherches associées — données récoltées sans consommer de recherche supplémentaire.</p>`;
     } catch { wrap.innerHTML = ''; }
 }
+function toggleSerpDetails(idx) {
+    const row = document.getElementById('serpDetails' + idx);
+    if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+// Une question "People Also Ask" devient un brouillon d'article en un clic
+async function createDraftFromQuestion(question) {
+    try {
+        await api('/api/blog', { method: 'POST', body: JSON.stringify({ title: question, excerpt: '', content: '' }) });
+        toast('📝 Brouillon créé — retrouve-le dans la liste des articles !');
+        loadBlog();
+    } catch (e) { toast(e.message); }
+}
+
+document.getElementById('serpSuggestBtn')?.addEventListener('click', async (e) => {
+    const seed = prompt('Mot-clé de départ pour les suggestions Google ?\n(consomme 1 recherche SerpApi)', 'graphiste freelance');
+    if (!seed) return;
+    e.target.disabled = true; e.target.textContent = 'Recherche…';
+    const wrap = document.getElementById('serpSuggestWrap');
+    try {
+        const { suggestions } = await api('/api/serp-suggest', { method: 'POST', body: JSON.stringify({ seed }), timeoutMs: 30000 });
+        wrap.innerHTML = suggestions.length ? `
+            <div class="tc-label">💡 Ce que les gens tapent vraiment dans Google après « ${escapeHtml(seed)} »</div>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;">${suggestions.map(x => `<span class="badge contacted">${escapeHtml(x)}</span>`).join('')}</div>
+            <p class="cell-muted" style="font-size:0.72rem;margin-top:0.5rem;">Ajoute les plus pertinents à tes mots-clés suivis (Mon entreprise) ou utilise-les comme titres d'articles.</p>` : '<p class="cell-muted" style="font-size:0.8rem;">Aucune suggestion trouvée.</p>';
+    } catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = '💡 Idées de mots-clés';
+});
+
 document.getElementById('serpRunBtn')?.addEventListener('click', async (e) => {
     e.target.disabled = true; e.target.textContent = 'Vérification…';
     try { await api('/api/serp-run', { method: 'POST', timeoutMs: 120000 }); toast('Positions relevées ✅'); loadSerp(); }
