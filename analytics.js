@@ -94,7 +94,7 @@ async function getOverview(days = 28) {
         }),
         run({
             dateRanges: [currentRange, previousRange], dimensions: [{ name: 'date' }],
-            metrics: [{ name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }],
+            metrics: [{ name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }, { name: 'averageSessionDuration' }, { name: 'bounceRate' }, { name: 'engagementRate' }],
             orderBys: [{ dimension: { dimensionName: 'date' } }],
         }),
         run({
@@ -225,6 +225,9 @@ async function getOverview(days = 28) {
             users: Number(r.metricValues[0].value),
             sessions: Number(r.metricValues[1].value),
             pageViews: Number(r.metricValues[2].value),
+            avgDuration: Math.round(Number(r.metricValues[3].value)),
+            bounceRate: Number(r.metricValues[4].value),
+            engagementRate: Number(r.metricValues[5].value),
         })),
         byDayPrevious: (byDay.rows || []).filter(r => r.dimensionValues[0].value === 'date_range_1').map(r => ({
             date: r.dimensionValues[1].value,

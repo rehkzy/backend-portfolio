@@ -106,7 +106,12 @@ async function getSeoOverview(days = 28) {
         seoCache.set(days, { data: result, at: Date.now() });
         return result;
     } catch (err) {
-        // Cas le plus courant : le compte de service n'a pas encore été ajouté dans Search Console
+        // Cas 1 : l'API Search Console n'est pas activée dans le projet Google Cloud
+        if (err.message && err.message.includes('has not been used in project')) {
+            const m = err.message.match(/project (\d+)/);
+            return { configured: true, apiDisabled: true, projectId: m ? m[1] : null };
+        }
+        // Cas 2 : le compte de service n'a pas encore été ajouté dans Search Console
         if (err.message && (err.message.includes('403') || err.message.includes('permission') || err.message.includes('Forbidden'))) {
             return { configured: true, accessDenied: true, error: err.message };
         }

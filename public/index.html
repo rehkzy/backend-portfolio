@@ -183,8 +183,8 @@
     .cmdk-hint { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; }
     .cmdk-hint kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.65rem; }
 
-    .main { padding: 1.6rem 2rem 4rem; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }
-    .global-toolbar { position: sticky; top: 0; z-index: 400; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin: -1.6rem -2rem 1.4rem; padding: 0.8rem 2rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .main { padding: 0 2rem 4rem; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }
+    .global-toolbar { position: sticky; top: 0; z-index: 400; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin: 0 -2rem 1.4rem; padding: 0.8rem 2rem; background: var(--bg); border-bottom: 1px solid var(--border); }
     .global-toolbar-status { font-size: 0.7rem; color: var(--text-muted); margin-right: 0.2rem; white-space: nowrap; }
     .global-toolbar .icon-btn.spinning svg { animation: spin 0.6s linear; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -254,7 +254,9 @@
     .kpi-card.hero { grid-column: span 2; background: linear-gradient(135deg, var(--accent-glow), transparent 60%), var(--surface); border-color: var(--accent); }
 
     /* ============ PANELS / CHARTS ============ */
-    .panel-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; margin-bottom: 1.6rem; }
+    .panel-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; margin-bottom: 1.2rem; }
+    .analytics-tab .panel-grid { grid-template-columns: 1fr 1fr; }
+    .analytics-tab > .panel { margin-bottom: 1.2rem; }
     .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.3rem; box-shadow: var(--shadow); }
     .panel h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; }
     .status-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
@@ -953,16 +955,19 @@
                             <div class="kpi-label">Durée moy. session</div>
                             <div class="kpi-value" id="gaAvgDuration">—</div>
                             <div class="kpi-trend" id="gaAvgDurationTrend"></div>
+                            <div class="kpi-sparkline-wrap"><canvas id="gaDurationSparkline"></canvas></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Taux de rebond</div>
-                            <div class="kpi-gauge-wrap"><canvas id="gaBounceGauge"></canvas><div class="kpi-gauge-center" id="gaBounce">—</div></div>
+                            <div class="kpi-value" id="gaBounce">—</div>
                             <div class="kpi-trend" id="gaBounceTrend"></div>
+                            <div class="kpi-sparkline-wrap"><canvas id="gaBounceSparkline"></canvas></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Taux d'engagement</div>
-                            <div class="kpi-gauge-wrap"><canvas id="gaEngagementGauge"></canvas><div class="kpi-gauge-center" id="gaEngagement">—</div></div>
+                            <div class="kpi-value" id="gaEngagement">—</div>
                             <div class="kpi-trend" id="gaEngagementTrend"></div>
+                            <div class="kpi-sparkline-wrap"><canvas id="gaEngagementSparkline"></canvas></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Pages / session</div>
@@ -1762,6 +1767,9 @@ let gaChartInstance = null;
 let gaUsersSparkInstance = null;
 let gaSessionsSparkInstance = null;
 let gaPageviewsSparkInstance = null;
+let gaDurationSparkInstance = null;
+let gaBounceSparkInstance = null;
+let gaEngagementSparkInstance = null;
 let gaRealtimeInterval = null;
 
 /* ---------------- API HELPERS ---------------- */
@@ -2106,8 +2114,9 @@ async function loadAnalytics() {
         document.getElementById('gaAvgDuration').textContent = formatDuration(overview.totals.avgSessionDuration);
         document.getElementById('gaBounce').textContent = Math.round(overview.totals.bounceRate * 100) + '%';
         document.getElementById('gaEngagement').textContent = Math.round((overview.totals.engagementRate || 0) * 100) + '%';
-        renderKpiGauge('gaBounceGauge', 'bounce', Math.round(overview.totals.bounceRate * 100), true);
-        renderKpiGauge('gaEngagementGauge', 'engagement', Math.round((overview.totals.engagementRate || 0) * 100), false);
+        gaDurationSparkInstance = renderKpiMiniSparkline('gaDurationSparkline', gaDurationSparkInstance, overview.byDay.map(d => d.avgDuration || 0), '#f59e0b');
+        gaBounceSparkInstance = renderKpiMiniSparkline('gaBounceSparkline', gaBounceSparkInstance, overview.byDay.map(d => Math.round((d.bounceRate || 0) * 100)), '#8b8b93');
+        gaEngagementSparkInstance = renderKpiMiniSparkline('gaEngagementSparkline', gaEngagementSparkInstance, overview.byDay.map(d => Math.round((d.engagementRate || 0) * 100)), '#22c55e');
         document.getElementById('gaPagesPerSession').textContent = (overview.totals.pagesPerSession || 0).toFixed(1);
 
         renderTrend('gaUsersTrend', overview.trends.activeUsers);
@@ -2187,8 +2196,16 @@ async function loadSeo() {
         const seo = await api('/api/analytics/seo?days=' + days);
         const ncEl = document.getElementById('seoNotConfigured');
         const contentEl = document.getElementById('seoContent');
-        if (!seo.configured || seo.accessDenied) {
+        if (!seo.configured || seo.accessDenied || seo.apiDisabled) {
             ncEl.style.display = 'block'; contentEl.style.display = 'none';
+            const msgEl = document.getElementById('seoNotConfiguredMsg');
+            if (seo.apiDisabled) {
+                msgEl.innerHTML = `<strong>Étape 1/2 :</strong> l'API Search Console doit être activée dans ton projet Google Cloud (une seule fois).<br><br>
+                    1. Ouvre <a href="https://console.developers.google.com/apis/api/searchconsole.googleapis.com/overview${seo.projectId ? '?project=' + seo.projectId : ''}" target="_blank" rel="noopener">cette page d'activation</a> (connecté au même compte Google que ton projet Analytics)<br>
+                    2. Clique sur le bouton bleu <strong>"Activer"</strong><br>
+                    3. Attends 2-3 minutes, puis recharge cet onglet.<br><br>
+                    <strong>Étape 2/2 :</strong> ajoute aussi l'email de ton compte de service (celui qui finit par <code>.iam.gserviceaccount.com</code>) comme utilisateur "Complet" dans <a href="https://search.google.com/search-console/users" target="_blank" rel="noopener">Search Console → Utilisateurs</a>.`;
+            }
             return;
         }
         ncEl.style.display = 'none'; contentEl.style.display = 'block';
@@ -2450,6 +2467,28 @@ const CITY_COORDS = {
     "Tokyo": [35.68, 139.69], "Dubai": [25.20, 55.27], "Singapore": [1.35, 103.82],
     "Sydney": [-33.87, 151.21], "São Paulo": [-23.55, -46.63], "Mexico City": [19.43, -99.13],
     // --- extension ---
+    "Boulogne-Billancourt": [48.84, 2.24], "Saint-Denis": [48.94, 2.36], "Argenteuil": [48.95, 2.25],
+    "Versailles": [48.80, 2.13], "Nanterre": [48.89, 2.20], "Créteil": [48.79, 2.46], "Courbevoie": [48.90, 2.25],
+    "Vitry-sur-Seine": [48.79, 2.39], "Colombes": [48.92, 2.25], "Asnières-sur-Seine": [48.91, 2.29],
+    "Aulnay-sous-Bois": [48.94, 2.49], "Rueil-Malmaison": [48.88, 2.18], "Aubervilliers": [48.91, 2.38],
+    "Champigny-sur-Marne": [48.82, 2.52], "Saint-Maur-des-Fossés": [48.80, 2.49], "Noisy-le-Grand": [48.85, 2.55],
+    "Levallois-Perret": [48.89, 2.29], "Issy-les-Moulineaux": [48.82, 2.27], "Neuilly-sur-Seine": [48.88, 2.27],
+    "Antony": [48.75, 2.30], "Cergy": [49.04, 2.06], "Ivry-sur-Seine": [48.81, 2.38], "Villejuif": [48.79, 2.36],
+    "Clichy": [48.90, 2.31], "Montrouge": [48.82, 2.32], "Pantin": [48.89, 2.41], "Bobigny": [48.91, 2.44],
+    "Fontenay-sous-Bois": [48.85, 2.47], "Meaux": [48.96, 2.89], "Chelles": [48.88, 2.59], "Évry-Courcouronnes": [48.63, 2.44],
+    "Melun": [48.54, 2.66], "Pontoise": [49.05, 2.10], "Sarcelles": [48.99, 2.38], "Massy": [48.73, 2.27],
+    "Vincennes": [48.85, 2.44], "Saint-Ouen-sur-Seine": [48.91, 2.33], "Puteaux": [48.88, 2.24], "Suresnes": [48.87, 2.23],
+    "Le Mans": [48.00, 0.20], "Aix-en-Provence": [43.53, 5.45], "Brest": [48.39, -4.49], "Tours": [47.39, 0.69],
+    "Amiens": [49.89, 2.30], "Limoges": [45.83, 1.26], "Clermont-Ferrand": [45.78, 3.08], "Besançon": [47.24, 6.02],
+    "Orléans": [47.90, 1.90], "Metz": [49.12, 6.18], "Rouen": [49.44, 1.10], "Mulhouse": [47.75, 7.34],
+    "Caen": [49.18, -0.37], "Nancy": [48.69, 6.18], "Avignon": [43.95, 4.81], "Cannes": [43.55, 7.02],
+    "Antibes": [43.58, 7.12], "La Rochelle": [46.16, -1.15], "Annecy": [45.90, 6.13], "Perpignan": [42.69, 2.90],
+    "Poitiers": [46.58, 0.34], "Pau": [43.30, -0.37], "Bayonne": [43.49, -1.48], "Biarritz": [43.48, -1.56],
+    "Chambéry": [45.56, 5.92], "Valence": [44.93, 4.89], "Troyes": [48.30, 4.08], "Lorient": [47.75, -3.37],
+    "Vannes": [47.66, -2.76], "Quimper": [47.996, -4.10], "Saint-Malo": [48.65, -2.03], "Ajaccio": [41.92, 8.74],
+    "Bastia": [42.70, 9.45], "Dunkerque": [51.03, 2.38], "Calais": [50.95, 1.86], "Roubaix": [50.69, 3.17],
+    "Tourcoing": [50.72, 3.16], "Villeurbanne": [45.77, 4.88], "Saint-Nazaire": [47.27, -2.21], "Angoulême": [45.65, 0.16],
+    "Niort": [46.32, -0.46], "Chartres": [48.44, 1.49], "Colmar": [48.08, 7.36], "Béziers": [43.34, 3.22],
     "Chicago": [41.88, -87.63], "Houston": [29.76, -95.37], "San Francisco": [37.77, -122.42],
     "Miami": [25.76, -80.19], "Boston": [42.36, -71.06], "Seattle": [47.61, -122.33],
     "Washington": [38.90, -77.04], "Atlanta": [33.75, -84.39], "Austin": [30.27, -97.74],
@@ -2773,19 +2812,24 @@ function renderGoals(goals) {
     if (!goals.length) { wrap.innerHTML = emptyStateHTML('Aucun objectif défini. Clique sur "+ Nouvel objectif".'); return; }
     wrap.innerHTML = goals.map(g => `
         <div class="goal-card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+                <div class="kpi-gauge-wrap" style="margin:0; flex-shrink:0;">
+                    <canvas id="goalGauge${g.id}"></canvas>
+                    <div class="kpi-gauge-center" style="font-size:0.95rem;">${Math.min(999, g.progress)}%</div>
+                </div>
+                <div style="flex:1;">
                     <strong>${GOAL_METRIC_LABELS_UI[g.metric]}</strong>
                     <span class="cell-muted"> — ${GOAL_PERIOD_LABELS_UI[g.period]}</span>
+                    <div class="goal-progress-bar"><div class="goal-progress-fill ${g.progress >= 100 ? 'complete' : ''}" style="width:${Math.min(100, g.progress)}%;"></div></div>
+                    <div class="cell-muted" style="font-size:0.8rem;">${g.current.toLocaleString('fr-FR')} / ${g.target.toLocaleString('fr-FR')} (${g.progress}%)${g.progress >= 100 ? ' 🎉' : ''}</div>
                 </div>
                 <button class="icon-btn danger" onclick="deleteGoal(${g.id})" title="Supprimer">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
             </div>
-            <div class="goal-progress-bar"><div class="goal-progress-fill ${g.progress >= 100 ? 'complete' : ''}" style="width:${Math.min(100, g.progress)}%;"></div></div>
-            <div class="cell-muted" style="font-size:0.8rem;">${g.current.toLocaleString('fr-FR')} / ${g.target.toLocaleString('fr-FR')} (${g.progress}%)${g.progress >= 100 ? ' 🎉' : ''}</div>
         </div>
     `).join('');
+    goals.forEach(g => renderKpiGauge('goalGauge' + g.id, 'goal' + g.id, Math.min(100, g.progress), false));
 }
 
 document.getElementById('addGoalBtn').addEventListener('click', () => {
