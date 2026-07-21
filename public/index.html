@@ -969,13 +969,17 @@
                     </div>
                     <div class="panel-grid">
                         <div class="panel">
+                            <h3>Résolutions d'écran</h3>
+                            <div id="gaScreenRes"></div>
+                        </div>
+                        <div class="panel">
                             <h3>Langues</h3>
                             <div id="gaLanguages"></div>
                         </div>
-                        <div class="panel">
-                            <h3>Trafic par jour de la semaine</h3>
-                            <canvas id="gaDayOfWeekChart" height="90"></canvas>
-                        </div>
+                    </div>
+                    <div class="panel">
+                        <h3>Trafic par jour de la semaine</h3>
+                        <canvas id="gaDayOfWeekChart" height="90"></canvas>
                     </div>
                     <div class="panel">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; flex-wrap:wrap; gap:0.5rem;">
@@ -1029,6 +1033,16 @@
                         <div class="panel">
                             <h3>Provenance détaillée</h3>
                             <div id="gaReferrers"></div>
+                        </div>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Événements &amp; conversions</h3>
+                            <div id="gaEvents"></div>
+                        </div>
+                        <div class="panel">
+                            <h3>Campagnes</h3>
+                            <div id="gaCampaigns"></div>
                         </div>
                     </div>
                 </div>
@@ -1980,7 +1994,7 @@ async function loadAnalytics() {
         renderTrend('gaEngagementTrend', overview.trends.engagementRate);
         renderTrend('gaPagesPerSessionTrend', overview.trends.pagesPerSession);
 
-        renderGaChart(overview.byDay);
+        renderGaChart(overview.byDay, overview.byDayPrevious);
         renderHourlyChart(overview.hourly);
         gaUsersSparkInstance = renderKpiMiniSparkline('gaUsersSparkline', gaUsersSparkInstance, overview.byDay.map(d => d.users), '#da2c48');
         gaSessionsSparkInstance = renderKpiMiniSparkline('gaSessionsSparkline', gaSessionsSparkInstance, overview.byDay.map(d => d.sessions), '#3b82f6');
@@ -1999,6 +2013,11 @@ async function loadAnalytics() {
         renderWorldMap(overview.geo, overview.cities);
         renderDayOfWeekChart(overview.dayOfWeek);
         renderGaList('gaNewVsReturning', overview.newVsReturning.map(n => ({ label: n.type === 'new' ? 'Nouveaux visiteurs' : 'Visiteurs récurrents', value: n.users })));
+        renderGaList('gaEvents', overview.events.map(e => ({ label: eventLabel(e.name), value: e.count })));
+        renderGaList('gaCampaigns', overview.campaigns
+            .filter(c => c.campaign !== '(not set)')
+            .map(c => ({ label: c.campaign, value: c.sessions, sub: c.sourceMedium })));
+        renderGaList('gaScreenRes', overview.screenResolutions.map(s => ({ label: s.resolution, value: s.users })));
 
         refreshRealtime();
         if (gaRealtimeInterval) clearInterval(gaRealtimeInterval);
@@ -2047,21 +2066,25 @@ switchView = function (view) {
     originalSwitchView(view);
 };
 
-function renderGaChart(byDay) {
+function renderGaChart(byDay, byDayPrevious) {
     const ctx = document.getElementById('gaChart').getContext('2d');
     const isDark = document.body.getAttribute('data-theme') === 'dark';
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
     const textColor = isDark ? '#96969e' : '#6b6b74';
     if (gaChartInstance) gaChartInstance.destroy();
+    const datasets = [
+        { label: 'Visiteurs', data: byDay.map(r => r.users), borderColor: '#da2c48', backgroundColor: 'rgba(218,44,72,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
+        { label: 'Sessions', data: byDay.map(r => r.sessions), borderColor: '#8b8b93', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [4, 4] },
+        { label: 'Pages vues', data: byDay.map(r => r.pageViews), borderColor: '#35548f', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [1, 3] },
+    ];
+    if (byDayPrevious && byDayPrevious.length) {
+        datasets.push({ label: 'Visiteurs (période précédente)', data: byDayPrevious.map(r => r.users), borderColor: isDark ? '#5a5a63' : '#c4c4cc', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [2, 5] });
+    }
     gaChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels: byDay.map(r => `${r.date.slice(6, 8)}/${r.date.slice(4, 6)}`),
-            datasets: [
-                { label: 'Visiteurs', data: byDay.map(r => r.users), borderColor: '#da2c48', backgroundColor: 'rgba(218,44,72,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
-                { label: 'Sessions', data: byDay.map(r => r.sessions), borderColor: '#8b8b93', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [4, 4] },
-                { label: 'Pages vues', data: byDay.map(r => r.pageViews), borderColor: '#35548f', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [1, 3] },
-            ],
+            datasets,
         },
         options: {
             plugins: { legend: { display: true, labels: { color: textColor, boxWidth: 12, font: { size: 11 } } } },
@@ -2434,6 +2457,17 @@ function deviceLabel(device) {
 function languageLabel(code) {
     const map = { 'fr-fr': '🇫🇷 Français', 'fr': '🇫🇷 Français', 'en-us': '🇺🇸 Anglais (US)', 'en-gb': '🇬🇧 Anglais (UK)', 'en': '🇬🇧 Anglais', 'es-es': '🇪🇸 Espagnol', 'es': '🇪🇸 Espagnol', 'de-de': '🇩🇪 Allemand', 'de': '🇩🇪 Allemand', 'it-it': '🇮🇹 Italien', 'it': '🇮🇹 Italien', 'pt-pt': '🇵🇹 Portugais', 'pt-br': '🇧🇷 Portugais (BR)', 'ar': '🇸🇦 Arabe', 'nl-nl': '🇳🇱 Néerlandais', 'zh-cn': '🇨🇳 Chinois' };
     return map[(code || '').toLowerCase()] || code;
+}
+
+function eventLabel(name) {
+    const map = {
+        page_view: '👁️ Vue de page', session_start: '🚪 Début de session', first_visit: '⭐ Première visite',
+        click: '🖱️ Clic', scroll: '📜 Défilement', form_submit: '📝 Formulaire envoyé', form_start: '📝 Formulaire commencé',
+        user_engagement: '⏱️ Engagement', file_download: '⬇️ Téléchargement fichier', video_start: '▶️ Vidéo lancée',
+        video_progress: '⏯️ Vidéo en cours', video_complete: '✅ Vidéo terminée', chat_open: '💬 Chat IA ouvert',
+        chat_message_sent: '💬 Message envoyé au chat', lead_submitted: '🎯 Lead soumis', appointment_requested: '📅 RDV demandé',
+    };
+    return map[name] || name;
 }
 
 let gaDowChartInstance = null;

@@ -78,7 +78,7 @@ async function getOverview(days = 28) {
     const [
         summary, byDay, topPages, landingPages, sources, referrers,
         devices, browsers, geo, cities, newVsReturning, hourly, dayOfWeek,
-        operatingSystems, languages,
+        operatingSystems, languages, events, campaigns, screenResolutions,
     ] = await Promise.all([
         run({
             dateRanges: [currentRange, previousRange],
@@ -89,7 +89,7 @@ async function getOverview(days = 28) {
             ],
         }),
         run({
-            dateRanges: [currentRange], dimensions: [{ name: 'date' }],
+            dateRanges: [currentRange, previousRange], dimensions: [{ name: 'dateRange' }, { name: 'date' }],
             metrics: [{ name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }],
             orderBys: [{ dimension: { dimensionName: 'date' } }],
         }),
@@ -157,6 +157,21 @@ async function getOverview(days = 28) {
             metrics: [{ name: 'activeUsers' }],
             orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 6,
         }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'eventName' }],
+            metrics: [{ name: 'eventCount' }],
+            orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }], limit: 15,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'sessionCampaignName' }, { name: 'sessionSourceMedium' }],
+            metrics: [{ name: 'sessions' }],
+            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 10,
+        }),
+        run({
+            dateRanges: [currentRange], dimensions: [{ name: 'screenResolution' }],
+            metrics: [{ name: 'activeUsers' }],
+            orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8,
+        }),
     ]);
 
     const currentRow = summary.rows?.[0]?.metricValues || [];
@@ -201,8 +216,14 @@ async function getOverview(days = 28) {
         totals,
         previousTotals,
         trends,
-        byDay: (byDay.rows || []).map(r => ({
-            date: r.dimensionValues[0].value,
+        byDay: (byDay.rows || []).filter(r => r.dimensionValues[0].value === 'date_range_0').map(r => ({
+            date: r.dimensionValues[1].value,
+            users: Number(r.metricValues[0].value),
+            sessions: Number(r.metricValues[1].value),
+            pageViews: Number(r.metricValues[2].value),
+        })),
+        byDayPrevious: (byDay.rows || []).filter(r => r.dimensionValues[0].value === 'date_range_1').map(r => ({
+            date: r.dimensionValues[1].value,
             users: Number(r.metricValues[0].value),
             sessions: Number(r.metricValues[1].value),
             pageViews: Number(r.metricValues[2].value),
@@ -228,6 +249,9 @@ async function getOverview(days = 28) {
         dayOfWeek: (dayOfWeek.rows || []).map(r => ({ day: Number(r.dimensionValues[0].value), sessions: Number(r.metricValues[0].value) })),
         operatingSystems: (operatingSystems.rows || []).map(r => ({ os: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
         languages: (languages.rows || []).map(r => ({ language: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
+        events: (events.rows || []).map(r => ({ name: r.dimensionValues[0].value, count: Number(r.metricValues[0].value) })),
+        campaigns: (campaigns.rows || []).map(r => ({ campaign: r.dimensionValues[0].value, sourceMedium: r.dimensionValues[1].value, sessions: Number(r.metricValues[0].value) })),
+        screenResolutions: (screenResolutions.rows || []).map(r => ({ resolution: r.dimensionValues[0].value, users: Number(r.metricValues[0].value) })),
     };
 
     overviewCache.set(days, { data: result, at: Date.now() });
