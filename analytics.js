@@ -38,19 +38,23 @@ function isConfigured() {
     return Boolean(process.env.GA_PROPERTY_ID && process.env.GA_SERVICE_ACCOUNT_JSON);
 }
 
-// Visiteurs actifs sur le site en ce moment même
+// Visiteurs actifs sur le site en ce moment même, avec répartition par pays
+// (pour la carte "live" façon Shopify)
 async function getRealtimeUsers() {
     const c = getClient();
     if (!c) return { configured: false };
     const [response] = await c.runRealtimeReport({
         property: `properties/${propertyId}`,
         metrics: [{ name: 'activeUsers' }],
-        dimensions: [{ name: 'unifiedScreenName' }],
+        dimensions: [{ name: 'country' }],
     });
-    const activeUsers = Number(response.rows?.[0]?.metricValues?.[0]?.value || 0)
-        || response.totals?.[0]?.metricValues?.[0]?.value
-        || (response.rows || []).reduce((sum, r) => sum + Number(r.metricValues[0].value), 0);
-    return { configured: true, activeUsers: Number(activeUsers) || 0 };
+    const rows = response.rows || [];
+    const byCountry = rows.map(r => ({
+        country: r.dimensionValues[0].value,
+        activeUsers: Number(r.metricValues[0].value),
+    })).filter(r => r.country && r.country !== '(not set)');
+    const activeUsers = byCountry.reduce((sum, r) => sum + r.activeUsers, 0);
+    return { configured: true, activeUsers, byCountry };
 }
 
 // Cache court en mémoire — évite de refaire 15 appels GA à chaque clic sur "Analytics"

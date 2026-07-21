@@ -1045,6 +1045,18 @@ app.get('/api/analytics/overview', auth, async (req, res) => {
     }
 });
 
+const seo = require('./seo');
+app.get('/api/analytics/seo', auth, async (req, res) => {
+    if (!seo.isConfigured()) return res.json({ configured: false });
+    try {
+        const days = Number(req.query.days) || 28;
+        res.json(await seo.getSeoOverview(days));
+    } catch (err) {
+        console.error('Erreur Search Console:', err.message);
+        res.status(500).json({ error: 'Erreur Search Console : ' + err.message });
+    }
+});
+
 /* ============================================================
    OBJECTIFS DE VUES/VISITEURS
    ============================================================ */

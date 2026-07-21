@@ -212,6 +212,41 @@
     .ga-share { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 100px; padding: 0.1rem 0.4rem; }
     a.ga-list-row:hover { background: var(--surface-2); }
     a.ga-list-row:hover .label { color: var(--accent); }
+
+    /* Jauges semi-circulaires dans les cartes KPI */
+    .kpi-gauge-wrap { position: relative; width: 110px; height: 62px; margin: 0.2rem auto 0; }
+    .kpi-gauge-wrap canvas { width: 100% !important; height: 100% !important; }
+    .kpi-gauge-center { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; pointer-events: none; }
+
+    /* Tableau SEO (mots-clés / pages avec positions) */
+    .seo-table-wrap { overflow-x: auto; }
+    .seo-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .seo-table th { text-align: left; padding: 0.5rem 0.6rem; color: var(--text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+    .seo-table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); }
+    .seo-table tr:last-child td { border-bottom: none; }
+    .seo-table tr:hover td { background: var(--surface-2); }
+    .seo-pos-badge { display: inline-block; min-width: 34px; text-align: center; font-weight: 800; font-size: 0.78rem; padding: 0.15rem 0.45rem; border-radius: 100px; }
+    .seo-pos-badge.top3 { background: rgba(34,197,94,0.14); color: #16a34a; }
+    .seo-pos-badge.top10 { background: rgba(59,130,246,0.13); color: #2563eb; }
+    .seo-pos-badge.beyond { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* Comparateur de périodes */
+    .compare-row { display: grid; grid-template-columns: 160px 1fr 1fr 90px; gap: 0.8rem; align-items: center; padding: 0.7rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-row .metric-name { font-weight: 700; }
+    .compare-bar-track { background: var(--surface-2); border-radius: 100px; height: 22px; position: relative; overflow: hidden; }
+    .compare-bar-fill { height: 100%; border-radius: 100px; display: flex; align-items: center; padding-left: 0.6rem; font-size: 0.72rem; font-weight: 700; color: #fff; white-space: nowrap; min-width: fit-content; transition: width 0.5s var(--ease); }
+    .compare-bar-fill.current { background: linear-gradient(90deg, var(--accent), #ff5478); }
+    .compare-bar-fill.previous { background: var(--text-muted); opacity: 0.55; }
+    .compare-delta { font-weight: 800; font-size: 0.85rem; text-align: right; }
+    .compare-delta.up { color: var(--success); }
+    .compare-delta.down { color: var(--accent); }
+    @media (max-width: 700px) { .compare-row { grid-template-columns: 1fr; gap: 0.35rem; } .compare-delta { text-align: left; } }
+
+    /* Points "live" sur la carte du monde (visiteurs actifs maintenant) */
+    .geo-live-dot { fill: #22c55e; }
+    .geo-live-ring { fill: none; stroke: #22c55e; stroke-width: 1.5; opacity: 0.8; animation: livePulse 1.8s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+    @keyframes livePulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(2.6); opacity: 0; } }
     .kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
     .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; background: linear-gradient(135deg, var(--text), var(--text)); -webkit-background-clip: text; background-clip: text; }
     .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
@@ -879,6 +914,8 @@
                     <button class="filter-chip active" data-atab="overview">Vue d'ensemble</button>
                     <button class="filter-chip" data-atab="audience">Audience</button>
                     <button class="filter-chip" data-atab="pages">Pages & trafic</button>
+                    <button class="filter-chip" data-atab="seo">🔍 SEO</button>
+                    <button class="filter-chip" data-atab="compare">⚖️ Comparateur</button>
                     <button class="filter-chip" data-atab="goals">🎯 Objectifs</button>
                     <button class="filter-chip" data-atab="alerts">🔔 Alertes</button>
                     <button class="filter-chip" data-atab="funnel">🔻 Funnel & sources</button>
@@ -919,12 +956,12 @@
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Taux de rebond</div>
-                            <div class="kpi-value" id="gaBounce">—</div>
+                            <div class="kpi-gauge-wrap"><canvas id="gaBounceGauge"></canvas><div class="kpi-gauge-center" id="gaBounce">—</div></div>
                             <div class="kpi-trend" id="gaBounceTrend"></div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Taux d'engagement</div>
-                            <div class="kpi-value" id="gaEngagement">—</div>
+                            <div class="kpi-gauge-wrap"><canvas id="gaEngagementGauge"></canvas><div class="kpi-gauge-center" id="gaEngagement">—</div></div>
                             <div class="kpi-trend" id="gaEngagementTrend"></div>
                         </div>
                         <div class="kpi-card">
@@ -1045,6 +1082,85 @@
                             <div id="gaCampaigns"></div>
                         </div>
                     </div>
+                </div>
+
+                <!-- ONGLET : SEO (Google Search Console) -->
+                <div class="analytics-tab" id="atab-seo" style="display:none;">
+                    <div id="seoNotConfigured" style="display:none;" class="panel">
+                        <h3>Search Console pas encore accessible</h3>
+                        <p class="cell-muted" id="seoNotConfiguredMsg">Pour voir tes positions Google, ajoute l'email de ton compte de service (le même que Google Analytics, celui qui finit par <code>.iam.gserviceaccount.com</code>) comme utilisateur avec accès "Complet" dans <a href="https://search.google.com/search-console/users" target="_blank" rel="noopener">Search Console → Paramètres → Utilisateurs et autorisations</a>.</p>
+                    </div>
+                    <div id="seoContent" style="display:none;">
+                        <div class="kpi-grid">
+                            <div class="kpi-card">
+                                <div class="kpi-label">Clics depuis Google</div>
+                                <div class="kpi-value" id="seoClicks">—</div>
+                                <div class="kpi-trend" id="seoClicksTrend"></div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Impressions</div>
+                                <div class="kpi-value" id="seoImpressions">—</div>
+                                <div class="kpi-trend" id="seoImpressionsTrend"></div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">CTR (taux de clic)</div>
+                                <div class="kpi-value" id="seoCtr">—</div>
+                                <div class="kpi-trend" id="seoCtrTrend"></div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Position moyenne</div>
+                                <div class="kpi-value" id="seoPosition">—</div>
+                                <div class="kpi-trend" id="seoPositionTrend"></div>
+                            </div>
+                        </div>
+                        <div class="panel" style="margin-bottom:1.2rem;">
+                            <h3>Clics &amp; impressions par jour</h3>
+                            <canvas id="seoChart" height="80"></canvas>
+                        </div>
+                        <div class="panel" style="margin-bottom:1.2rem;">
+                            <h3>Mots-clés — sur quelles recherches tu apparais</h3>
+                            <div class="seo-table-wrap">
+                                <table class="seo-table">
+                                    <thead><tr><th>Requête</th><th>Position</th><th>Clics</th><th>Impressions</th><th>CTR</th></tr></thead>
+                                    <tbody id="seoQueriesBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="panel-grid">
+                            <div class="panel">
+                                <h3>Pages les mieux référencées</h3>
+                                <div class="seo-table-wrap">
+                                    <table class="seo-table">
+                                        <thead><tr><th>Page</th><th>Position</th><th>Clics</th></tr></thead>
+                                        <tbody id="seoPagesBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="panel">
+                                <h3>Recherches par appareil</h3>
+                                <div id="seoDevices"></div>
+                                <h3 style="margin-top:1.2rem;">Recherches par pays</h3>
+                                <div id="seoCountries"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ONGLET : COMPARATEUR DE PÉRIODES -->
+                <div class="analytics-tab" id="atab-compare" style="display:none;">
+                    <div class="panel" style="margin-bottom:1.2rem;">
+                        <div style="display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap;">
+                            <span style="font-weight:700; font-size:0.85rem;">Comparer</span>
+                            <select id="comparePeriodA" class="dash-select" style="width:auto;">
+                                <option value="7">7 derniers jours</option>
+                                <option value="28" selected>28 derniers jours</option>
+                                <option value="90">90 derniers jours</option>
+                            </select>
+                            <span class="cell-muted" style="font-size:0.85rem;">à la période équivalente précédente</span>
+                            <button class="btn-primary" id="runCompareBtn" style="width:auto; padding:0.55rem 1.2rem;">Comparer</button>
+                        </div>
+                    </div>
+                    <div id="compareResults"></div>
                 </div>
 
                 <!-- ONGLET : OBJECTIFS -->
@@ -1943,7 +2059,11 @@ function renderLeadsQuality(list) {
 }
 
 
-document.getElementById('analyticsDaysSelect').addEventListener('change', () => loadAnalytics());
+document.getElementById('analyticsDaysSelect').addEventListener('change', () => {
+    loadAnalytics();
+    if (seoLoaded && document.getElementById('atab-seo').style.display !== 'none') loadSeo();
+});
+document.getElementById('runCompareBtn').addEventListener('click', runCompare);
 
 document.querySelectorAll('#view-analytics .toolbar .filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -1954,6 +2074,8 @@ document.querySelectorAll('#view-analytics .toolbar .filter-chip').forEach(chip 
         if (chip.dataset.atab === 'goals') loadGoals();
         if (chip.dataset.atab === 'alerts') loadAlerts();
         if (chip.dataset.atab === 'funnel') loadFunnelAndSources();
+        if (chip.dataset.atab === 'seo') loadSeo();
+        if (chip.dataset.atab === 'compare' && !document.getElementById('compareResults').innerHTML) runCompare();
     });
 });
 
@@ -1984,6 +2106,8 @@ async function loadAnalytics() {
         document.getElementById('gaAvgDuration').textContent = formatDuration(overview.totals.avgSessionDuration);
         document.getElementById('gaBounce').textContent = Math.round(overview.totals.bounceRate * 100) + '%';
         document.getElementById('gaEngagement').textContent = Math.round((overview.totals.engagementRate || 0) * 100) + '%';
+        renderKpiGauge('gaBounceGauge', 'bounce', Math.round(overview.totals.bounceRate * 100), true);
+        renderKpiGauge('gaEngagementGauge', 'engagement', Math.round((overview.totals.engagementRate || 0) * 100), false);
         document.getElementById('gaPagesPerSession').textContent = (overview.totals.pagesPerSession || 0).toFixed(1);
 
         renderTrend('gaUsersTrend', overview.trends.activeUsers);
@@ -2037,6 +2161,146 @@ function renderKpiMiniSparkline(canvasId, currentInstance, values, color) {
     });
 }
 
+/* ===== Jauges semi-circulaires (rebond / engagement) ===== */
+const kpiGaugeInstances = {};
+function renderKpiGauge(canvasId, key, valuePct, invert) {
+    const el = document.getElementById(canvasId);
+    if (!el) return;
+    if (kpiGaugeInstances[key]) kpiGaugeInstances[key].destroy();
+    // invert=true : plus c'est bas mieux c'est (rebond) → vert si bas, rouge si haut
+    const good = invert ? valuePct <= 40 : valuePct >= 60;
+    const mid = invert ? valuePct <= 65 : valuePct >= 35;
+    const color = good ? '#22c55e' : mid ? '#f59e0b' : '#da2c48';
+    kpiGaugeInstances[key] = new Chart(el.getContext('2d'), {
+        type: 'doughnut',
+        data: { datasets: [{ data: [valuePct, 100 - valuePct], backgroundColor: [color, 'rgba(128,128,128,0.12)'], borderWidth: 0 }] },
+        options: { rotation: -90, circumference: 180, cutout: '75%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 600 } },
+    });
+}
+
+/* ===== SEO — Google Search Console ===== */
+let seoChartInstance = null;
+let seoLoaded = false;
+async function loadSeo() {
+    const days = document.getElementById('analyticsDaysSelect').value;
+    try {
+        const seo = await api('/api/analytics/seo?days=' + days);
+        const ncEl = document.getElementById('seoNotConfigured');
+        const contentEl = document.getElementById('seoContent');
+        if (!seo.configured || seo.accessDenied) {
+            ncEl.style.display = 'block'; contentEl.style.display = 'none';
+            return;
+        }
+        ncEl.style.display = 'none'; contentEl.style.display = 'block';
+        seoLoaded = true;
+
+        document.getElementById('seoClicks').textContent = seo.totals.clicks.toLocaleString('fr-FR');
+        document.getElementById('seoImpressions').textContent = seo.totals.impressions.toLocaleString('fr-FR');
+        document.getElementById('seoCtr').textContent = (seo.totals.ctr * 100).toFixed(1) + '%';
+        document.getElementById('seoPosition').textContent = seo.totals.position.toFixed(1);
+        renderTrend('seoClicksTrend', seo.trends.clicks);
+        renderTrend('seoImpressionsTrend', seo.trends.impressions);
+        renderTrend('seoCtrTrend', seo.trends.ctr);
+        renderTrend('seoPositionTrend', seo.trends.position, true); // position : baisse = meilleur classement
+
+        // Courbe clics + impressions
+        const ctx = document.getElementById('seoChart').getContext('2d');
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+        const textColor = isDark ? '#96969e' : '#6b6b74';
+        if (seoChartInstance) seoChartInstance.destroy();
+        seoChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: seo.byDate.map(r => r.date.slice(8, 10) + '/' + r.date.slice(5, 7)),
+                datasets: [
+                    { label: 'Clics', data: seo.byDate.map(r => r.clicks), borderColor: '#da2c48', backgroundColor: 'rgba(218,44,72,0.08)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2, yAxisID: 'y' },
+                    { label: 'Impressions', data: seo.byDate.map(r => r.impressions), borderColor: '#3b82f6', backgroundColor: 'transparent', fill: false, tension: 0.35, pointRadius: 0, borderWidth: 2, borderDash: [4, 4], yAxisID: 'y1' },
+                ],
+            },
+            options: {
+                plugins: { legend: { display: true, labels: { color: textColor, boxWidth: 12, font: { size: 11 } } } },
+                scales: {
+                    x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
+                    y: { position: 'left', grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true },
+                    y1: { position: 'right', grid: { display: false }, ticks: { color: textColor, font: { size: 10 } }, beginAtZero: true },
+                },
+            },
+        });
+
+        function posBadge(p) {
+            const cls = p <= 3 ? 'top3' : p <= 10 ? 'top10' : 'beyond';
+            return `<span class="seo-pos-badge ${cls}">${p.toFixed(1)}</span>`;
+        }
+        document.getElementById('seoQueriesBody').innerHTML = seo.topQueries.map(q => `
+            <tr><td>${escapeHtml(q.query)}</td><td>${posBadge(q.position)}</td><td>${q.clicks}</td><td>${q.impressions.toLocaleString('fr-FR')}</td><td>${(q.ctr * 100).toFixed(1)}%</td></tr>
+        `).join('') || '<tr><td colspan="5" class="cell-muted">Pas encore de données.</td></tr>';
+        document.getElementById('seoPagesBody').innerHTML = seo.topPages.map(p => {
+            const shortPath = p.page.replace(/^https?:\/\/[^/]+/, '') || '/';
+            return `<tr><td><a href="${p.page}" target="_blank" rel="noopener" style="color:inherit;">${escapeHtml(shortPath)}</a></td><td>${posBadge(p.position)}</td><td>${p.clicks}</td></tr>`;
+        }).join('') || '<tr><td colspan="3" class="cell-muted">Pas encore de données.</td></tr>';
+        const devMap = { DESKTOP: '💻 Ordinateur', MOBILE: '📱 Mobile', TABLET: '📱 Tablette' };
+        renderGaList('seoDevices', seo.byDevice.map(d => ({ label: devMap[d.device] || d.device, value: d.clicks, sub: d.impressions.toLocaleString('fr-FR') + ' impr.' })));
+        renderGaList('seoCountries', seo.byCountry.map(c => ({ label: c.country.toUpperCase(), value: c.clicks, sub: c.impressions.toLocaleString('fr-FR') + ' impr.' })));
+    } catch (e) { toast(e.message); }
+}
+
+/* ===== Comparateur de périodes ===== */
+async function runCompare() {
+    const days = Number(document.getElementById('comparePeriodA').value);
+    const wrap = document.getElementById('compareResults');
+    wrap.innerHTML = '<p class="cell-muted">Comparaison en cours…</p>';
+    try {
+        const o = await api('/api/analytics/overview?days=' + days);
+        if (!o.configured) { wrap.innerHTML = '<p class="cell-muted">Google Analytics non connecté.</p>'; return; }
+        const metrics = [
+            { name: 'Visiteurs', curr: o.totals.activeUsers, prev: o.previousTotals.activeUsers },
+            { name: 'Sessions', curr: o.totals.sessions, prev: o.previousTotals.sessions },
+            { name: 'Pages vues', curr: o.totals.pageViews, prev: o.previousTotals.pageViews },
+            { name: 'Durée moy. (s)', curr: o.totals.avgSessionDuration, prev: o.previousTotals.avgSessionDuration },
+            { name: 'Rebond (%)', curr: Math.round(o.totals.bounceRate * 100), prev: Math.round((o.previousTotals.bounceRate || 0) * 100), invert: true },
+            { name: 'Engagement (%)', curr: Math.round((o.totals.engagementRate || 0) * 100), prev: Math.round((o.previousTotals.engagementRate || 0) * 100) },
+        ];
+        wrap.innerHTML = `<div class="panel">` + metrics.map(m => {
+            const max = Math.max(m.curr, m.prev, 1);
+            const delta = m.prev ? Math.round(((m.curr - m.prev) / m.prev) * 100) : (m.curr > 0 ? 100 : 0);
+            const good = m.invert ? delta < 0 : delta > 0;
+            const cls = delta === 0 ? '' : good ? 'up' : 'down';
+            const arrow = delta === 0 ? '→' : delta > 0 ? '▲' : '▼';
+            return `
+            <div class="compare-row">
+                <span class="metric-name">${m.name}</span>
+                <div class="compare-bar-track"><div class="compare-bar-fill current" style="width:${(m.curr / max) * 100}%">${m.curr.toLocaleString('fr-FR')}</div></div>
+                <div class="compare-bar-track"><div class="compare-bar-fill previous" style="width:${(m.prev / max) * 100}%">${m.prev.toLocaleString('fr-FR')}</div></div>
+                <span class="compare-delta ${cls}">${arrow} ${Math.abs(delta)}%</span>
+            </div>`;
+        }).join('') + `
+            <div class="compare-row" style="border-top:1px solid var(--border); padding-top:0.9rem;">
+                <span></span>
+                <span class="cell-muted" style="font-size:0.75rem;">■ Période actuelle (${days} j)</span>
+                <span class="cell-muted" style="font-size:0.75rem;">■ Période précédente (${days} j)</span>
+                <span></span>
+            </div>
+        </div>`;
+    } catch (e) { wrap.innerHTML = ''; toast(e.message); }
+}
+
+/* ===== Carte live — visiteurs actifs par pays (façon Shopify) ===== */
+function renderLiveDots(byCountry) {
+    const svg = document.getElementById('gaWorldMap');
+    if (!svg || !byCountry) return;
+    svg.querySelectorAll('.geo-live-dot, .geo-live-ring').forEach(n => n.remove());
+    let html = '';
+    byCountry.forEach(c => {
+        const coords = COUNTRY_COORDS[c.country];
+        if (!coords) return;
+        const { x, y } = projectLatLng(coords[0], coords[1]);
+        html += `<circle class="geo-live-ring" cx="${x}" cy="${y}" r="6"></circle>`;
+        html += `<circle class="geo-live-dot" cx="${x}" cy="${y}" r="3.2"><title>${escapeHtml(c.country)} — ${c.activeUsers} en ligne maintenant</title></circle>`;
+    });
+    svg.insertAdjacentHTML('beforeend', html);
+}
+
 function renderTrend(elId, value, invert = false) {
     const el = document.getElementById(elId);
     if (value === undefined || value === null || !isFinite(value)) { el.textContent = ''; return; }
@@ -2055,6 +2319,7 @@ async function refreshRealtime() {
         const badge = document.getElementById('realtimeBadge');
         if (rt.activeUsers > 0) { badge.textContent = rt.activeUsers; badge.style.display = 'inline-block'; }
         else { badge.style.display = 'none'; }
+        renderLiveDots(rt.byCountry);
         updateLastRefreshLabel();
     } catch (e) { /* silencieux, on ne spam pas de toast toutes les 15s */ }
 }
