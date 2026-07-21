@@ -11,9 +11,11 @@ const db = require('./db');
 const mailer = require('./mailer');
 const pdfGen = require('./pdf');
 const analytics = require('./analytics');
-const push = require('./push');
 const cron = require('node-cron');
-push.init();
+const push = require('./push');
+const { frenchHolidays } = require('./holidays');
+const ftpPub = require('./ftp');
+const publisher = require('./publisher');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -339,171 +341,6 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
 /* ============================================================
    INGESTION PUBLIQUE — appelée par le chat widget du site
    ============================================================ */
-/* ============================================================
-   NOTIFICATIONS PUSH — abonnement des appareils du dashboard
-   ============================================================ */
-app.get('/api/push/public-key', auth, (req, res) => {
-    res.json({ publicKey: push.getPublicKey(), subscriptions: push.countSubscriptions() });
-});
-
-app.post('/api/push/subscribe', auth, (req, res) => {
-    const ok = push.addSubscription(req.body || {}, req.user);
-    if (!ok) return res.status(400).json({ error: 'Abonnement invalide' });
-    logTeamAction(req, 'push_subscribed', 'Notifications push activées sur un appareil');
-    res.json({ ok: true, subscriptions: push.countSubscriptions() });
-});
-
-app.post('/api/push/unsubscribe', auth, (req, res) => {
-    push.removeSubscription((req.body || {}).endpoint);
-    res.json({ ok: true, subscriptions: push.countSubscriptions() });
-});
-
-app.post('/api/push/test', auth, async (req, res) => {
-    const result = await push.notifyAll({
-        title: '🔔 Test réussi !',
-        body: 'Les notifications push du dashboard fonctionnent sur cet appareil.',
-        tag: 'test',
-    });
-    res.json(result);
-});
-
-/* ============================================================
-   JOURS FÉRIÉS FRANÇAIS — calculés automatiquement chaque année
-   (fêtes fixes + fêtes mobiles basées sur Pâques, algorithme de Meeus)
-   ============================================================ */
-function easterDate(year) {
-    const a = year % 19, b = Math.floor(year / 100), c = year % 100;
-    const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
-    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
-    const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
-    const m = Math.floor((a + 11 * h + 22 * l) / 451);
-    const month = Math.floor((h + l - 7 * m + 114) / 31);
-    const day = ((h + l - 7 * m + 114) % 31) + 1;
-    return new Date(Date.UTC(year, month - 1, day));
-}
-
-function frenchHolidays(year) {
-    const iso = (d) => d.toISOString().slice(0, 10);
-    const plus = (d, days) => new Date(d.getTime() + days * 86400000);
-    const easter = easterDate(year);
-    return [
-        { date: `${year}-01-01`, name: "Jour de l'an" },
-        { date: iso(plus(easter, 1)),  name: 'Lundi de Pâques' },
-        { date: `${year}-05-01`, name: 'Fête du Travail' },
-        { date: `${year}-05-08`, name: 'Victoire 1945' },
-        { date: iso(plus(easter, 39)), name: 'Ascension' },
-        { date: iso(plus(easter, 50)), name: 'Lundi de Pentecôte' },
-        { date: `${year}-07-14`, name: 'Fête nationale' },
-        { date: `${year}-08-15`, name: 'Assomption' },
-        { date: `${year}-11-01`, name: 'Toussaint' },
-        { date: `${year}-11-11`, name: 'Armistice 1918' },
-        { date: `${year}-12-25`, name: 'Noël' },
-    ].sort((a, b) => a.date.localeCompare(b.date));
-}
-
-app.get('/api/holidays', auth, (req, res) => {
-    const year = Number(req.query.year) || new Date().getFullYear();
-    // Année demandée + la suivante, pour couvrir la fin d'année sans requête supplémentaire
-    res.json([...frenchHolidays(year), ...frenchHolidays(year + 1)]);
-});
-
-/* ============================================================
-   CONTEXTE LOCAL D'UN VISITEUR — météo + heure locale
-   Météo via open-meteo.com (gratuit, sans clé API)
-   ============================================================ */
-const WEATHER_CODES = {
-    0: '☀️ Ciel dégagé', 1: '🌤️ Plutôt dégagé', 2: '⛅ Partiellement nuageux', 3: '☁️ Couvert',
-    45: '🌫️ Brouillard', 48: '🌫️ Brouillard givrant',
-    51: '🌦️ Bruine légère', 53: '🌦️ Bruine', 55: '🌧️ Bruine dense',
-    61: '🌧️ Pluie légère', 63: '🌧️ Pluie', 65: '🌧️ Pluie forte',
-    66: '🌧️ Pluie verglaçante', 67: '🌧️ Pluie verglaçante forte',
-    71: '🌨️ Neige légère', 73: '🌨️ Neige', 75: '❄️ Neige forte', 77: '❄️ Grésil',
-    80: '🌦️ Averses légères', 81: '🌧️ Averses', 82: '⛈️ Averses violentes',
-    85: '🌨️ Averses de neige', 86: '🌨️ Fortes averses de neige',
-    95: '⛈️ Orage', 96: '⛈️ Orage avec grêle', 99: '⛈️ Orage violent avec grêle',
-};
-
-app.get('/api/local-context', auth, async (req, res) => {
-    const lat = Number(req.query.lat), lon = Number(req.query.lon);
-    const tz = req.query.tz || null;
-    const out = { weather: null, localTime: null, timezone: tz };
-
-    // Heure locale du visiteur, calculée depuis son fuseau
-    if (tz) {
-        try {
-            out.localTime = new Intl.DateTimeFormat('fr-FR', {
-                timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit',
-            }).format(new Date());
-        } catch { /* fuseau invalide — on ignore */ }
-    }
-
-    // Météo actuelle à sa position
-    if (Number.isFinite(lat) && Number.isFinite(lon)) {
-        try {
-            const ctrl = new AbortController();
-            const tid = setTimeout(() => ctrl.abort(), 5000);
-            const r = await fetch(
-                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`,
-                { signal: ctrl.signal }
-            ).finally(() => clearTimeout(tid));
-            if (r.ok) {
-                const d = await r.json();
-                const cw = d.current_weather;
-                if (cw) {
-                    out.weather = {
-                        temperature: Math.round(cw.temperature),
-                        label: WEATHER_CODES[cw.weathercode] || '🌡️ Météo',
-                        windspeed: Math.round(cw.windspeed),
-                    };
-                }
-            }
-        } catch { /* météo indisponible — pas bloquant */ }
-    }
-    res.json(out);
-});
-
-/* ============================================================
-   VISITEURS EN DIRECT — carte précise, IP, appareil, durée...
-   Une session est considérée "en ligne" si un heartbeat est arrivé
-   il y a moins de 45s (le tracker en envoie un toutes les 15s).
-   ============================================================ */
-const LIVE_ONLINE_WINDOW_MS = 45 * 1000;
-const LIVE_SESSION_KEEP_MS = 30 * 60 * 1000; // on garde 30 min l'historique "récemment parti"
-
-app.get('/api/live-visitors', auth, (req, res) => {
-    const nowMs = Date.now();
-    const all = db.get('liveSessions').value();
-
-    // Purge des sessions trop vieilles pour ne pas faire grossir le fichier
-    const kept = all.filter(s => nowMs - new Date(s.lastSeenAt).getTime() < LIVE_SESSION_KEEP_MS);
-    if (kept.length !== all.length) db.set('liveSessions', kept).write();
-
-    const enriched = kept.map(s => {
-        const lastSeenMs = new Date(s.lastSeenAt).getTime();
-        const online = (nowMs - lastSeenMs) < LIVE_ONLINE_WINDOW_MS;
-        // Petit décalage déterministe (basé sur l'IP) pour éviter que plusieurs
-        // visiteurs de la même ville se superposent exactement sur la carte
-        let jitterLat = 0, jitterLon = 0;
-        if (s.geo && s.geo.lat != null) {
-            const h = crypto.createHash('md5').update(s.sessionId).digest();
-            jitterLat = ((h[0] / 255) - 0.5) * 0.06;
-            jitterLon = ((h[1] / 255) - 0.5) * 0.06;
-        }
-        return {
-            ...s,
-            online,
-            secondsSinceSeen: Math.round((nowMs - lastSeenMs) / 1000),
-            mapLat: s.geo && s.geo.lat != null ? s.geo.lat + jitterLat : null,
-            mapLon: s.geo && s.geo.lon != null ? s.geo.lon + jitterLon : null,
-        };
-    }).sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt));
-
-    res.json({
-        online: enriched.filter(s => s.online).length,
-        sessions: enriched,
-    });
-});
-
 app.post('/api/leads', async (req, res) => {
     const { name, email, message, source, budget } = req.body || {};
     if (!email || !message) return res.status(400).json({ error: 'email et message requis' });
@@ -551,9 +388,9 @@ app.post('/api/leads', async (req, res) => {
         mailer.sendMail({ ...mailer.leadConfirmationEmail(lead), meta: { type: 'lead_confirmation', relatedId: lead.id } }).catch(() => {});
         mailer.sendMail({ ...mailer.leadNotificationEmail(lead), meta: { type: 'lead_notification', relatedId: lead.id } }).catch(() => {});
         push.notifyAll({
-            title: '🎯 Nouveau lead !',
-            body: `${lead.name || lead.email}${lead.tracking.geo?.city ? ' · ' + lead.tracking.geo.city : ''} — ${(lead.message || '').slice(0, 90)}`,
-            tag: 'lead-' + lead.id,
+            title: '🔥 Nouveau lead' + (lead.name ? ' — ' + lead.name : ''),
+            body: (lead.message || '').slice(0, 120) + (geo && geo.city ? `\n📍 ${geo.city}` : ''),
+            url: '/dashboard', tag: 'lead-' + lead.id,
         }).catch(() => {});
     })();
 });
@@ -632,9 +469,9 @@ app.post('/api/appointments', async (req, res) => {
         mailer.sendMail({ ...mailer.appointmentConfirmationEmail(appt), meta: { type: 'appointment_confirmation', relatedId: appt.id } }).catch(() => {});
         mailer.sendMail({ ...mailer.appointmentNotificationEmail(appt), meta: { type: 'appointment_notification', relatedId: appt.id } }).catch(() => {});
         push.notifyAll({
-            title: '📅 Nouvelle demande de RDV !',
-            body: `${appt.email} — ${appt.subject}${appt.date_text ? ' (' + appt.date_text + ')' : ''}`,
-            tag: 'appt-' + appt.id,
+            title: '📅 Nouvelle demande de RDV',
+            body: `${appt.subject}${appt.date_text ? ' — ' + appt.date_text : ''}${appt.time_text ? ' ' + appt.time_text : ''}`,
+            url: '/dashboard', tag: 'appt-' + appt.id,
         }).catch(() => {});
     })();
 });
@@ -643,7 +480,7 @@ app.post('/api/appointments', async (req, res) => {
 // consultation de projet, ouverture du chat, FAQ, téléchargements, etc.)
 // Format envoyé par le site : { event, sessionId, path, referrer, timestamp, ...données propres à l'événement }
 // Reste compatible avec l'ancien format { type, meta } utilisé par le code existant.
-app.post('/api/events', async (req, res) => {
+app.post('/api/events', (req, res) => {
     const body = req.body || {};
     const type = body.event || body.type;
     if (!type) return res.status(400).json({ error: 'event (ou type) requis' });
@@ -663,45 +500,6 @@ app.post('/api/events', async (req, res) => {
     const events = db.get('events').value();
     if (events.length > 5000) db.set('events', events.slice(events.length - 5000)).write();
     res.status(201).json({ ok: true });
-
-    // Mise à jour de la session en direct (carte "Visiteurs en direct") — seulement
-    // pour les événements de suivi de navigation (page_view / heartbeat) porteurs de sessionId
-    if ((type === 'page_view' || type === 'heartbeat') && body.sessionId) {
-        const ip = getRealIp(req);
-        const ua = req.headers['user-agent'] || null;
-        const sessions = db.get('liveSessions');
-        const existing = sessions.find({ sessionId: body.sessionId }).value();
-        const uaParsed = parseUA(ua);
-        const patch = {
-            sessionId: body.sessionId,
-            ip,
-            ...uaParsed,
-            lang: body.lang || (existing && existing.lang) || null,
-            timezone: body.timezone || (existing && existing.timezone) || null,
-            screen: body.screen || (existing && existing.screen) || null,
-            connection: body.connection || (existing && existing.connection) || null,
-            referrer: body.referrer || (existing && existing.referrer) || null,
-            utmSource: body.utmSource || (existing && existing.utmSource) || null,
-            utmMedium: body.utmMedium || (existing && existing.utmMedium) || null,
-            utmCampaign: body.utmCampaign || (existing && existing.utmCampaign) || null,
-            currentPath: body.path || null,
-            pagesVisited: body.pagesVisited || (existing && existing.pagesVisited) || null,
-            visitDuration: body.visitDuration != null ? body.visitDuration : (existing && existing.visitDuration) || 0,
-            lastSeenAt: now(),
-            firstSeenAt: (existing && existing.firstSeenAt) || now(),
-            geo: (existing && existing.geo) || null,
-        };
-        if (existing) sessions.find({ sessionId: body.sessionId }).assign(patch).write();
-        else sessions.push(patch).write();
-
-        // Géolocalisation IP une seule fois par session (pas à chaque heartbeat, pour
-        // rester sous la limite gratuite de 45 requêtes/min du service de géoloc)
-        if (!patch.geo) {
-            geolocateIp(ip).then((geo) => {
-                if (geo) db.get('liveSessions').find({ sessionId: body.sessionId }).assign({ geo }).write();
-            }).catch(() => {});
-        }
-    }
 });
 
 app.get('/api/events', auth, (req, res) => {
@@ -1502,6 +1300,9 @@ app.post('/api/quotes/:id/send', auth, adminOnly, async (req, res) => {
     if (!quote) return res.status(404).json({ error: 'Devis introuvable' });
     const business = db.get('businessSettings').value() || {};
     const mail = mailer.quoteEmail(quote, quoteAcceptToken(id));
+    // Pixel invisible : on saura quand (et combien de fois) le client ouvre le devis
+    const base = process.env.DASHBOARD_URL || '';
+    if (base) mail.html = mail.html.replace('</body>', `<img src="${base}/api/quotes/${id}/open.gif?token=${quoteAcceptToken(id)}" width="1" height="1" alt="" style="display:none;"></body>`);
     mail.meta = { type: 'quote_sent', relatedId: id };
     try {
         const pdfBuffer = await pdfGen.generateQuotePdf(quote, business);
@@ -1547,6 +1348,8 @@ app.get('/api/quotes/:id/accept', async (req, res) => {
 
     // Notifie Florian — la facture reste en brouillon, à lui de vérifier puis de l'envoyer
     mailer.sendMail({ ...mailer.quoteAcceptedEmail(quote, invoice), meta: { type: 'quote_accepted', relatedId: quote.id } }).catch(() => {});
+    // Onboarding automatique : projet créé + questionnaire de brief envoyé au client
+    try { onboardAfterQuoteAccepted(quote); } catch (err) { console.error('Onboarding auto:', err.message); }
 
     res.send(simplePage('Devis accepté ✅', `Merci ! Votre acceptation a bien été transmise à Florian. Il finalise votre facture (n°${invoice.invoiceNumber}) et revient vers vous rapidement.`, true));
 });
@@ -2329,6 +2132,558 @@ async function buildAndSendDailyBrief() {
         meta: { type: 'daily_brief' },
     });
 }
+
+/* ============================================================
+   BLOG & PUBLICATION FTP — écrit directement sur florian-b.fr (OVH)
+   ============================================================ */
+app.get('/api/publish/status', auth, (req, res) => {
+    res.json({ ftpConfigured: ftpPub.isConfigured(), siteUrl: publisher.SITE_URL });
+});
+app.post('/api/publish/test', auth, adminOnly, async (req, res) => {
+    res.json(await ftpPub.testConnection());
+});
+
+app.get('/api/blog', auth, (req, res) => res.json(db.get('blogPosts').value() || []));
+app.post('/api/blog', auth, canWrite, (req, res) => {
+    const { title, excerpt, content, coverUrl } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'Titre requis' });
+    let slug = publisher.slugify(title);
+    // Slug unique
+    const existing = db.get('blogPosts').value() || [];
+    if (existing.some(p => p.slug === slug)) slug = slug + '-' + (existing.length + 1);
+    const post = {
+        id: nextId('blogPosts'), created_at: now(),
+        title, slug, excerpt: excerpt || '', content: content || '', coverUrl: coverUrl || '',
+        status: 'draft', publishedAt: null,
+    };
+    db.get('blogPosts').push(post).write();
+    res.status(201).json(post);
+});
+app.patch('/api/blog/:id', auth, canWrite, (req, res) => {
+    const id = Number(req.params.id);
+    const post = db.get('blogPosts').find({ id }).value();
+    if (!post) return res.status(404).json({ error: 'Article introuvable' });
+    const { title, excerpt, content, coverUrl } = req.body || {};
+    const patch = {};
+    if (title !== undefined) patch.title = title;
+    if (excerpt !== undefined) patch.excerpt = excerpt;
+    if (content !== undefined) patch.content = content;
+    if (coverUrl !== undefined) patch.coverUrl = coverUrl;
+    db.get('blogPosts').find({ id }).assign(patch).write();
+    res.json(db.get('blogPosts').find({ id }).value());
+});
+app.delete('/api/blog/:id', auth, canWrite, async (req, res) => {
+    const id = Number(req.params.id);
+    const post = db.get('blogPosts').find({ id }).value();
+    if (!post) return res.status(404).json({ error: 'Article introuvable' });
+    // Si publié, on retire aussi la page du site (puis on republie l'index)
+    if (post.status === 'published' && ftpPub.isConfigured()) {
+        try { await ftpPub.deletePath('blog/' + post.slug); } catch {}
+    }
+    db.get('blogPosts').remove({ id }).write();
+    if (post.status === 'published' && ftpPub.isConfigured()) {
+        try {
+            const posts = db.get('blogPosts').value() || [];
+            await ftpPub.uploadFiles([{ remotePath: 'blog/index.html', content: publisher.blogIndexHtml(posts) }]);
+        } catch {}
+    }
+    logTeamAction(req, 'other', `Article de blog supprimé : ${post.title}`, id);
+    res.json({ ok: true });
+});
+
+// Publication : article + index du blog + sitemap fusionné, en un clic
+app.post('/api/blog/:id/publish', auth, adminOnly, async (req, res) => {
+    const id = Number(req.params.id);
+    const post = db.get('blogPosts').find({ id }).value();
+    if (!post) return res.status(404).json({ error: 'Article introuvable' });
+    if (!post.content || !post.excerpt) return res.status(400).json({ error: 'Ajoute le contenu et la meta-description (résumé) avant de publier — c\'est essentiel pour le SEO' });
+    try {
+        db.get('blogPosts').find({ id }).assign({ status: 'published', publishedAt: post.publishedAt || now() }).write();
+        const fresh = db.get('blogPosts').find({ id }).value();
+        const posts = db.get('blogPosts').value() || [];
+        const blogUrls = posts.filter(p => p.status === 'published').map(p => `${publisher.SITE_URL}/blog/${p.slug}/`);
+        const sitemap = await publisher.mergedSitemap([`${publisher.SITE_URL}/blog/`, ...blogUrls]);
+        await ftpPub.uploadFiles([
+            { remotePath: `blog/${fresh.slug}/index.html`, content: publisher.blogArticleHtml(fresh) },
+            { remotePath: 'blog/index.html', content: publisher.blogIndexHtml(posts) },
+            { remotePath: 'sitemap.xml', content: sitemap },
+        ]);
+        logTeamAction(req, 'other', `Article publié sur le site : ${fresh.title}`, id);
+        res.json({ ok: true, url: `${publisher.SITE_URL}/blog/${fresh.slug}/` });
+    } catch (err) {
+        // La publication a échoué : on remet en brouillon pour rester cohérent
+        db.get('blogPosts').find({ id }).assign({ status: 'draft' }).write();
+        res.status(500).json({ error: 'Publication échouée : ' + err.message });
+    }
+});
+
+// Pages projets SEO générées depuis les cartes du theme builder
+app.post('/api/publish/project-pages', auth, adminOnly, async (req, res) => {
+    const content = db.get('site_content').value() || {};
+    const cards = (content.projects || []).filter(c => c.title);
+    if (!cards.length) return res.status(400).json({ error: 'Aucune carte projet dans "Contenu du site"' });
+    const descriptions = req.body?.descriptions || {}; // { "project-1": "texte..." }
+    try {
+        const files = [];
+        const urls = [];
+        for (const card of cards) {
+            const slug = publisher.slugify(card.title);
+            files.push({ remotePath: `projets/${slug}/index.html`, content: publisher.projectPageHtml(card, descriptions[card.id] || card.seoDescription || '') });
+            urls.push(`${publisher.SITE_URL}/projets/${slug}/`);
+        }
+        files.push({ remotePath: 'sitemap.xml', content: await publisher.mergedSitemap(urls) });
+        await ftpPub.uploadFiles(files);
+        logTeamAction(req, 'other', `${cards.length} pages projets publiées sur le site`);
+        res.json({ ok: true, count: cards.length, urls });
+    } catch (err) {
+        res.status(500).json({ error: 'Publication échouée : ' + err.message });
+    }
+});
+
+/* ============================================================
+   DISPONIBILITÉS RDV — pilote le calendrier de créneaux du site
+   Configurable dans "Mon entreprise" ; les jours fériés français
+   et les créneaux déjà confirmés sont exclus automatiquement.
+   ============================================================ */
+app.get('/api/rdv-availability', (req, res) => {
+    const b = db.get('businessSettings').value() || {};
+    const year = new Date().getFullYear();
+    const holidayDates = [...frenchHolidays(year), ...frenchHolidays(year + 1)].map(h => h.date);
+    const blockedDates = String(b.rdvBlockedDates || '')
+        .split(/[\n,;]+/).map(x => x.trim()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
+    // Créneaux déjà pris : RDV confirmés à venir
+    const bookedSlots = db.get('appointments').value()
+        .filter(a => a.status === 'confirmed' && a.confirmedDate && new Date(a.confirmedDate) > new Date())
+        .map(a => {
+            const d = new Date(a.confirmedDate);
+            return { date: d.toISOString().slice(0, 10), hour: d.getHours() };
+        });
+    res.set('Cache-Control', 'no-store');
+    res.json({
+        openHour: Number(b.rdvOpenHour) || 9,
+        closeHour: Number(b.rdvCloseHour) || 19,
+        closedWeekdays: Array.isArray(b.rdvClosedWeekdays) ? b.rdvClosedWeekdays : [0], // dimanche par défaut
+        blockedDates: [...new Set([...holidayDates, ...blockedDates])],
+        bookedSlots,
+    });
+});
+
+/* ============================================================
+   RENTABILITÉ PAR PROJET — heures loguées × factures payées du client
+   ============================================================ */
+app.get('/api/projects-profitability', auth, (req, res) => {
+    const projects = db.get('projects').value();
+    const logs = db.get('timeLogs').value();
+    const invoices = db.get('invoices').value();
+    const result = projects.map(p => {
+        const minutes = logs.filter(t => t.projectId === p.id).reduce((s, t) => s + (t.minutes || 0), 0);
+        const paid = invoices.filter(i => i.clientEmail === p.clientEmail && i.status === 'paid').reduce((s, i) => s + (i.total || 0), 0);
+        const hours = minutes / 60;
+        return {
+            id: p.id, name: p.name, clientEmail: p.clientEmail, stage: p.stage,
+            hours: Math.round(hours * 10) / 10, revenue: paid,
+            hourlyRate: hours > 0 ? Math.round(paid / hours) : null,
+        };
+    }).filter(x => x.hours > 0 || x.revenue > 0);
+    res.json(result);
+});
+
+/* ============================================================
+   ONBOARDING CLIENT AUTOMATIQUE — après acceptation d'un devis :
+   projet créé automatiquement + questionnaire de brief envoyé au client
+   ============================================================ */
+function briefToken(id) {
+    return crypto.createHmac('sha256', JWT_SECRET).update('brief-' + id).digest('hex').slice(0, 32);
+}
+const BRIEF_QUESTIONS = [
+    { key: 'objectif', label: 'Quel est l\'objectif principal de ce projet ?' },
+    { key: 'cible', label: 'À qui s\'adresse-t-il ? (votre public, vos clients)' },
+    { key: 'references', label: 'Des références ou inspirations que vous aimez ? (liens bienvenus)' },
+    { key: 'contraintes', label: 'Contraintes à connaître ? (délais, couleurs imposées, formats...)' },
+    { key: 'autres', label: 'Autre chose à me dire ?' },
+];
+function onboardAfterQuoteAccepted(quote) {
+    const base = process.env.DASHBOARD_URL || '';
+    // Crée le projet s'il n'y en a pas déjà un actif pour ce client
+    let project = db.get('projects').value().find(p => p.clientEmail === quote.clientEmail && p.stage !== 'livre');
+    if (!project) {
+        const template = db.get('projectChecklistTemplate').value() || [];
+        project = {
+            id: nextId('projects'), created_at: now(), leadId: null,
+            name: quote.clientName ? `Projet ${quote.clientName}` : `Projet devis ${quote.quoteNumber || '#' + quote.id}`,
+            clientEmail: quote.clientEmail, stage: 'brief', notes: `Créé automatiquement à l'acceptation du devis ${quote.quoteNumber || '#' + quote.id}.`,
+            checklist: template.map(label => ({ label, done: false })),
+            deliveredAt: null, satisfactionRequestedAt: null, reviewRequestedAt: null, anniversarySentAt: null,
+        };
+        db.get('projects').push(project).write();
+    }
+    // Questionnaire de brief par email (si l'URL publique est configurée)
+    if (base) {
+        const briefUrl = `${base}/brief/${project.id}?token=${briefToken(project.id)}`;
+        mailer.sendMail({
+            to: quote.clientEmail,
+            subject: 'On démarre ! Quelques questions pour bien cadrer votre projet — Florian B.',
+            html: `<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#0a0a0a;font-family:-apple-system,'Segoe UI',Arial,sans-serif;">
+                <div style="max-width:520px;margin:0 auto;background:#141414;border:1px solid #262626;border-radius:16px;padding:32px;">
+                <p style="font-family:Arial,sans-serif;font-weight:800;color:#ff2f76;letter-spacing:1px;font-size:12px;text-transform:uppercase;margin:0 0 16px;">Florian B. — Studio</p>
+                <h1 style="color:#f5f5f5;font-size:20px;margin:0 0 12px;">Merci pour votre confiance ! 🙌</h1>
+                <p style="color:#9a9a9a;font-size:14px;line-height:1.6;margin:0 0 20px;">Votre devis est accepté, on peut démarrer. Pour cadrer le projet au mieux, j'ai préparé <strong style="color:#f5f5f5;">5 questions rapides</strong> (2 minutes) :</p>
+                <p style="margin:0 0 24px;"><a href="${briefUrl}" style="display:inline-block;background:linear-gradient(135deg,#da2c48,#ff2f76);color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;">Répondre au questionnaire de brief →</a></p>
+                <p style="color:#666;font-size:12px;line-height:1.5;margin:0;">Vous préférez en parler de vive voix ? Répondez simplement à cet email.</p>
+                </div></body></html>`,
+            meta: { type: 'other', relatedId: project.id },
+        }).catch(() => {});
+    }
+    push.notifyAll({ title: '🎉 Devis accepté', body: `${quote.clientName || quote.clientEmail} — projet créé + brief envoyé automatiquement`, url: '/dashboard', tag: 'quote-accepted-' + quote.id }).catch(() => {});
+}
+app.get('/brief/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const p = db.get('projects').find({ id }).value();
+    if (!p || (req.query.token || '') !== briefToken(id)) return res.status(404).send('Lien invalide.');
+    res.set('Content-Type', 'text/html');
+    res.set('X-Robots-Tag', 'noindex');
+    res.send(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex">
+<title>Brief de projet — Florian B.</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#0a0a0a;color:#f5f5f5;font-family:'Inter',sans-serif;padding:2rem 1.2rem 4rem;}
+.wrap{max-width:560px;margin:0 auto;}h1{font-family:'Syne',sans-serif;font-size:1.5rem;margin:0.4rem 0 0.3rem;}
+.brand{font-family:'Syne',sans-serif;font-weight:800;color:#ff2f76;letter-spacing:0.5px;font-size:0.8rem;text-transform:uppercase;}
+.sub{color:#9a9a9a;font-size:0.9rem;margin-bottom:1.8rem;}label{display:block;font-size:0.85rem;font-weight:600;margin:1.2rem 0 0.4rem;}
+textarea{width:100%;min-height:80px;background:#141414;border:1px solid #2a2a2a;border-radius:10px;color:#f5f5f5;padding:0.8rem;font-family:inherit;font-size:0.9rem;resize:vertical;}
+button{margin-top:1.6rem;width:100%;padding:0.9rem;border:none;border-radius:10px;background:linear-gradient(135deg,#da2c48,#ff2f76);color:#fff;font-weight:600;font-size:0.95rem;cursor:pointer;}
+.done{display:none;color:#22c55e;margin-top:1.5rem;font-size:0.95rem;}</style></head><body><div class="wrap">
+<div class="brand">Florian B. — Studio</div>
+<h1>Brief de votre projet</h1>
+<p class="sub">5 questions rapides pour bien démarrer « ${(p.name || '').replace(/</g, '&lt;')} ». Répondez librement, tout est utile !</p>
+<form id="f">
+${BRIEF_QUESTIONS.map(q => `<label>${q.label}</label><textarea name="${q.key}"></textarea>`).join('')}
+<button type="submit">Envoyer mon brief ✔️</button>
+</form>
+<p class="done" id="done">✅ Merci ! Florian a bien reçu votre brief et revient vers vous rapidement.</p>
+<script>
+document.getElementById('f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    try {
+        await fetch('/api/brief/${id}?token=${briefToken(id)}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        document.getElementById('f').style.display = 'none';
+        document.getElementById('done').style.display = 'block';
+    } catch { alert("Une erreur est survenue, réessayez ou répondez par email."); }
+});
+</script></div></body></html>`);
+});
+app.post('/api/brief/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const p = db.get('projects').find({ id }).value();
+    if (!p || (req.query.token || '') !== briefToken(id)) return res.status(404).json({ error: 'Lien invalide' });
+    const answers = req.body || {};
+    const text = BRIEF_QUESTIONS
+        .map(q => answers[q.key] ? `• ${q.label}\n${String(answers[q.key]).slice(0, 2000)}` : null)
+        .filter(Boolean).join('\n\n');
+    if (text) {
+        const notes = (p.notes ? p.notes + '\n\n' : '') + `— BRIEF CLIENT (${new Date().toLocaleDateString('fr-FR')}) —\n` + text;
+        db.get('projects').find({ id }).assign({ notes, briefAnsweredAt: now() }).write();
+    }
+    push.notifyAll({ title: '📋 Brief reçu', body: `Le client de « ${p.name} » a répondu au questionnaire — tout est dans les notes du projet`, url: '/dashboard', tag: 'brief-' + id }).catch(() => {});
+    res.json({ ok: true });
+});
+
+/* ============================================================
+   VEILLE CONCURRENTIELLE — surveille des sites (1x/jour) et notifie
+   quand leur contenu change. URLs configurées dans "Mon entreprise".
+   ============================================================ */
+async function runCompetitorWatch() {
+    const b = db.get('businessSettings').value() || {};
+    const urls = String(b.watchUrls || '').split(/[\n,;]+/).map(x => x.trim()).filter(x => /^https?:\/\//.test(x)).slice(0, 10);
+    if (!urls.length) return;
+    const sites = db.get('watchSites').value() || [];
+    for (const url of urls) {
+        try {
+            const r = await fetch(url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FBWatch/1.0)' } });
+            const html = await r.text();
+            // On ne garde que le texte visible (les scripts/styles changent tout le temps)
+            const text = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const hash = crypto.createHash('sha256').update(text).digest('hex');
+            const existing = sites.find(x => x.url === url);
+            if (!existing) {
+                db.get('watchSites').push({ url, hash, lastChecked: now(), lastChanged: null }).write();
+            } else if (existing.hash !== hash) {
+                db.get('watchSites').find({ url }).assign({ hash, lastChecked: now(), lastChanged: now() }).write();
+                push.notifyAll({ title: '🕵️ Veille — du nouveau', body: `Le contenu de ${new URL(url).hostname} a changé — va jeter un œil !`, url: '/dashboard', tag: 'watch-' + new URL(url).hostname }).catch(() => {});
+            } else {
+                db.get('watchSites').find({ url }).assign({ lastChecked: now() }).write();
+            }
+        } catch { /* site injoignable : on réessaiera demain */ }
+    }
+    // Nettoie les URLs retirées de la config
+    db.get('watchSites').remove(x => !urls.includes(x.url)).write();
+}
+cron.schedule('0 7 * * *', () => {
+    runCompetitorWatch().catch(err => console.error('Erreur veille:', err.message));
+}, { timezone: 'Europe/Paris' });
+app.get('/api/watch-status', auth, (req, res) => res.json(db.get('watchSites').value() || []));
+app.post('/api/watch-run', auth, adminOnly, async (req, res) => {
+    await runCompetitorWatch();
+    res.json({ ok: true, sites: db.get('watchSites').value() || [] });
+});
+
+/* ============================================================
+   CHAT IA — le widget du site devient un vrai assistant (API Claude)
+   Optionnel : nécessite la variable Railway ANTHROPIC_API_KEY.
+   ============================================================ */
+const chatRate = new Map(); // anti-abus simple : 30 messages / heure / IP
+app.get('/api/chat-status', (req, res) => {
+    res.json({ enabled: Boolean(process.env.ANTHROPIC_API_KEY) });
+});
+app.post('/api/chat', async (req, res) => {
+    if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'chat_disabled' });
+    const ip = getRealIp(req);
+    const nowMs = Date.now();
+    const entry = chatRate.get(ip) || { count: 0, resetAt: nowMs + 3600000 };
+    if (nowMs > entry.resetAt) { entry.count = 0; entry.resetAt = nowMs + 3600000; }
+    if (++entry.count > 30) return res.status(429).json({ error: 'rate_limited' });
+    chatRate.set(ip, entry);
+
+    const messages = (Array.isArray(req.body?.messages) ? req.body.messages : [])
+        .filter(m => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string')
+        .slice(-12)
+        .map(m => ({ role: m.role, content: m.content.slice(0, 1500) }));
+    if (!messages.length) return res.status(400).json({ error: 'messages requis' });
+
+    const content = db.get('content').value() || {};
+    const faq = (content.faq || []).map(f => `Q: ${f.question}\nR: ${f.answer}`).join('\n');
+    const projects = (content.projects || []).map(p => p.title).filter(Boolean).join(', ');
+    const system = `Tu es l'assistant du site de Florian Bonnet (florian-b.fr), graphiste et directeur artistique freelance de 23 ans à Paris.
+Ton rôle : renseigner les visiteurs et les encourager à laisser un message ou prendre RDV. Réponds en français, chaleureux mais professionnel, en 1 à 3 phrases courtes. Tutoie jamais le visiteur (vouvoiement).
+Compétences : branding, UI/UX, print, communication digitale, community management, photo/vidéo, motion. Outils : Figma, suite Adobe complète, WordPress.
+Projets notables : ${projects || 'Courtepaille, BNP Paribas, BasicFit, Augmantor, Trustify'}.
+Tarifs : pas de prix fixes, chaque projet est sur devis personnalisé — orienter vers le formulaire de contact.
+${faq ? 'FAQ du site :\n' + faq.slice(0, 3000) : ''}
+Si la question sort du cadre (politique, questions personnelles intrusives, demandes sans rapport), recadre poliment vers les sujets du site. Ne promets jamais de délai ou de prix précis. N'invente rien sur Florian.`;
+
+    try {
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001', max_tokens: 300, system, messages }),
+            signal: AbortSignal.timeout(20000),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d?.error?.message || 'Erreur API');
+        const reply = (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+        res.json({ reply: reply || "Je n'ai pas de réponse à ça, mais Florian pourra vous renseigner directement !" });
+    } catch (err) {
+        console.error('Chat IA:', err.message);
+        res.status(502).json({ error: 'chat_error' });
+    }
+});
+
+/* ============================================================
+   PIXEL D'OUVERTURE DES DEVIS — image 1x1 chargée quand le client ouvre l'email
+   ============================================================ */
+const PIXEL_GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+app.get('/api/quotes/:id/open.gif', (req, res) => {
+    res.set('Content-Type', 'image/gif');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.send(PIXEL_GIF); // on répond d'abord, tout le reste est silencieux
+    try {
+        const id = Number(req.params.id);
+        if ((req.query.token || '') !== quoteAcceptToken(id)) return;
+        const quote = db.get('quotes').find({ id }).value();
+        if (!quote) return;
+        const opens = quote.opens || [];
+        // Ignore les ouvertures dans l'heure suivant l'envoi si c'est toi qui vérifies ? Non :
+        // on garde tout, mais on ne notifie qu'une fois par heure max pour ne pas spammer.
+        const lastOpen = opens.length ? new Date(opens[opens.length - 1]) : null;
+        opens.push(now());
+        db.get('quotes').find({ id }).assign({ opens, firstOpenedAt: quote.firstOpenedAt || now() }).write();
+        if (!lastOpen || (Date.now() - lastOpen) > 3600000) {
+            push.notifyAll({
+                title: '👀 Devis ouvert',
+                body: `${quote.clientName || quote.clientEmail} vient d'ouvrir le devis ${quote.quoteNumber || '#' + id}${opens.length > 1 ? ` (${opens.length}ᵉ fois)` : ''} — bon moment pour appeler !`,
+                url: '/dashboard', tag: 'quote-open-' + id,
+            }).catch(() => {});
+        }
+    } catch {}
+});
+
+/* ============================================================
+   SALLE D'ATTENTE CLIENT — page de suivi privée par projet
+   Lien signé (non devinable), à envoyer au client : /suivi/:id?token=...
+   ============================================================ */
+function projectTrackToken(id) {
+    return crypto.createHmac('sha256', JWT_SECRET).update('project-track-' + id).digest('hex').slice(0, 32);
+}
+app.get('/api/projects/:id/track-link', auth, (req, res) => {
+    const id = Number(req.params.id);
+    if (!db.get('projects').find({ id }).value()) return res.status(404).json({ error: 'Projet introuvable' });
+    const base = process.env.DASHBOARD_URL || '';
+    res.json({ url: `${base}/suivi/${id}?token=${projectTrackToken(id)}` });
+});
+const PROJECT_STAGES_PUBLIC = [
+    { key: 'brief', label: 'Brief & cadrage' },
+    { key: 'maquettes', label: 'Création des maquettes' },
+    { key: 'revisions', label: 'Révisions & ajustements' },
+    { key: 'livre', label: 'Livraison finale' },
+];
+app.get('/suivi/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const p = db.get('projects').find({ id }).value();
+    if (!p || (req.query.token || '') !== projectTrackToken(id)) {
+        return res.status(404).send('<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Lien invalide</title></head><body style="background:#0a0a0a;color:#aaa;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">Ce lien de suivi n\'est pas valide.</body></html>');
+    }
+    const stageIdx = Math.max(0, PROJECT_STAGES_PUBLIC.findIndex(s => s.key === p.stage));
+    const checklist = (p.checklist || []);
+    const doneCount = checklist.filter(c => c.done).length;
+    const invoices = db.get('invoices').value().filter(i => i.clientEmail === p.clientEmail && ['sent', 'paid', 'overdue'].includes(i.status));
+    res.set('Content-Type', 'text/html');
+    res.set('X-Robots-Tag', 'noindex');
+    res.send(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex">
+<title>Suivi de votre projet — Florian B.</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--card:#141414;--border:#262626;--text:#f5f5f5;--muted:#9a9a9a;--accent:#da2c48;--accent2:#ff2f76;--ok:#22c55e;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;padding:2rem 1.2rem 4rem;}
+.wrap{max-width:640px;margin:0 auto;}
+h1{font-family:'Syne',sans-serif;font-size:1.6rem;margin:0.4rem 0 0.2rem;}
+.sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem;}
+.brand{font-family:'Syne',sans-serif;font-weight:800;color:var(--accent2);letter-spacing:0.5px;font-size:0.85rem;text-transform:uppercase;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin-bottom:1.2rem;}
+.steps{list-style:none;}
+.step{display:flex;gap:0.9rem;padding:0.7rem 0;align-items:flex-start;}
+.dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--muted);}
+.step.done .dot{background:var(--ok);border-color:var(--ok);color:#0a0a0a;font-weight:700;}
+.step.current .dot{border-color:var(--accent2);color:var(--accent2);box-shadow:0 0 0 4px rgba(255,47,118,0.15);}
+.step .lbl{padding-top:0.2rem;font-size:0.95rem;}
+.step.done .lbl{color:var(--muted);}
+.step.current .lbl{font-weight:600;}
+.badge{display:inline-block;padding:0.25rem 0.7rem;border-radius:20px;font-size:0.72rem;font-weight:600;}
+.badge.ok{background:rgba(34,197,94,0.12);color:var(--ok);}
+.badge.wait{background:rgba(255,47,118,0.1);color:var(--accent2);}
+.row{display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border);font-size:0.88rem;}
+.row:last-child{border-bottom:none;}
+.h2{font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:0.8rem;font-weight:600;}
+.bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:0.6rem;}
+.bar>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;}
+.foot{color:var(--muted);font-size:0.8rem;text-align:center;margin-top:2rem;}
+.foot a{color:var(--accent2);text-decoration:none;}
+</style></head><body><div class="wrap">
+<div class="brand">Florian B. — Studio</div>
+<h1>${(p.name || 'Votre projet').replace(/</g, '&lt;')}</h1>
+<p class="sub">Suivi en temps réel de l'avancement de votre projet.</p>
+<div class="card">
+  <div class="h2">Avancement</div>
+  <ul class="steps">
+    ${PROJECT_STAGES_PUBLIC.map((s, i) => `<li class="step ${i < stageIdx ? 'done' : ''} ${i === stageIdx ? 'current' : ''}"><span class="dot">${i < stageIdx ? '✓' : i + 1}</span><span class="lbl">${s.label}${i === stageIdx && p.stage !== 'livre' ? ' — en cours' : ''}${s.key === 'livre' && p.stage === 'livre' ? ' 🎉' : ''}</span></li>`).join('')}
+  </ul>
+</div>
+${checklist.length ? `<div class="card">
+  <div class="h2">Étapes clés — ${doneCount}/${checklist.length}</div>
+  ${checklist.map(c => `<div class="row"><span style="${c.done ? 'color:var(--muted);' : ''}">${c.done ? '✅' : '◻️'} ${(c.label || '').replace(/</g, '&lt;')}</span></div>`).join('')}
+  <div class="bar"><div style="width:${checklist.length ? Math.round(doneCount / checklist.length * 100) : 0}%;"></div></div>
+</div>` : ''}
+${invoices.length ? `<div class="card">
+  <div class="h2">Facturation</div>
+  ${invoices.map(i => `<div class="row"><span>Facture ${i.invoiceNumber}</span><span class="badge ${i.status === 'paid' ? 'ok' : 'wait'}">${i.status === 'paid' ? 'Réglée' : 'En attente'}</span></div>`).join('')}
+</div>` : ''}
+<p class="foot">Une question ? Écrivez-moi : <a href="mailto:${process.env.SMTP_USER || 'contact@florian-b.fr'}">${process.env.SMTP_USER || 'contact@florian-b.fr'}</a><br>florian-b.fr</p>
+</div></body></html>`);
+});
+
+/* ============================================================
+   DIGEST PUSH DU MATIN — 8h30 : ta journée en une notification
+   ============================================================ */
+async function sendMorningPushDigest() {
+    const leads = db.get('leads').value().filter(l => !l.archived);
+    const newLeads = leads.filter(l => l.status === 'new');
+    const staleLeads = newLeads.filter(l => (Date.now() - new Date(l.created_at)) > 48 * 3600000);
+    const today = new Date().toISOString().slice(0, 10);
+    const apptsToday = db.get('appointments').value().filter(a => a.status === 'confirmed' && a.confirmedDate && String(a.confirmedDate).slice(0, 10) === today);
+    const overdue = db.get('invoices').value().filter(i => i.status !== 'paid' && i.sent_at && i.dueDate && new Date(i.dueDate) < new Date());
+    const parts = [];
+    if (newLeads.length) parts.push(`${newLeads.length} lead${newLeads.length > 1 ? 's' : ''} à traiter${staleLeads.length ? ` (dont ${staleLeads.length} depuis +48h ⏰)` : ''}`);
+    if (apptsToday.length) parts.push(`${apptsToday.length} RDV aujourd'hui`);
+    if (overdue.length) parts.push(`${overdue.length} facture${overdue.length > 1 ? 's' : ''} en retard`);
+    if (!parts.length) return; // rien à signaler = pas de notification inutile
+    await push.notifyAll({ title: '☀️ Ta journée', body: parts.join(' · '), url: '/dashboard', tag: 'morning-digest' });
+}
+cron.schedule('30 8 * * *', () => {
+    sendMorningPushDigest().catch(err => console.error('Erreur digest push:', err.message));
+}, { timezone: 'Europe/Paris' });
+
+/* ============================================================
+   NOTIFICATIONS PUSH (iPhone / Android / desktop)
+   ============================================================ */
+app.get('/api/admin/push/public-key', auth, (req, res) => {
+    res.json({ publicKey: push.getPublicKey() });
+});
+app.post('/api/admin/push/subscribe', auth, (req, res) => {
+    const { subscription, label } = req.body || {};
+    if (!push.addSubscription(subscription, label)) return res.status(400).json({ error: 'abonnement invalide' });
+    logTeamAction(req, 'push_subscribed', `Notifications push activées (${label || 'appareil'})`);
+    res.json({ ok: true });
+});
+app.post('/api/admin/push/unsubscribe', auth, (req, res) => {
+    const { endpoint } = req.body || {};
+    if (endpoint) push.removeSubscription(endpoint);
+    res.json({ ok: true });
+});
+app.post('/api/admin/push/test', auth, async (req, res) => {
+    const r = await push.notifyAll({ title: '🔔 Test de notification', body: 'Tout fonctionne ! Tu recevras les nouveaux leads et RDV ici.', url: '/dashboard', tag: 'test' });
+    res.json(r);
+});
+
+/* ============================================================
+   JOURS FÉRIÉS FRANÇAIS (calcul automatique, aucune API)
+   ============================================================ */
+app.get('/api/holidays', (req, res) => {
+    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.json({ year, holidays: [...frenchHolidays(year), ...frenchHolidays(year + 1)] });
+});
+
+/* ============================================================
+   CONTEXTE LOCAL D'UN LEAD — heure locale + météo (Open-Meteo, gratuit, sans clé)
+   ============================================================ */
+const WEATHER_LABELS = {
+    0:'☀️ Ciel dégagé',1:'🌤 Plutôt dégagé',2:'⛅ Partiellement nuageux',3:'☁️ Couvert',
+    45:'🌫 Brouillard',48:'🌫 Brouillard givrant',51:'🌦 Bruine légère',53:'🌦 Bruine',55:'🌧 Bruine forte',
+    61:'🌧 Pluie légère',63:'🌧 Pluie',65:'🌧 Pluie forte',66:'🌧 Pluie verglaçante',67:'🌧 Pluie verglaçante forte',
+    71:'🌨 Neige légère',73:'🌨 Neige',75:'❄️ Neige forte',77:'🌨 Grésil',
+    80:'🌦 Averses légères',81:'🌧 Averses',82:'⛈ Averses violentes',85:'🌨 Averses de neige',86:'🌨 Fortes averses de neige',
+    95:'⛈ Orage',96:'⛈ Orage avec grêle',99:'⛈ Orage avec forte grêle',
+};
+app.get('/api/admin/leads/:id/local-context', auth, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const item = req.query.type === 'appointment' ? db.get('appointments').find({ id }).value() : db.get('leads').find({ id }).value();
+    if (!item) return res.status(404).json({ error: 'introuvable' });
+    const geo = (item.tracking && item.tracking.geo) || {};
+    const tz = geo.timezone || (item.tracking && item.tracking.timezone) || null;
+    const out = { timezone: tz, localTime: null, weather: null, city: geo.city || null };
+    if (tz) {
+        try {
+            out.localTime = new Intl.DateTimeFormat('fr-FR', { timeZone: tz, weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date());
+        } catch {}
+    }
+    if (geo.lat != null && geo.lon != null) {
+        try {
+            const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current=temperature_2m,weather_code&timezone=auto`, { signal: AbortSignal.timeout(5000) });
+            const d = await r.json();
+            if (d && d.current) {
+                out.weather = {
+                    temperature: Math.round(d.current.temperature_2m),
+                    label: WEATHER_LABELS[d.current.weather_code] || '🌡 Conditions inconnues',
+                };
+            }
+        } catch {}
+    }
+    res.json(out);
+});
 
 // Rapport mensuel automatique — le 1er de chaque mois à 8h (heure de Paris)
 cron.schedule('0 8 1 * *', () => {

@@ -214,7 +214,65 @@ Ajoute `GA_PROPERTY_ID` (le nombre) et `GA_SERVICE_ACCOUNT_JSON` (colle **le con
 
 ---
 
-## 8. Sécurité
+## 8. Notifications push iPhone
+
+Le dashboard peut t'envoyer une notification sur ton iPhone a chaque **nouveau lead** et **nouvelle demande de RDV** (aussi sur Android et ordinateur).
+
+**Aucune variable Railway a ajouter** — les cles techniques sont generees automatiquement au premier demarrage.
+
+### Activation sur iPhone (une seule fois)
+1. Ouvre le dashboard dans **Safari** sur ton iPhone
+2. Touche le bouton **Partager** (le carre avec une fleche vers le haut)
+3. Choisis **« Sur l'ecran d'accueil »** → tu obtiens une app "Florian B."
+4. Ouvre cette app depuis l'ecran d'accueil et connecte-toi
+5. Menu **Systeme** → **« Notifications iPhone »** → autorise les notifications
+6. Une notification de test arrive immediatement
+
+Sur ordinateur ou Android : clique simplement sur "Notifications iPhone" dans le menu Systeme.
+
+## 9. Nouvelles fonctionnalites (conversion & pilotage)
+
+- **Suivi d'ouverture des devis** : un pixel invisible dans l'email de devis detecte quand le client l'ouvre. Tu recois une notification push "Devis ouvert" (max 1/heure) et le dashboard affiche un indicateur (oeil + nombre d'ouvertures) dans la liste et la fiche du devis. Necessite la variable `DASHBOARD_URL` sur Railway (l'URL publique de ton backend, ex: https://xxx.up.railway.app) — elle sert a construire l'adresse du pixel.
+- **Salle d'attente client** : chaque projet a une page de suivi privee (lien signe non devinable) montrant au client l'avancement (4 etapes), la checklist et l'etat de ses factures. Bouton "Copier le lien de suivi client" dans la fiche projet. Necessite aussi `DASHBOARD_URL`.
+- **Digest push du matin (8h30)** : une notification resume ta journee (leads a traiter dont ceux en attente depuis +48h, RDV du jour, factures en retard). Rien a signaler = pas de notification.
+- **Heatmap des heures de leads** (Vue d'ensemble) : jour x heure ou arrivent tes contacts.
+- **Meteo business dans l'onglet** : emoji dans le titre du navigateur (vert = tout roule, orange = a surveiller, rouge = lead en attente depuis +48h).
+- **Dictee vocale** : boutons micro sur les notes et reponses de leads (Safari iPhone et Chrome).
+- **Cote site** : popup de sortie (exit-intent, 1 fois par session, jamais avant 20s de visite) qui capte un lead avant que le visiteur parte, et bandeau de disponibilite automatique quand la prise de RDV est en pause dans le dashboard.
+
+## 11. Blog SEO & pages projets — publication directe sur florian-b.fr
+
+Le backend peut maintenant **ecrire directement sur ton hebergement OVH** via FTP. Deux usages :
+- **Blog SEO** (menu Marketing → Blog SEO) : tu rediges dans le dashboard, tu cliques "Publier", et l'article part sur `florian-b.fr/blog/ton-article/` avec tout le SEO (meta-description, Open Graph, schema.org Article, canonical). L'index du blog et le `sitemap.xml` sont regeneres automatiquement (le sitemap existant est conserve et fusionne, rien n'est perdu).
+- **Pages projets** : le bouton "Publier les pages projets" genere une page SEO `florian-b.fr/projets/nom-du-projet/` pour chaque carte projet du theme builder.
+
+### Configuration (une seule fois) — 3 variables Railway
+1. Recupere tes identifiants FTP : OVH Manager → Hebergements → ton hebergement → onglet **FTP-SSH**. Tu y trouves le **serveur FTP** (ex: `ftp.cluster0XX.hosting.ovh.net`) et ton **login**. Si tu as oublie le mot de passe, bouton "Modifier le mot de passe" sur l'utilisateur FTP.
+2. Railway → ton projet → **Variables** → ajoute :
+   - `FTP_HOST` : le serveur FTP
+   - `FTP_USER` : ton login FTP
+   - `FTP_PASSWORD` : le mot de passe FTP
+   - *(optionnel)* `FTP_DIR` : le dossier du site, `www` par defaut — ne change rien si ton site est bien dans `www/`
+3. Dashboard → Blog SEO → bouton **"Tester la connexion"** pour verifier que tout est bon.
+
+Conseils de redaction SEO : un article = une question que tes prospects tapent dans Google ("Combien coute un logo ?", "Refonte de marque : par ou commencer ?"). Titre = la question, meta-description = la promesse de reponse, 400 mots minimum, sous-titres avec `## `.
+
+⚠️ Le mot de passe FTP donne acces a tout ton site : ne le partage jamais, et mets-le uniquement dans les variables Railway.
+
+## 12. Deuxieme vague de fonctionnalites
+
+- **Calendrier de RDV pilotable** : dans "Mon entreprise", tu choisis tes horaires, tes jours fermes et tes dates bloquees (vacances). Le calendrier du chat sur le site s'adapte automatiquement, retire les jours feries francais et masque les creneaux de RDV deja confirmes.
+- **Onboarding client automatique** : quand un client accepte un devis, un projet est cree automatiquement dans le Kanban et il recoit un questionnaire de brief (5 questions, page au design du site). Ses reponses arrivent dans les notes du projet + notification push. Necessite `DASHBOARD_URL`.
+- **Rentabilite par projet** : dans "Suivi de projets", un tableau croise les heures loguees et les factures payees de chaque client → ton vrai taux horaire par projet.
+- **Veille concurrentielle** : dans "Mon entreprise", liste les sites de confreres a surveiller (une URL par ligne). Verifies chaque matin a 7h ; notification push quand leur contenu change. Bouton "Verifier maintenant" pour tester.
+- **Chat IA (optionnel)** : le widget du site peut devenir un vrai assistant propulse par l'API Claude. Pour l'activer : cree une cle sur console.anthropic.com (service payant a l'usage, quelques centimes pour des dizaines de conversations), puis ajoute la variable Railway `ANTHROPIC_API_KEY`. Sans cette variable, le chat garde son comportement actuel (scenarios pre-ecrits) — rien ne casse. L'IA connait tes projets, ta FAQ (via le theme builder) et oriente vers le contact ; limite anti-abus : 30 messages/heure par visiteur.
+
+## 13. Jours feries & contexte des leads
+
+- **Jours feries francais** : calcules automatiquement (aucune configuration). Affiches en haut du Calendrier de contenu, avec une etiquette sur toute idee de post prevue un jour ferie.
+- **Heure locale + meteo du lead** : dans la fiche d'un lead, un encart affiche l'heure qu'il est chez lui et la meteo actuelle (pratique pour choisir le bon moment pour appeler). Base sur sa geolocalisation IP, via Open-Meteo (gratuit, sans cle).
+
+## 14. Securite
 
 - Plusieurs comptes possibles, chacun avec un mot de passe hashé (bcrypt) et un rôle (admin / rédacteur / lecteur) — voir section 4ter
 - Session JWT (7 jours), revérifiée à chaque requête : désactiver ou supprimer un compte coupe l'accès immédiatement, pas seulement à l'expiration du token

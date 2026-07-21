@@ -3,18 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<title>Dashboard — Florian B.</title>
 <link rel="manifest" href="/dashboard/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/dashboard/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/dashboard/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Florian B.">
 <meta name="theme-color" content="#0a0a0a">
+<title>Dashboard — Florian B.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
     :root {
         --accent: #da2c48;
@@ -601,10 +598,6 @@
         .login-card { padding: 1.8rem 1.4rem; }
         .kanban-col { min-width: 78vw; }
     }
-    #liveMap { border-radius: var(--radius-lg); }
-    .leaflet-popup-content-wrapper { border-radius: 10px; }
-    .leaflet-popup-content { margin: 0.8rem 0.9rem; }
-    .leaflet-container { font-family: 'Inter', sans-serif; background: #0a0a0a; }
 </style>
 </head>
 <body data-theme="light">
@@ -679,11 +672,6 @@
                 Analytics
                 <span class="badge" id="realtimeBadge" style="display:none; background:#22c55e;"></span>
             </div>
-            <div class="nav-item" data-view="live-map">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                Visiteurs en direct
-                <span class="badge" id="liveMapBadge" style="display:none; background:#22c55e;"></span>
-            </div>
         </div>
 
         <div class="nav-group">
@@ -734,6 +722,10 @@
             <div class="nav-item" data-view="calendar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
                 Calendrier de contenu
+            </div>
+            <div class="nav-item" data-view="blog" data-role="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Blog SEO
             </div>
         </div>
 
@@ -799,6 +791,10 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Système</div>
+            <div class="nav-item" id="pushNotifBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span id="pushNotifLabel">Notifications iPhone</span>
+            </div>
             <div class="nav-item" id="backupBtn" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Télécharger une sauvegarde
@@ -883,6 +879,11 @@
                 <div class="panel">
                     <h3>Leads reçus — 30 derniers jours</h3>
                     <canvas id="leadsChart" height="90"></canvas>
+                </div>
+                <div class="panel">
+                    <h3>À quelles heures arrivent tes leads ?</h3>
+                    <p class="cell-muted" style="font-size:0.72rem;margin-bottom:0.6rem;">Jour × heure — plus c'est rose, plus tu reçois de contacts à ce moment. Utile pour caler tes posts et tes dispos.</p>
+                    <div id="leadsHeatmap" style="overflow-x:auto;"></div>
                 </div>
                 <div class="panel">
                     <h3>Répartition par statut</h3>
@@ -1562,6 +1563,19 @@
         </section>
 
         <!-- PARAMÈTRES ENTREPRISE -->
+        <section class="view" id="view-blog">
+            <div class="topbar">
+                <h2>Blog SEO</h2>
+                <div class="topbar-actions">
+                    <button class="btn-secondary" id="publishProjectPagesBtn" style="width:auto;padding:0.6rem 1.2rem;">📄 Publier les pages projets</button>
+                    <button class="btn-primary" id="addBlogPostBtn" style="width:auto;padding:0.6rem 1.2rem;">+ Nouvel article</button>
+                </div>
+            </div>
+            <div id="ftpStatusBanner" style="margin-bottom:1rem;"></div>
+            <p class="cell-muted" style="margin-bottom:1.2rem;font-size:0.85rem;">Écris ici, publie en un clic : l'article part directement sur <strong>florian-b.fr/blog/</strong> avec tout le SEO (meta, Open Graph, schema.org), et le sitemap est mis à jour automatiquement. C'est ce qui attire les prospects qui cherchent sur Google.</p>
+            <div id="blogListWrap"></div>
+        </section>
+
         <section class="view" id="view-business-settings">
             <div class="topbar">
                 <h2>Mon entreprise</h2>
@@ -1594,6 +1608,34 @@
                 <p class="cell-muted" style="margin:-0.5rem 0 1rem;font-size:0.78rem;">Un seul email de relance envoyé au prospect, une seule fois.</p>
                 <div class="drawer-field"><label>Délai avant relance d'un lead sans réponse (jours)</label><input type="number" id="bsLeadFollowUpDays" min="1" placeholder="3"></div>
             </div>
+            <div class="panel" style="max-width:560px;margin-top:1.2rem;">
+                <h3 style="margin:0 0 0.9rem;font-size:0.95rem;">📅 Créneaux de RDV proposés sur le site</h3>
+                <p class="cell-muted" style="margin-bottom:1rem;font-size:0.82rem;">Le calendrier du chat propose ces horaires. Les jours fériés français et les créneaux de RDV déjà confirmés sont retirés automatiquement.</p>
+                <div style="display:flex;gap:0.8rem;">
+                    <div class="drawer-field" style="flex:1;"><label>Premier créneau (heure)</label><input type="number" id="bsRdvOpen" min="0" max="23" placeholder="9"></div>
+                    <div class="drawer-field" style="flex:1;"><label>Fin de journée (heure)</label><input type="number" id="bsRdvClose" min="1" max="24" placeholder="19"></div>
+                </div>
+                <div class="drawer-field"><label>Jours fermés</label>
+                    <div id="bsRdvClosedDays" style="display:flex;gap:0.6rem;flex-wrap:wrap;font-size:0.82rem;">
+                        <label style="display:flex;align-items:center;gap:0.3rem;"><input type="checkbox" value="1" class="bs-rdv-day"> Lun</label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;"><input type="checkbox" value="2" class="bs-rdv-day"> Mar</label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;"><input type="checkbox" value="3" class="bs-rdv-day"> Mer</label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;"><input type="checkbox" value="4" class="bs-rdv-day"> Jeu</label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;"><input type="checkbox" value="5" class="bs-rdv-day"> Ven</label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;"><input type="checkbox" value="6" class="bs-rdv-day"> Sam</label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;"><input type="checkbox" value="0" class="bs-rdv-day"> Dim</label>
+                    </div>
+                </div>
+                <div class="drawer-field"><label>Dates bloquées (vacances...) — une par ligne, format AAAA-MM-JJ</label><textarea id="bsRdvBlocked" placeholder="2026-08-03
+2026-08-04"></textarea></div>
+            </div>
+            <div class="panel" style="max-width:560px;margin-top:1.2rem;">
+                <h3 style="margin:0 0 0.9rem;font-size:0.95rem;">🕵️ Veille concurrentielle</h3>
+                <p class="cell-muted" style="margin-bottom:1rem;font-size:0.82rem;">Sites de confrères à surveiller (une URL par ligne, 10 max). Vérifiés chaque matin à 7h — tu reçois une notification push quand leur contenu change.</p>
+                <div class="drawer-field"><textarea id="bsWatchUrls" placeholder="https://exemple-graphiste.fr"></textarea></div>
+                <button type="button" class="btn-secondary" id="watchRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;">Vérifier maintenant</button>
+                <div id="watchStatusWrap" style="margin-top:0.8rem;"></div>
+            </div>
             <div class="panel" id="legalReadinessPanel" style="max-width:560px;margin-top:1.2rem;"></div>
         </section>
 
@@ -1604,6 +1646,11 @@
                 <div class="topbar-actions">
                     <button class="btn-primary" id="addProjectTrackBtn" style="width:auto; padding:0.6rem 1.2rem;">+ Nouveau projet</button>
                 </div>
+            </div>
+            <div class="panel" id="profitabilityPanel" style="margin-bottom:1rem;display:none;">
+                <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">💶 Rentabilité réelle par projet</h3>
+                <p class="cell-muted" style="font-size:0.75rem;margin-bottom:0.8rem;">Heures enregistrées (⏱️ dans chaque fiche projet) × factures payées du client = ton vrai taux horaire. Tu sauras quels types de projets valent ton temps.</p>
+                <div id="profitabilityWrap"></div>
             </div>
             <div class="kanban-board" id="projectsKanban"></div>
         </section>
@@ -1661,27 +1708,6 @@
                 </div>
             </div>
             <div id="expensesTableWrap"></div>
-        </section>
-
-        <section class="view" id="view-live-map">
-            <div class="topbar">
-                <h2>Visiteurs en direct</h2>
-                <div class="topbar-actions">
-                    <span class="cell-muted" style="font-size:0.78rem; display:flex; align-items:center; gap:0.4rem;">
-                        <span id="liveMapDot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
-                        <span id="liveMapCount">0 en ligne</span>
-                    </span>
-                </div>
-            </div>
-            <p class="cell-muted" style="font-size:0.8rem; margin-bottom:1rem;">
-                Position, IP, appareil et durée de visite de chaque visiteur actuellement sur florian-b.fr — mis à jour automatiquement toutes les 8 secondes. Basé sur la géolocalisation de l'adresse IP : précision généralement à l'échelle de la ville, pas de l'adresse exacte.
-            </p>
-            <div class="panel" style="padding:0; overflow:hidden; margin-bottom:1.2rem;">
-                <div id="liveMap" style="width:100%; height:480px; background:#0a0a0a;"></div>
-            </div>
-            <div class="panel" style="padding:0;">
-                <div id="liveMapTableWrap"></div>
-            </div>
         </section>
 
         <!-- CALENDRIER DE CONTENU -->
@@ -1757,25 +1783,6 @@
                 <div class="drawer-field"><label>Email</label><div class="value" id="accEmail">—</div></div>
                 <div class="drawer-field"><label>Rôle</label><div class="value" id="accRole">—</div></div>
                 <button class="btn-primary" id="saveAccountNameBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer le nom</button>
-            </div>
-            <div class="panel" style="max-width:480px; margin-bottom:1.2rem;">
-                <h3>🔔 Notifications push</h3>
-                <p class="cell-muted" style="font-size:0.8rem; margin-bottom:0.8rem;">
-                    Reçois une notification sur cet appareil à chaque nouveau lead ou demande de RDV, même quand le dashboard est fermé.
-                </p>
-                <div id="pushIosHint" class="cell-muted" style="display:none; font-size:0.78rem; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:0.7rem 0.8rem; margin-bottom:0.8rem; line-height:1.6;">
-                    📱 <strong>Sur iPhone</strong>, les notifications ne marchent que si le dashboard est installé sur l'écran d'accueil :<br>
-                    1. Ouvre cette page dans <strong>Safari</strong><br>
-                    2. Touche le bouton <strong>Partager</strong> (carré avec flèche vers le haut)<br>
-                    3. Choisis <strong>« Sur l'écran d'accueil »</strong> puis <strong>Ajouter</strong><br>
-                    4. Ouvre l'app <strong>« Florian B. »</strong> depuis l'écran d'accueil et reviens ici activer les notifications
-                </div>
-                <div id="pushStatus" class="cell-muted" style="font-size:0.8rem; margin-bottom:0.8rem;">Vérification…</div>
-                <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
-                    <button class="btn-primary" id="pushEnableBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Activer sur cet appareil</button>
-                    <button class="btn-secondary" id="pushDisableBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Désactiver</button>
-                    <button class="btn-secondary" id="pushTestBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Envoyer un test</button>
-                </div>
             </div>
             <div class="panel" style="max-width:480px;">
                 <h3>Changer mon mot de passe</h3>
@@ -2028,6 +2035,7 @@ function switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
     if (view === 'overview') loadOverview();
+    if (view === 'blog') loadBlog();
     if (view === 'cockpit') loadCockpit();
     if (view === 'analytics') loadAnalytics();
     if (view === 'leads') loadLeads();
@@ -2049,10 +2057,8 @@ function switchView(view) {
     if (view === 'business-settings') loadBusinessSettings();
     if (view === 'projects') loadProjectsTrack();
     if (view === 'calendar') loadContentCalendar();
-    if (view === 'live-map') loadLiveMap();
-    else stopLiveMapPolling();
     if (view === 'team') loadTeam();
-    if (view === 'account') { loadAccount(); refreshPushUI(); }
+    if (view === 'account') loadAccount();
     if (view === 'journal') loadJournal();
     if (view === 'emails') loadEmails();
 }
@@ -3029,15 +3035,49 @@ async function loadOverview() {
         document.getElementById('kpiNewLeadsDelta').textContent = s.chatOpens ? `${s.chatOpens} ouvertures du chat` : '';
 
         renderLeadsChart(s.byDay);
+        renderLeadsHeatmap();
         renderKpiSparkline(s.byDay);
         renderConversionRing(rate);
         renderStatusDonut(s.byStatus);
 
+        // Météo business dans le titre de l'onglet : 🟢 tout roule, 🟠 à surveiller, 🔴 action requise
+        try {
+            const staleness = (leadsCache || []).filter(l => l.status === 'new' && (Date.now() - new Date(l.created_at)) > 48 * 3600000).length;
+            const health = staleness > 0 ? '🔴' : (s.newLeads7d > 0 || s.pendingAppointments > 0) ? '🟠' : '🟢';
+            document.title = health + ' Dashboard — Florian B.';
+        } catch {}
         document.getElementById('leadsBadge').style.display = s.newLeads7d ? 'inline-flex' : 'none';
         document.getElementById('leadsBadge').textContent = s.newLeads7d;
         document.getElementById('apptBadge').style.display = s.pendingAppointments ? 'inline-flex' : 'none';
         document.getElementById('apptBadge').textContent = s.pendingAppointments;
     } catch (e) { toast(e.message); }
+}
+
+/* ---- Heatmap jour × heure des leads ---- */
+async function renderLeadsHeatmap() {
+    const el = document.getElementById('leadsHeatmap');
+    if (!el) return;
+    try {
+        if (!leadsCache.length) leadsCache = await api('/api/leads');
+    } catch { return; }
+    const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+    let max = 0;
+    leadsCache.forEach(l => {
+        const d = new Date(l.created_at);
+        if (isNaN(d)) return;
+        const day = (d.getDay() + 6) % 7; // lundi = 0
+        grid[day][d.getHours()]++;
+        if (grid[day][d.getHours()] > max) max = grid[day][d.getHours()];
+    });
+    if (!max) { el.innerHTML = '<p class="cell-muted" style="font-size:0.8rem;">Pas encore assez de données.</p>'; return; }
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    el.innerHTML = `<table style="border-collapse:separate;border-spacing:2px;font-size:0.6rem;">
+        <tr><td></td>${Array.from({ length: 24 }, (_, h) => `<td style="color:var(--text-muted);text-align:center;padding:0 1px;">${h % 3 === 0 ? h : ''}</td>`).join('')}</tr>
+        ${grid.map((row, d) => `<tr><td style="color:var(--text-muted);padding-right:4px;">${days[d]}</td>${row.map((v, h) => {
+            const a = v / max;
+            return `<td title="${days[d]} ${h}h — ${v} lead${v > 1 ? 's' : ''}" style="width:14px;height:14px;border-radius:3px;background:${v ? `rgba(255,47,118,${(0.15 + a * 0.85).toFixed(2)})` : 'var(--border)'};"></td>`;
+        }).join('')}</tr>`).join('')}
+    </table>`;
 }
 
 /* ---- Anneau de progression (taux de conversion) ---- */
@@ -3253,39 +3293,11 @@ function trackingSection(t) {
                 <div class="tc-value">${escapeHtml(String(value))}</div>
             </div>`).join('')}
         </div>
-        <div id="localContextChips"></div>
         ${t.pagesVisited ? `
         <div class="tc-label" style="margin-top:0.6rem;">Parcours de navigation</div>
         <div class="tracking-path">${escapeHtml(t.pagesVisited)}</div>
         ` : ''}
     </div>`;
-}
-
-/* Météo actuelle + heure locale du visiteur — chargées après ouverture du drawer */
-async function loadLocalContext(t) {
-    const el = document.getElementById('localContextChips');
-    if (!el || !t) return;
-    const geo = t.geo || {};
-    const tz = geo.timezone || t.timezone || null;
-    if (!tz && (geo.lat == null || geo.lon == null)) return;
-    try {
-        const params = new URLSearchParams();
-        if (geo.lat != null) params.set('lat', geo.lat);
-        if (geo.lon != null) params.set('lon', geo.lon);
-        if (tz) params.set('tz', tz);
-        const ctx = await api('/api/local-context?' + params.toString());
-        const chips = [];
-        if (ctx.localTime) chips.push(['Heure locale', '🕐 ' + ctx.localTime]);
-        if (ctx.weather) chips.push(['Météo sur place', `${ctx.weather.label} · ${ctx.weather.temperature}°C`]);
-        if (!chips.length) return;
-        el.innerHTML = `<div class="tracking-grid" style="margin-top:0.6rem;">
-            ${chips.map(([label, value]) => `
-            <div class="tracking-chip">
-                <div class="tc-label">${label}</div>
-                <div class="tc-value">${escapeHtml(value)}</div>
-            </div>`).join('')}
-        </div>`;
-    } catch { /* silencieux — juste un bonus de contexte */ }
 }
 
 function countryFlag(code) {
@@ -3315,7 +3327,7 @@ function openLeadDrawer(id) {
                 ${['new', 'contacted', 'won', 'lost'].map(s => `<option value="${s}" ${s === l.status ? 'selected' : ''}>${statusLabel(s)}</option>`).join('')}
             </select>
         </div>
-        <div class="drawer-field"><label>Notes internes</label><textarea id="drawerNotes" placeholder="Notes privées...">${escapeHtml(l.notes || '')}</textarea></div>
+        <div class="drawer-field"><label>Notes internes <button type="button" class="reply-template-btn" style="margin-left:0.4rem;" onclick="dictateInto('drawerNotes', this)">🎤 Dicter</button></label><textarea id="drawerNotes" placeholder="Notes privées...">${escapeHtml(l.notes || '')}</textarea></div>
         <div class="drawer-actions">
             <button class="btn-secondary" onclick="saveLead(${l.id})">Enregistrer</button>
             <button class="btn-danger" onclick="deleteLead(${l.id})">Supprimer</button>
@@ -3329,18 +3341,64 @@ function openLeadDrawer(id) {
                 <button type="button" class="reply-template-btn" data-template="indispo">Actuellement complet</button>
             </div>
             <textarea id="replyMessage" placeholder="Bonjour, merci pour votre message..." style="min-height:140px;"></textarea>
+            <button type="button" class="reply-template-btn" style="margin-top:0.4rem;" onclick="dictateInto('replyMessage', this)">🎤 Dicter la réponse</button>
             <p class="cell-muted" style="margin-top:0.5rem; font-size:0.75rem;">✨ Mis en forme automatiquement avec le design du site.</p>
         </div>
         <div class="drawer-actions">
             <button class="btn-primary" id="sendReplyBtn" onclick="sendLeadReply(${l.id})">Envoyer la réponse</button>
         </div>
+        <div id="leadLocalContext"></div>
         ${trackingSection(l.tracking)}
     `;
     openDrawer();
+    loadLeadLocalContext(l.id);
     document.querySelectorAll('.reply-template-btn').forEach(btn => {
         btn.onclick = () => { document.getElementById('replyMessage').value = REPLY_TEMPLATES[btn.dataset.template](l); };
     });
-    loadLocalContext(l.tracking);
+}
+
+// Dictée vocale (API du navigateur, gratuite — Safari iPhone et Chrome)
+let activeRecognition = null;
+function dictateInto(targetId, btn) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast('La dictée vocale n\'est pas disponible sur ce navigateur.'); return; }
+    if (activeRecognition) { activeRecognition.stop(); return; }
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    const rec = new SR();
+    rec.lang = 'fr-FR';
+    rec.continuous = true;
+    rec.interimResults = false;
+    const originalLabel = btn.textContent;
+    btn.textContent = '⏹ Stop';
+    rec.onresult = (e) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) {
+                const txt = e.results[i][0].transcript.trim();
+                target.value = (target.value ? target.value + ' ' : '') + txt;
+            }
+        }
+    };
+    rec.onend = () => { activeRecognition = null; btn.textContent = originalLabel; };
+    rec.onerror = () => { activeRecognition = null; btn.textContent = originalLabel; toast('Dictée interrompue.'); };
+    activeRecognition = rec;
+    rec.start();
+    toast('🎤 Je t\'écoute... (re-clique pour arrêter)');
+}
+
+// Heure locale + météo du lead (utile pour savoir quand l'appeler)
+async function loadLeadLocalContext(id) {
+    const el = document.getElementById('leadLocalContext');
+    if (!el) return;
+    try {
+        const ctx = await api(`/api/admin/leads/${id}/local-context`);
+        if (!ctx.localTime && !ctx.weather) return;
+        el.innerHTML = `
+        <div style="margin-top:1.2rem; padding:0.9rem 1rem; border:1px solid var(--border); border-radius:10px; display:flex; gap:1.2rem; flex-wrap:wrap;">
+            ${ctx.localTime ? `<div><div class="tc-label">🕐 Heure locale${ctx.city ? ' à ' + escapeHtml(ctx.city) : ''}</div><div class="tc-value" style="text-transform:capitalize;">${escapeHtml(ctx.localTime)}</div></div>` : ''}
+            ${ctx.weather ? `<div><div class="tc-label">Météo actuelle</div><div class="tc-value">${escapeHtml(ctx.weather.label)} · ${ctx.weather.temperature}°C</div></div>` : ''}
+        </div>`;
+    } catch {}
 }
 
 const REPLY_TEMPLATES = {
@@ -3581,7 +3639,6 @@ function openApptDrawer(id) {
         ${trackingSection(a.tracking)}
     `;
     openDrawer();
-    loadLocalContext(a.tracking);
 }
 
 async function addApptToLeads(id) {
@@ -4552,7 +4609,7 @@ function renderTreasuryReminders(reminders) {
                 ${quotesToRemind.map(q => `
                     <tr>
                         <td><span class="badge" style="background:var(--surface-2);color:var(--text-muted);">Devis</span></td>
-                        <td>${escapeHtml(q.clientName || q.clientEmail)}</td>
+                        <td>${escapeHtml(q.clientName || q.clientEmail)}${q.opens && q.opens.length ? ` <span title="Ouvert ${q.opens.length} fois — première ouverture le ${formatDate(q.firstOpenedAt, true)}" style="font-size:0.75rem;">👀${q.opens.length > 1 ? '×' + q.opens.length : ''}</span>` : ''}</td>
                         <td class="cell-muted">${(q.total || 0).toFixed(2)} €</td>
                         <td class="cell-muted">Envoyé le ${formatDate(q.sent_at)}, sans réponse</td>
                         <td><button class="btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="sendQuoteReminder(${q.id})">Relancer</button></td>
@@ -4625,7 +4682,7 @@ function renderQuotesTable() {
                 ${list.map(q => `
                     <tr onclick="openQuoteDrawer(${q.id})">
                         <td class="cell-muted">${escapeHtml(q.quoteNumber || '#' + q.id)}</td>
-                        <td>${escapeHtml(q.clientName || q.clientEmail)}</td>
+                        <td>${escapeHtml(q.clientName || q.clientEmail)}${q.opens && q.opens.length ? ` <span title="Ouvert ${q.opens.length} fois — première ouverture le ${formatDate(q.firstOpenedAt, true)}" style="font-size:0.75rem;">👀${q.opens.length > 1 ? '×' + q.opens.length : ''}</span>` : ''}</td>
                         <td class="cell-muted">${(q.total || 0).toFixed(2)} €</td>
                         <td onclick="event.stopPropagation()">
                             <select class="status-quick-select ${q.status === 'paid' ? 'won' : q.status === 'sent' ? 'contacted' : 'new'}" onchange="quickSetQuoteStatus(${q.id}, this.value)">
@@ -4689,6 +4746,7 @@ function openQuoteDrawer(id) {
             <h3>${q ? 'Devis ' + (q.quoteNumber || '#' + q.id) : 'Nouveau devis'}</h3>
             <button class="drawer-close" onclick="closeDrawer()">✕</button>
         </div>
+        ${q && q.opens && q.opens.length ? `<div style="margin-bottom:1rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:9px;font-size:0.82rem;">👀 Ouvert <strong>${q.opens.length} fois</strong> par le client — dernière fois ${formatDate(q.opens[q.opens.length-1], true)}</div>` : q && q.status === 'sent' ? `<div style="margin-bottom:1rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:9px;font-size:0.82rem;color:var(--text-muted);">📭 Pas encore ouvert par le client</div>` : ''}
         <div class="drawer-field autocomplete-wrap">
             <label>Nom du client</label>
             <input type="text" id="qClientName" value="${escapeAttr(q?.clientName || '')}" autocomplete="off">
@@ -4810,6 +4868,7 @@ async function loadProjectsTrack() {
 }
 
 function renderProjectsKanban() {
+    renderProfitability();
     const wrap = document.getElementById('projectsKanban');
     wrap.innerHTML = PROJECT_STAGES_UI.map(stage => {
         const items = projectsTrackCache.filter(p => p.stage === stage.key);
@@ -4831,6 +4890,27 @@ function renderProjectsKanban() {
         await api('/api/projects/' + id, { method: 'PATCH', body: JSON.stringify({ stage: newStage }) });
         await loadProjectsTrack();
     });
+}
+
+async function renderProfitability() {
+    const panel = document.getElementById('profitabilityPanel');
+    const wrap = document.getElementById('profitabilityWrap');
+    if (!panel || !wrap) return;
+    try {
+        const rows = await api('/api/projects-profitability');
+        if (!rows.length) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        const maxRate = Math.max(...rows.map(r => r.hourlyRate || 0), 1);
+        wrap.innerHTML = `<table class="data-table"><thead><tr><th>Projet</th><th>Heures</th><th>Encaissé</th><th>€ / heure</th></tr></thead><tbody>
+            ${rows.sort((a, b) => (b.hourlyRate || 0) - (a.hourlyRate || 0)).map(r => `
+            <tr>
+                <td>${escapeHtml(r.name)} <span class="cell-muted" style="font-size:0.72rem;">${escapeHtml(r.clientEmail)}</span></td>
+                <td class="cell-muted">${r.hours} h</td>
+                <td class="cell-muted">${r.revenue.toFixed(0)} €</td>
+                <td>${r.hourlyRate != null ? `<strong style="color:${r.hourlyRate >= maxRate * 0.6 ? 'var(--success, #22c55e)' : r.hourlyRate >= maxRate * 0.3 ? 'inherit' : '#f59e0b'};">${r.hourlyRate} €/h</strong>` : '<span class="cell-muted">— (pas d\'heures loguées)</span>'}</td>
+            </tr>`).join('')}
+        </tbody></table>`;
+    } catch { panel.style.display = 'none'; }
 }
 
 document.getElementById('addProjectTrackBtn').addEventListener('click', () => openProjectTrackDrawer(null));
@@ -4862,6 +4942,10 @@ function openProjectTrackDrawer(id) {
             <button class="btn-secondary" onclick="saveProjectTrack(${p ? p.id : 'null'})">Enregistrer</button>
             ${p ? `<button class="btn-danger" onclick="deleteProjectTrack(${p.id})">Supprimer</button>` : ''}
         </div>
+        ${p ? `<div class="drawer-field" style="margin-top:0.8rem;">
+            <button type="button" class="btn-secondary" onclick="copyProjectTrackLink(${p.id})">🔗 Copier le lien de suivi client</button>
+            <p class="cell-muted" style="font-size:0.72rem;margin-top:0.4rem;">Page privée où le client voit l'avancement de son projet (étapes, checklist, factures). À lui envoyer par email.</p>
+        </div>` : ''}
         ${p ? `
         <div class="drawer-field" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
             <label>⏱️ Suivi du temps — <span id="ptTimeTotal">—</span></label>
@@ -4914,6 +4998,14 @@ async function deleteTimeLog(id, projectId) {
     catch (e) { toast(e.message); }
 }
 
+async function copyProjectTrackLink(id) {
+    try {
+        const { url } = await api('/api/projects/' + id + '/track-link');
+        await navigator.clipboard.writeText(url);
+        toast('🔗 Lien de suivi copié — colle-le dans un email au client !');
+    } catch (e) { toast('Erreur : ' + e.message); }
+}
+
 async function saveProjectTrack(id) {
     const name = document.getElementById('ptName').value.trim();
     const clientEmail = document.getElementById('ptEmail').value.trim();
@@ -4950,41 +5042,48 @@ const PLATFORM_ICONS = { instagram: '📸', linkedin: '💼', newsletter: '✉�
 let holidaysCache = [];
 async function loadContentCalendar() {
     try {
-        if (!holidaysCache.length) {
-            try { holidaysCache = await api('/api/holidays'); } catch { holidaysCache = []; }
-        }
         calendarCache = await api('/api/content-calendar');
+        try { holidaysCache = (await api('/api/holidays')).holidays || []; } catch {}
         renderCalendarList();
+        renderHolidaysPanel();
     }
     catch (e) { toast(e.message); }
 }
 
-function isHoliday(dateStr) {
+function holidayForDate(dateStr) {
     if (!dateStr) return null;
-    return holidaysCache.find(h => h.date === dateStr.slice(0, 10)) || null;
+    const d = String(dateStr).slice(0, 10);
+    return holidaysCache.find(h => h.date === d) || null;
 }
 
-function upcomingHolidaysHTML() {
+// Panneau "prochains jours fériés" au-dessus du calendrier de contenu
+function renderHolidaysPanel() {
+    let panel = document.getElementById('holidaysPanel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'holidaysPanel';
+        const wrap = document.getElementById('calendarListWrap');
+        wrap.parentNode.insertBefore(panel, wrap);
+    }
     const today = new Date().toISOString().slice(0, 10);
-    const limit = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
-    const next = holidaysCache.filter(h => h.date >= today && h.date <= limit);
-    if (!next.length) return '';
-    return `
-    <div class="panel" style="margin-bottom:1.2rem;">
-        <div class="edit-card-label" style="margin-bottom:0.6rem;">🇫🇷 Jours fériés dans les 3 prochains mois — pense à adapter tes publications et tes délais de réponse</div>
+    const next = holidaysCache.filter(h => h.date >= today).slice(0, 4);
+    if (!next.length) { panel.innerHTML = ''; return; }
+    panel.innerHTML = `
+    <div class="panel" style="margin-bottom:1rem;">
+        <div class="tc-label" style="margin-bottom:0.5rem;">🇫🇷 Prochains jours fériés (ajoutés automatiquement)</div>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            ${next.map(h => `<span class="badge contacted" style="font-size:0.72rem;">${formatDate(h.date)} · ${h.name}</span>`).join('')}
+            ${next.map(h => `<span class="badge contacted" title="${h.date}">${h.name} · ${formatDate(h.date)}</span>`).join('')}
         </div>
     </div>`;
 }
 
 function renderCalendarList() {
     const wrap = document.getElementById('calendarListWrap');
-    if (!calendarCache.length) { wrap.innerHTML = upcomingHolidaysHTML() + emptyStateHTML('Aucune idée de contenu pour le moment.'); return; }
-    wrap.innerHTML = upcomingHolidaysHTML() + calendarCache.map(c => `
+    if (!calendarCache.length) { wrap.innerHTML = emptyStateHTML('Aucune idée de contenu pour le moment.'); return; }
+    wrap.innerHTML = calendarCache.map(c => `
         <div class="edit-card" onclick="openCalendarDrawer(${c.id})" style="cursor:pointer;">
             <div class="edit-card-fields">
-                <div class="edit-card-label">${PLATFORM_ICONS[c.platform] || '📱'} ${c.date ? formatDate(c.date) : 'Date non définie'}${isHoliday(c.date) ? ` <span class="badge new" style="font-size:0.62rem;">🇫🇷 ${isHoliday(c.date).name}</span>` : ''}</div>
+                <div class="edit-card-label">${PLATFORM_ICONS[c.platform] || '📱'} ${c.date ? formatDate(c.date) : 'Date non définie'}${holidayForDate(c.date) ? ` <span class="badge lost" title="Jour férié">🇫🇷 ${holidayForDate(c.date).name}</span>` : ''}</div>
                 <strong style="color:var(--text); font-size:0.95rem;">${escapeHtml(c.title)}</strong>
                 ${c.caption ? `<p class="cell-muted" style="font-size:0.8rem;">${escapeHtml(c.caption.slice(0, 80))}${c.caption.length > 80 ? '…' : ''}</p>` : ''}
             </div>
@@ -5447,6 +5546,182 @@ async function loadJournal() {
 document.getElementById('refreshJournalBtn').addEventListener('click', () => loadJournal());
 
 /* ============================================================
+   BLOG SEO — rédaction + publication FTP directe sur florian-b.fr
+   ============================================================ */
+let blogCache = [];
+let ftpConfigured = false;
+
+async function loadBlog() {
+    try {
+        const [posts, status] = await Promise.all([api('/api/blog'), api('/api/publish/status')]);
+        blogCache = posts;
+        ftpConfigured = status.ftpConfigured;
+        renderFtpBanner(status);
+        renderBlogList();
+    } catch (e) { toast(e.message); }
+}
+
+function renderFtpBanner(status) {
+    const el = document.getElementById('ftpStatusBanner');
+    if (!el) return;
+    if (status.ftpConfigured) {
+        el.innerHTML = `<div style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:9px;font-size:0.8rem;display:flex;justify-content:space-between;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+            <span>🟢 FTP configuré — publication directe sur <strong>${escapeHtml(status.siteUrl)}</strong></span>
+            <button class="btn-secondary" style="width:auto;padding:0.35rem 0.8rem;font-size:0.75rem;" onclick="testFtp(this)">Tester la connexion</button>
+        </div>`;
+    } else {
+        el.innerHTML = `<div style="padding:0.8rem 1rem;border:1px solid #f59e0b;border-radius:9px;font-size:0.8rem;color:#f59e0b;">
+            ⚠️ FTP non configuré — ajoute les variables <strong>FTP_HOST</strong>, <strong>FTP_USER</strong> et <strong>FTP_PASSWORD</strong> sur Railway pour pouvoir publier (voir README, section Blog). Tu peux déjà rédiger des brouillons en attendant.
+        </div>`;
+    }
+}
+
+async function testFtp(btn) {
+    btn.disabled = true; btn.textContent = 'Test...';
+    try {
+        const r = await api('/api/publish/test', { method: 'POST', timeoutMs: 40000 });
+        toast(r.ok ? `✅ Connexion FTP réussie (${r.filesAtRoot} fichiers à la racine du site)` : '❌ ' + r.reason);
+    } catch (e) { toast(e.message); }
+    btn.disabled = false; btn.textContent = 'Tester la connexion';
+}
+
+function renderBlogList() {
+    const wrap = document.getElementById('blogListWrap');
+    if (!blogCache.length) { wrap.innerHTML = emptyStateHTML('Aucun article pour le moment. Idées de départ : "Combien coûte un logo en 2026", "Les 5 erreurs d\'une identité visuelle", "Refonte de marque : par où commencer".'); return; }
+    wrap.innerHTML = blogCache.slice().reverse().map(p => `
+        <div class="edit-card" onclick="openBlogDrawer(${p.id})" style="cursor:pointer;">
+            <div class="edit-card-fields">
+                <div class="edit-card-label">${p.status === 'published' ? '🟢 En ligne' : '📝 Brouillon'} ${p.publishedAt ? '· ' + formatDate(p.publishedAt) : ''}</div>
+                <strong style="color:var(--text);font-size:0.95rem;">${escapeHtml(p.title)}</strong>
+                <p class="cell-muted" style="font-size:0.8rem;">${escapeHtml((p.excerpt || 'Pas encore de meta-description').slice(0, 90))}</p>
+            </div>
+            <div class="edit-card-actions" onclick="event.stopPropagation()">
+                ${p.status === 'published' ? `<a class="btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.75rem;text-decoration:none;" href="${escapeAttr('https://florian-b.fr/blog/' + p.slug + '/')}" target="_blank">Voir</a>` : ''}
+                <button class="btn-primary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.75rem;" onclick="publishBlogPost(${p.id}, this)">${p.status === 'published' ? 'Republier' : 'Publier'}</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+document.getElementById('addBlogPostBtn')?.addEventListener('click', () => openBlogDrawer(null));
+
+function openBlogDrawer(id) {
+    const p = id ? blogCache.find(x => x.id === id) : null;
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${p ? 'Modifier l\'article' : 'Nouvel article'}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-field"><label>Titre * <span class="cell-muted" style="font-weight:400;">(pense "recherche Google" : "Combien coûte un logo ?")</span></label><input type="text" id="bpTitle" value="${escapeAttr(p?.title || '')}"></div>
+        <div class="drawer-field"><label>Meta-description * <span class="cell-muted" style="font-weight:400;">(résumé de 150 caractères max, affiché dans Google)</span></label><textarea id="bpExcerpt" maxlength="160" style="min-height:60px;">${escapeHtml(p?.excerpt || '')}</textarea></div>
+        <div class="drawer-field"><label>Image de couverture <span class="cell-muted" style="font-weight:400;">(optionnel — URL, ou nom d'un fichier déjà sur le site, ex: Courtepaille7.webp)</span></label><input type="text" id="bpCover" value="${escapeAttr(p?.coverUrl || '')}"></div>
+        <div class="drawer-field"><label>Contenu * <button type="button" class="reply-template-btn" style="margin-left:0.4rem;" onclick="dictateInto('bpContent', this)">🎤 Dicter</button></label>
+            <p class="cell-muted" style="font-size:0.72rem;margin-bottom:0.4rem;">Mise en forme : ligne vide = nouveau paragraphe · commence une ligne par <code>## </code> pour un sous-titre · <code>- </code> pour une liste.</p>
+            <textarea id="bpContent" style="min-height:320px;font-family:inherit;">${escapeHtml(p?.content || '')}</textarea>
+        </div>
+        <div class="drawer-actions">
+            <button class="btn-secondary" onclick="saveBlogPost(${p ? p.id : 'null'})">Enregistrer le brouillon</button>
+            ${p ? `<button class="btn-danger" onclick="deleteBlogPost(${p.id})">Supprimer</button>` : ''}
+        </div>
+        ${p ? `<div class="drawer-actions" style="margin-top:0.6rem;"><button class="btn-primary" onclick="saveBlogPost(${p.id}, true)">💾 Enregistrer + Publier sur le site</button></div>` : ''}
+    `;
+    openDrawer();
+}
+
+async function saveBlogPost(id, thenPublish) {
+    const payload = {
+        title: document.getElementById('bpTitle').value.trim(),
+        excerpt: document.getElementById('bpExcerpt').value.trim(),
+        coverUrl: document.getElementById('bpCover').value.trim(),
+        content: document.getElementById('bpContent').value,
+    };
+    if (!payload.title) { toast('Le titre est obligatoire.'); return; }
+    try {
+        let post;
+        if (id) post = await api('/api/blog/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+        else post = await api('/api/blog', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Article enregistré ✅');
+        await loadBlog();
+        if (thenPublish) await publishBlogPost(post.id);
+        else closeDrawer();
+    } catch (e) { toast(e.message); }
+}
+
+async function publishBlogPost(id, btn) {
+    if (!ftpConfigured) { toast('Configure d\'abord le FTP sur Railway (voir le bandeau en haut).'); return; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Publication...'; }
+    try {
+        const r = await api('/api/blog/' + id + '/publish', { method: 'POST', timeoutMs: 90000 });
+        toast('🚀 Article en ligne !');
+        closeDrawer();
+        await loadBlog();
+        if (r.url) window.open(r.url, '_blank');
+    } catch (e) { toast(e.message); }
+    if (btn) { btn.disabled = false; btn.textContent = 'Publier'; }
+}
+
+async function deleteBlogPost(id) {
+    if (!confirm('Supprimer cet article ? S\'il est en ligne, la page sera aussi retirée du site.')) return;
+    try { await api('/api/blog/' + id, { method: 'DELETE', timeoutMs: 60000 }); toast('Article supprimé'); closeDrawer(); loadBlog(); }
+    catch (e) { toast(e.message); }
+}
+
+document.getElementById('publishProjectPagesBtn')?.addEventListener('click', async (e) => {
+    if (!ftpConfigured) { toast('Configure d\'abord le FTP sur Railway (voir le bandeau en haut).'); return; }
+    if (!confirm('Générer et publier une page SEO pour chaque carte projet du theme builder (florian-b.fr/projets/...) ? Le sitemap sera mis à jour.')) return;
+    e.target.disabled = true; e.target.textContent = 'Publication...';
+    try {
+        const r = await api('/api/publish/project-pages', { method: 'POST', body: JSON.stringify({}), timeoutMs: 120000 });
+        toast(`🚀 ${r.count} pages projets publiées !`);
+    } catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = '📄 Publier les pages projets';
+});
+
+/* ============================================================
+   NOTIFICATIONS PUSH (iPhone / Android / desktop)
+   ============================================================ */
+function urlB64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function enablePushNotifications() {
+    // iPhone : les notifications ne marchent que si le dashboard est installé sur l'écran d'accueil
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isIOS && !isStandalone) {
+        alert("Pour recevoir les notifications sur iPhone :\n\n1. Ouvre cette page dans Safari\n2. Touche le bouton Partager (carré avec une flèche)\n3. Choisis « Sur l'écran d'accueil »\n4. Ouvre l'app « Florian B. » depuis l'écran d'accueil\n5. Reviens ici (menu Système → Notifications iPhone)");
+        return;
+    }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert("Ce navigateur ne prend pas en charge les notifications push.");
+        return;
+    }
+    try {
+        const reg = await navigator.serviceWorker.register('/dashboard/sw.js', { scope: '/dashboard' });
+        await navigator.serviceWorker.ready;
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') { toast('Autorisation refusée — active les notifications dans les réglages.'); return; }
+        const { publicKey } = await api('/api/admin/push/public-key');
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(publicKey) });
+        }
+        const label = isIOS ? 'iPhone' : (/Android/.test(navigator.userAgent) ? 'Android' : 'Ordinateur');
+        await api('/api/admin/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription: sub.toJSON(), label }) });
+        toast('🔔 Notifications activées sur cet appareil !');
+        await api('/api/admin/push/test', { method: 'POST' });
+    } catch (e) {
+        toast('Erreur : ' + e.message);
+    }
+}
+document.getElementById('pushNotifBtn').addEventListener('click', enablePushNotifications);
+// Ré-enregistre silencieusement le service worker si déjà installé
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/dashboard/sw.js', { scope: '/dashboard' }).catch(() => {}); }
+
+/* ============================================================
    SAUVEGARDE
    ============================================================ */
 document.getElementById('backupBtn').addEventListener('click', async () => {
@@ -5573,9 +5848,36 @@ async function loadBusinessSettings() {
         document.getElementById('bsAutoReminders').checked = !!b.autoRemindersEnabled;
         document.getElementById('bsAutoLeadFollowUp').checked = !!b.autoLeadFollowUpEnabled;
         document.getElementById('bsLeadFollowUpDays').value = b.leadFollowUpDays || 3;
+        document.getElementById('bsRdvOpen').value = b.rdvOpenHour || 9;
+        document.getElementById('bsRdvClose').value = b.rdvCloseHour || 19;
+        const closed = Array.isArray(b.rdvClosedWeekdays) ? b.rdvClosedWeekdays.map(String) : ['0'];
+        document.querySelectorAll('.bs-rdv-day').forEach(cb => { cb.checked = closed.includes(cb.value); });
+        document.getElementById('bsRdvBlocked').value = b.rdvBlockedDates || '';
+        document.getElementById('bsWatchUrls').value = b.watchUrls || '';
+        loadWatchStatus();
         renderLegalReadiness(b);
     } catch (e) { toast(e.message); }
 }
+
+async function loadWatchStatus() {
+    const wrap = document.getElementById('watchStatusWrap');
+    if (!wrap) return;
+    try {
+        const sites = await api('/api/watch-status');
+        if (!sites.length) { wrap.innerHTML = ''; return; }
+        wrap.innerHTML = sites.map(x => `
+            <div style="display:flex;justify-content:space-between;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.78rem;">
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(x.url)}</span>
+                <span class="cell-muted" style="flex-shrink:0;">${x.lastChanged ? '🔔 Modifié le ' + formatDate(x.lastChanged) : '✓ ' + (x.lastChecked ? formatDate(x.lastChecked) : 'jamais vérifié')}</span>
+            </div>`).join('');
+    } catch {}
+}
+document.getElementById('watchRunBtn')?.addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Vérification...';
+    try { await api('/api/watch-run', { method: 'POST', timeoutMs: 90000 }); toast('Veille vérifiée ✅'); loadWatchStatus(); }
+    catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = 'Vérifier maintenant';
+});
 
 function renderLegalReadiness(b) {
     const missing = [];
@@ -5610,6 +5912,11 @@ document.getElementById('saveBusinessBtn').addEventListener('click', async () =>
             autoRemindersEnabled: document.getElementById('bsAutoReminders').checked,
             autoLeadFollowUpEnabled: document.getElementById('bsAutoLeadFollowUp').checked,
             leadFollowUpDays: Number(document.getElementById('bsLeadFollowUpDays').value) || 3,
+            rdvOpenHour: Number(document.getElementById('bsRdvOpen').value) || 9,
+            rdvCloseHour: Number(document.getElementById('bsRdvClose').value) || 19,
+            rdvClosedWeekdays: [...document.querySelectorAll('.bs-rdv-day:checked')].map(cb => Number(cb.value)),
+            rdvBlockedDates: document.getElementById('bsRdvBlocked').value.trim(),
+            watchUrls: document.getElementById('bsWatchUrls').value.trim(),
         };
         await api('/api/business-settings', { method: 'PUT', body: JSON.stringify(payload) });
         toast('Informations enregistrées ✅');
@@ -6110,229 +6417,6 @@ function toast(msg) {
     if (isInvite) { document.getElementById('loginScreen').style.display = 'flex'; return; }
     if (TOKEN) boot(); else document.getElementById('loginScreen').style.display = 'flex';
 })();
-
-/* ============================================================
-   VISITEURS EN DIRECT — carte Leaflet réelle (tuiles OpenStreetMap
-   sombres), IP, appareil, durée, position précise par ville.
-   ============================================================ */
-let liveMapInstance = null;
-let liveMapMarkers = {};
-let liveMapPollTimer = null;
-
-const DEVICE_ICON = { mobile: '📱', tablet: '📲', desktop: '💻' };
-
-function ensureLiveMap() {
-    if (liveMapInstance) return liveMapInstance;
-    liveMapInstance = L.map('liveMap', { worldCopyJump: true }).setView([46.6, 2.4], 5);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        maxZoom: 19,
-        subdomains: 'abcd',
-    }).addTo(liveMapInstance);
-    return liveMapInstance;
-}
-
-function liveMapPopupHTML(s) {
-    const geo = s.geo || {};
-    const flag = geo.countryCode ? countryFlag(geo.countryCode) : '';
-    const loc = geo.city ? `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country || ''}` : 'Localisation inconnue';
-    const dur = formatDuration(s.visitDuration || 0);
-    const since = s.online ? "à l'instant" : `il y a ${formatDuration(s.secondsSinceSeen)}`;
-    return `
-        <div style="min-width:240px; font-family:Inter,sans-serif;">
-            <div style="font-weight:800; font-size:0.9rem; margin-bottom:0.35rem;">${flag} ${escapeHtml(loc)}</div>
-            <div style="font-size:0.78rem; line-height:1.7; color:#333;">
-                <div><strong>IP :</strong> ${escapeHtml(s.ip || '—')}</div>
-                ${geo.isp ? `<div><strong>Opérateur :</strong> ${escapeHtml(geo.isp)}</div>` : ''}
-                <div><strong>Appareil :</strong> ${DEVICE_ICON[s.device] || ''} ${escapeHtml(s.device || '—')} · ${escapeHtml(s.browser || '—')} · ${escapeHtml(s.os || '—')}</div>
-                <div><strong>Fuseau :</strong> ${escapeHtml(geo.timezone || s.timezone || '—')}</div>
-                <div><strong>Temps sur le site :</strong> ${dur}</div>
-                <div><strong>Page actuelle :</strong> ${escapeHtml(s.currentPath || '—')}</div>
-                ${s.referrer ? `<div><strong>Venu depuis :</strong> ${escapeHtml(s.referrer)}</div>` : ''}
-                <div style="margin-top:0.3rem; color:${s.online ? '#16a34a' : '#888'};">${s.online ? '🟢 En ligne' : '⚪ Vu ' + since}</div>
-            </div>
-        </div>`;
-}
-
-function formatDuration(sec) {
-    sec = Math.max(0, Math.round(sec || 0));
-    if (sec < 60) return sec + 's';
-    const m = Math.floor(sec / 60), s2 = sec % 60;
-    if (m < 60) return `${m}min ${s2}s`;
-    return `${Math.floor(m / 60)}h ${m % 60}min`;
-}
-
-function renderLiveMapMarkers(sessions) {
-    const map = ensureLiveMap();
-    const seen = new Set();
-    sessions.forEach(s => {
-        if (s.mapLat == null || s.mapLon == null) return;
-        seen.add(s.sessionId);
-        const html = `<div style="width:16px;height:16px;border-radius:50%;background:${s.online ? '#22c55e' : '#666'};border:2px solid #fff;box-shadow:0 0 0 4px ${s.online ? 'rgba(34,197,94,0.35)' : 'rgba(150,150,150,0.25)'};"></div>`;
-        const icon = L.divIcon({ html, className: '', iconSize: [16, 16] });
-        if (liveMapMarkers[s.sessionId]) {
-            liveMapMarkers[s.sessionId].setLatLng([s.mapLat, s.mapLon]);
-            liveMapMarkers[s.sessionId].setIcon(icon);
-            liveMapMarkers[s.sessionId].setPopupContent(liveMapPopupHTML(s));
-        } else {
-            liveMapMarkers[s.sessionId] = L.marker([s.mapLat, s.mapLon], { icon })
-                .addTo(map)
-                .bindPopup(liveMapPopupHTML(s));
-        }
-    });
-    Object.keys(liveMapMarkers).forEach(id => {
-        if (!seen.has(id)) { map.removeLayer(liveMapMarkers[id]); delete liveMapMarkers[id]; }
-    });
-}
-
-function renderLiveMapTable(sessions) {
-    const wrap = document.getElementById('liveMapTableWrap');
-    if (!sessions.length) { wrap.innerHTML = emptyStateHTML('Aucun visiteur suivi pour le moment.'); return; }
-    wrap.innerHTML = `
-    <table class="data-table">
-        <thead><tr>
-            <th></th><th>Localisation</th><th>IP</th><th>Appareil</th><th>Page actuelle</th><th>Depuis</th><th>Durée</th>
-        </tr></thead>
-        <tbody>
-            ${sessions.map(s => {
-                const geo = s.geo || {};
-                const flag = geo.countryCode ? countryFlag(geo.countryCode) : '';
-                const loc = geo.city ? `${geo.city}, ${geo.country || ''}` : '—';
-                return `<tr onclick="flyToLiveVisitor('${s.sessionId}')" style="cursor:pointer;">
-                    <td>${s.online ? '<span title="En ligne" style="color:#22c55e;">●</span>' : '<span title="Récemment" style="color:#666;">●</span>'}</td>
-                    <td>${flag} ${escapeHtml(loc)}</td>
-                    <td class="cell-muted">${escapeHtml(s.ip || '—')}</td>
-                    <td>${DEVICE_ICON[s.device] || ''} ${escapeHtml(s.browser || '—')} · ${escapeHtml(s.os || '—')}</td>
-                    <td class="cell-muted">${escapeHtml(s.currentPath || '—')}</td>
-                    <td class="cell-muted">${formatDate(s.firstSeenAt, true)}</td>
-                    <td class="cell-muted">${formatDuration(s.visitDuration || 0)}</td>
-                </tr>`;
-            }).join('')}
-        </tbody>
-    </table>`;
-}
-
-function flyToLiveVisitor(sessionId) {
-    const m = liveMapMarkers[sessionId];
-    if (!m || !liveMapInstance) return;
-    liveMapInstance.flyTo(m.getLatLng(), 11, { duration: 0.8 });
-    setTimeout(() => m.openPopup(), 700);
-}
-
-async function loadLiveMap() {
-    ensureLiveMap();
-    try {
-        const data = await api('/api/live-visitors');
-        document.getElementById('liveMapCount').textContent = `${data.online} en ligne · ${data.sessions.length} suivi(s)`;
-        document.getElementById('liveMapBadge').style.display = data.online > 0 ? 'inline-block' : 'none';
-        if (data.online > 0) document.getElementById('liveMapBadge').textContent = data.online;
-        renderLiveMapMarkers(data.sessions);
-        renderLiveMapTable(data.sessions);
-    } catch (e) { toast(e.message); }
-    if (liveMapPollTimer) clearTimeout(liveMapPollTimer);
-    liveMapPollTimer = setTimeout(loadLiveMap, 8000);
-}
-
-function stopLiveMapPolling() {
-    if (liveMapPollTimer) { clearTimeout(liveMapPollTimer); liveMapPollTimer = null; }
-}
-
-
-const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-const IS_STANDALONE = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-
-function pushSupported() {
-    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-}
-
-async function getSWRegistration() {
-    return navigator.serviceWorker.register('/dashboard/sw.js', { scope: '/dashboard/' });
-}
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(base64);
-    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-}
-
-async function refreshPushUI() {
-    const status = document.getElementById('pushStatus');
-    const enableBtn = document.getElementById('pushEnableBtn');
-    const disableBtn = document.getElementById('pushDisableBtn');
-    const testBtn = document.getElementById('pushTestBtn');
-    const iosHint = document.getElementById('pushIosHint');
-    if (!status) return;
-    enableBtn.style.display = disableBtn.style.display = testBtn.style.display = 'none';
-
-    // iPhone hors PWA installée : le navigateur ne propose pas les notifications
-    if (IS_IOS && !IS_STANDALONE) {
-        iosHint.style.display = 'block';
-        status.textContent = "⚠️ Installe d'abord le dashboard sur ton écran d'accueil (voir ci-dessus).";
-        return;
-    }
-    if (!pushSupported()) {
-        status.textContent = "❌ Ce navigateur ne prend pas en charge les notifications push. Sur iPhone : iOS 16.4 minimum requis.";
-        return;
-    }
-    if (Notification.permission === 'denied') {
-        status.textContent = "🚫 Les notifications sont bloquées dans les réglages de cet appareil. Réactive-les dans Réglages → Notifications → Florian B.";
-        return;
-    }
-    try {
-        const reg = await getSWRegistration();
-        const sub = await reg.pushManager.getSubscription();
-        if (sub) {
-            status.textContent = '✅ Notifications activées sur cet appareil.';
-            disableBtn.style.display = 'inline-block';
-            testBtn.style.display = 'inline-block';
-        } else {
-            status.textContent = 'Les notifications ne sont pas encore activées sur cet appareil.';
-            enableBtn.style.display = 'inline-block';
-        }
-    } catch (e) {
-        status.textContent = 'Erreur : ' + e.message;
-    }
-}
-
-document.getElementById('pushEnableBtn')?.addEventListener('click', async () => {
-    const status = document.getElementById('pushStatus');
-    try {
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') { status.textContent = '🚫 Permission refusée.'; return; }
-        const { publicKey } = await api('/api/push/public-key');
-        if (!publicKey) throw new Error('Clé serveur indisponible — redéploie le backend.');
-        const reg = await getSWRegistration();
-        await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey),
-        });
-        await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(sub.toJSON()) });
-        toast('🔔 Notifications activées !');
-        refreshPushUI();
-    } catch (e) { status.textContent = 'Erreur : ' + e.message; }
-});
-
-document.getElementById('pushDisableBtn')?.addEventListener('click', async () => {
-    try {
-        const reg = await getSWRegistration();
-        const sub = await reg.pushManager.getSubscription();
-        if (sub) {
-            await api('/api/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
-            await sub.unsubscribe();
-        }
-        toast('Notifications désactivées sur cet appareil');
-        refreshPushUI();
-    } catch (e) { toast('Erreur : ' + e.message); }
-});
-
-document.getElementById('pushTestBtn')?.addEventListener('click', async () => {
-    try {
-        const r = await api('/api/push/test', { method: 'POST' });
-        toast(r.sent ? '📤 Notification de test envoyée !' : 'Aucun appareil abonné trouvé');
-    } catch (e) { toast('Erreur : ' + e.message); }
-});
 </script>
 </body>
 </html>
