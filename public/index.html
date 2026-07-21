@@ -183,7 +183,7 @@
     .cmdk-hint { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; }
     .cmdk-hint kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.65rem; }
 
-    .main { padding: 1.6rem 2rem 4rem; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }
+    .main { padding: 1.6rem 2rem 4rem; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
     .global-toolbar { position: sticky; top: 0; z-index: 400; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin: -1.6rem -2rem 1.4rem; padding: 0.8rem 2rem; background: var(--bg); border-bottom: 1px solid var(--border); }
     .global-toolbar-status { font-size: 0.7rem; color: var(--text-muted); margin-right: 0.2rem; white-space: nowrap; }
     .global-toolbar .icon-btn.spinning svg { animation: spin 0.6s linear; }
@@ -199,29 +199,20 @@
     .view.active { display: block; animation: fadein 0.35s var(--ease); }
     @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ============ KPI CARDS — bento asymétrique ============ */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(108px, auto); gap: 1rem; margin-bottom: 1.6rem; }
-    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem 1.3rem; box-shadow: var(--shadow); transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s; display: flex; flex-direction: column; }
+    /* ============ KPI CARDS ============ */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem 1.3rem; box-shadow: var(--shadow); transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s; }
     .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
     @keyframes pulseDot { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); } 50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34,197,94,0); } }
-    .ga-list-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; position: relative; overflow: hidden; border-radius: 6px; text-decoration: none; color: inherit; }
+    .ga-list-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     .ga-list-row:last-child { border-bottom: none; }
-    .ga-list-row .label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; position: relative; z-index: 1; }
-    .ga-list-row .value { font-weight: 700; position: relative; z-index: 1; display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
-    .ga-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-glow); z-index: 0; border-radius: 6px; transition: width 0.4s var(--ease); }
-    .ga-share { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 100px; padding: 0.1rem 0.4rem; }
-    a.ga-list-row:hover { background: var(--surface-2); }
-    a.ga-list-row:hover .label { color: var(--accent); }
+    .ga-list-row .label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+    .ga-list-row .value { font-weight: 700; }
     .kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
-    .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; color: var(--text); }
+    .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; background: linear-gradient(135deg, var(--text), var(--text)); -webkit-background-clip: text; background-clip: text; }
     .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
     .kpi-delta.up { color: var(--success); }
-    .kpi-card.hero { grid-column: span 2; }
-    .kpi-grid-bento .kpi-card.hero { grid-row: span 2; position: relative; border-top: 2px solid var(--accent); justify-content: space-between; }
-    .kpi-grid-bento .kpi-card.hero .kpi-value { font-size: 2.6rem; }
-    .kpi-card.compact { justify-content: center; }
-    .kpi-grid-bento .kpi-card-ring { grid-column: span 2; flex-direction: row; align-items: center; gap: 1.1rem; }
-    .kpi-card-ring .kpi-ring-text { display: flex; flex-direction: column; }
+    .kpi-card.hero { grid-column: span 2; background: linear-gradient(135deg, var(--accent-glow), transparent 60%), var(--surface); border-color: var(--accent); }
 
     /* ============ PANELS / CHARTS ============ */
     .panel-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.2rem; margin-bottom: 1.6rem; }
@@ -338,12 +329,12 @@
     .legend-chip .lc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .legend-chip .lc-count { color: var(--text-muted); font-weight: 700; }
 
-    .kpi-sparkline-wrap { position: relative; width: 100%; height: 54px; margin-top: auto; }
+    .kpi-sparkline-wrap { position: relative; width: 100%; height: 34px; margin-top: 0.6rem; }
     .kpi-sparkline-wrap canvas { width: 100% !important; height: 100% !important; }
     .kpi-card-ring .kpi-label { margin-bottom: 0.2rem; }
-    .chart-ring-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+    .chart-ring-wrap { position: relative; width: 88px; height: 88px; margin: 0.3rem auto 0; }
     .chart-ring-wrap canvas { width: 100% !important; height: 100% !important; }
-    .chart-ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; pointer-events: none; }
+    .chart-ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; pointer-events: none; }
 
     .compare-chips { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1rem; }
     .compare-chip { flex: 1; min-width: 140px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem; }
@@ -522,8 +513,7 @@
         .main { flex: 1 1 auto; min-height: 0; height: auto; padding: 1.1rem; }
         .panel-grid { grid-template-columns: 1fr; }
         .kpi-grid { grid-template-columns: 1fr 1fr; }
-        .kpi-card.hero { grid-column: span 2; grid-row: auto; }
-        .kpi-card-ring { grid-column: span 2; }
+        .kpi-card.hero { grid-column: span 2; }
         .kpi-value { font-size: 1.5rem; }
 
         .topbar { flex-wrap: wrap; gap: 0.6rem; }
@@ -558,8 +548,7 @@
 
     @media (max-width: 480px) {
         .kpi-grid { grid-template-columns: 1fr; }
-        .kpi-card.hero { grid-column: span 1; grid-row: auto; }
-        .kpi-card-ring { grid-column: span 1; flex-direction: row; }
+        .kpi-card.hero { grid-column: span 1; }
         .login-card { padding: 1.8rem 1.4rem; }
         .kanban-col { min-width: 78vw; }
     }
@@ -808,27 +797,26 @@
                 <h2>Overview</h2>
             </div>
 
-            <div class="kpi-grid kpi-grid-bento">
+            <div class="kpi-grid">
+                <div class="kpi-card hero">
+                    <div class="kpi-label">Nouveaux leads (7 derniers jours)</div>
                     <div class="kpi-value" id="kpiNewLeads">—</div>
-                    <div class="kpi-delta up" id="kpiNewLeadsDelta"></div>
                     <div class="kpi-sparkline-wrap"><canvas id="kpiSparkline"></canvas></div>
+                    <div class="kpi-delta up" id="kpiNewLeadsDelta"></div>
                 </div>
-                <div class="kpi-card compact">
+                <div class="kpi-card">
                     <div class="kpi-label">Total leads</div>
                     <div class="kpi-value" id="kpiTotalLeads">—</div>
                 </div>
-                <div class="kpi-card compact">
+                <div class="kpi-card">
                     <div class="kpi-label">RDV en attente</div>
                     <div class="kpi-value" id="kpiPendingAppt">—</div>
                 </div>
                 <div class="kpi-card kpi-card-ring">
+                    <div class="kpi-label">Taux de conversion</div>
                     <div class="chart-ring-wrap">
                         <canvas id="conversionRing"></canvas>
                         <div class="chart-ring-center" id="kpiConversion">—</div>
-                    </div>
-                    <div class="kpi-ring-text">
-                        <div class="kpi-label">Taux de conversion</div>
-                        <div class="cell-muted">Leads → clients gagnés</div>
                     </div>
                 </div>
             </div>
@@ -1811,24 +1799,6 @@ document.getElementById('sidebarOverlay').addEventListener('click', closeMobileS
 
 function switchView(view) {
     currentView = view;
-    const mainEl = document.querySelector('.main');
-    const resetScroll = () => {
-        if (mainEl) mainEl.scrollTop = 0;
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-    };
-    resetScroll();
-    requestAnimationFrame(resetScroll);
-    setTimeout(resetScroll, 150);
-    // Contournement d'un bug de rendu Safari/WebKit : un conteneur en overflow-y:auto
-    // ne repeint pas toujours correctement son contenu visible après un changement
-    // brusque de display sur ses enfants — on force un reflow complet.
-    if (mainEl) {
-        mainEl.style.display = 'none';
-        void mainEl.offsetHeight;
-        mainEl.style.display = '';
-    }
     document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.toggle('active', i.dataset.view === view));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
@@ -1983,8 +1953,8 @@ async function loadAnalytics() {
 
         renderGaList('gaSources', overview.sources.map(s => ({ label: channelLabel(s.channel), value: s.sessions })));
         renderGaList('gaReferrers', overview.referrers.map(r => ({ label: r.source, value: r.sessions })));
-        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views, sub: formatDuration(p.avgDuration), href: SITE_URL + p.path })));
-        renderGaList('gaLandingPages', overview.landingPages.map(p => ({ label: p.path, value: p.sessions, sub: Math.round(p.bounceRate * 100) + '% rebond', href: SITE_URL + p.path })));
+        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views, sub: formatDuration(p.avgDuration) })));
+        renderGaList('gaLandingPages', overview.landingPages.map(p => ({ label: p.path, value: p.sessions, sub: Math.round(p.bounceRate * 100) + '% rebond' })));
         renderGaList('gaDevices', overview.devices.map(d => ({ label: deviceLabel(d.device), value: d.users })));
         renderGaList('gaBrowsers', overview.browsers.map(b => ({ label: b.browser, value: b.users })));
         renderGaList('gaGeo', overview.geo.map(g => ({ label: g.country, value: g.users })));
@@ -2383,20 +2353,12 @@ function initMapInteractions() {
 function renderGaList(elId, items) {
     const wrap = document.getElementById(elId);
     if (!items.length) { wrap.innerHTML = '<p class="cell-muted">Pas encore de données.</p>'; return; }
-    const max = Math.max(...items.map(i => i.value), 1);
-    const total = items.reduce((s, i) => s + i.value, 0) || 1;
-    wrap.innerHTML = items.map(i => {
-        const pct = Math.round((i.value / max) * 100);
-        const share = Math.round((i.value / total) * 100);
-        const inner = `
-            <span class="ga-bar" style="width:${pct}%"></span>
-            <span class="label" title="${escapeHtml(i.label)}">${escapeHtml(i.label)}</span>
-            <span class="value">${i.value.toLocaleString('fr-FR')}${i.sub ? ` <span class="cell-muted" style="font-weight:400;">· ${i.sub}</span>` : ''}<span class="ga-share">${share}%</span></span>
-        `;
-        return i.href
-            ? `<a class="ga-list-row" href="${i.href}" target="_blank" rel="noopener" title="Ouvrir la page">${inner}</a>`
-            : `<div class="ga-list-row">${inner}</div>`;
-    }).join('');
+    wrap.innerHTML = items.slice(0, 10).map(i => `
+        <div class="ga-list-row">
+            <span class="label">${escapeHtml(i.label)}</span>
+            <span class="value">${i.value.toLocaleString('fr-FR')}${i.sub ? ` <span class="cell-muted" style="font-weight:400;">· ${i.sub}</span>` : ''}</span>
+        </div>
+    `).join('');
 }
 
 function formatDuration(seconds) {
