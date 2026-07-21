@@ -89,7 +89,7 @@ async function getOverview(days = 28) {
             ],
         }),
         run({
-            dateRanges: [currentRange, previousRange], dimensions: [{ name: 'dateRange' }, { name: 'date' }],
+            dateRanges: [currentRange, previousRange], dimensions: [{ name: 'date' }],
             metrics: [{ name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }],
             orderBys: [{ dimension: { dimensionName: 'date' } }],
         }),
