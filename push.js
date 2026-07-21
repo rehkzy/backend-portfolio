@@ -64,12 +64,12 @@ function countSubscriptions() {
 /* Envoie une notification à TOUS les appareils abonnés.
    Les abonnements morts (app désinstallée, permission retirée)
    renvoient 404/410 → on les supprime automatiquement. */
-async function notifyAll({ title, body, url = '/dashboard/', tag = null }) {
+async function notifyAll({ title, body, url = '/dashboard/', tag = null, actions = null }) {
     if (!ready) return { sent: 0 };
     const subs = db.get('pushSubscriptions').value();
     if (!subs.length) return { sent: 0 };
 
-    const payload = JSON.stringify({ title, body, url, tag });
+    const payload = JSON.stringify({ title, body, url, tag, actions });
     let sent = 0;
     await Promise.all(subs.map(async (sub) => {
         try {

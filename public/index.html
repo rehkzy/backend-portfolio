@@ -893,6 +893,11 @@
                     <p class="cell-muted" style="font-size:0.72rem;margin-bottom:0.6rem;">Jour × heure — plus c'est rose, plus tu reçois de contacts à ce moment.</p>
                     <div id="leadsHeatmap" style="overflow-x:auto;"></div>
                 </div>
+                <div class="panel" id="abPanel" style="display:none;">
+                    <h3>🧪 A/B test du hero</h3>
+                    <p class="cell-muted" style="font-size:0.72rem;margin-bottom:0.6rem;">Quelle tagline amène le plus de contacts ? (configurable dans Contenu du site → Hero)</p>
+                    <div id="abWrap"></div>
+                </div>
                 <div class="panel">
                     <h3>Répartition par statut</h3>
                     <div class="chart-donut-wrap">
@@ -1331,6 +1336,11 @@
                     <label>Sous-titre (tagline)</label>
                     <input type="text" id="heroTaglineInput" style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:0.9rem;">
                 </div>
+                <div class="drawer-field">
+                    <label>Tagline variante B — A/B test (optionnel)</label>
+                    <input type="text" id="heroTaglineBInput" style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:0.9rem;" placeholder="Laisse vide pour désactiver le test">
+                    <p class="cell-muted" style="font-size:0.75rem;margin-top:0.4rem;">Si rempli : la moitié des visiteurs voit la tagline A, l'autre la B. Le panneau A/B de la Vue d'ensemble te dira laquelle amène le plus de contacts.</p>
+                </div>
                 <p class="cell-muted">Ces textes sont ceux affichés en haut de florian-b.fr, au-dessus de la barre de recherche IA.</p>
             </div>
         </section>
@@ -1582,6 +1592,11 @@
             <div id="ftpStatusBanner" style="margin-bottom:1rem;"></div>
             <p class="cell-muted" style="margin-bottom:1.2rem;font-size:0.85rem;">Écris ici, publie en un clic : l'article part directement sur <strong>florian-b.fr/blog/</strong> avec tout le SEO (meta, Open Graph, schema.org), et le sitemap est mis à jour automatiquement. C'est ce qui attire les prospects qui cherchent sur Google.</p>
             <div id="blogListWrap"></div>
+            <div class="panel" id="serpPanel" style="margin-top:1.5rem;">
+                <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">📈 Positions Google (SERP)</h3>
+                <div id="serpWrap"><p class="cell-muted" style="font-size:0.8rem;">Chargement…</p></div>
+                <button type="button" class="btn-secondary" id="serpRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;margin-top:0.6rem;">Vérifier maintenant</button>
+            </div>
         </section>
 
         <section class="view" id="view-business-settings">
@@ -1641,6 +1656,9 @@
                 <h3 style="margin:0 0 0.9rem;font-size:0.95rem;">🕵️ Veille concurrentielle</h3>
                 <p class="cell-muted" style="margin-bottom:1rem;font-size:0.82rem;">Sites de confrères à surveiller (une URL par ligne, 10 max). Vérifiés chaque matin à 7h — tu reçois une notification push quand leur contenu change.</p>
                 <div class="drawer-field"><textarea id="bsWatchUrls" placeholder="https://exemple-graphiste.fr"></textarea></div>
+                <div class="drawer-field"><label>Mots-clés Google à suivre (SERP) — un par ligne, 5 max</label><textarea id="bsSeoKeywords" placeholder="graphiste freelance paris
+directeur artistique freelance"></textarea>
+                <p class="cell-muted" style="font-size:0.75rem;margin-top:0.3rem;">Position vérifiée chaque lundi matin (nécessite la variable Railway <strong>SERPAPI_KEY</strong>, clé gratuite sur serpapi.com — 100 recherches/mois offertes). Résultats dans l'onglet Blog SEO.</p></div>
                 <button type="button" class="btn-secondary" id="watchRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;">Vérifier maintenant</button>
                 <div id="watchStatusWrap" style="margin-top:0.8rem;"></div>
             </div>
@@ -3086,6 +3104,7 @@ async function loadOverview() {
 
         renderLeadsChart(s.byDay);
         renderLeadsHeatmap();
+        renderAbStats();
         renderKpiSparkline(s.byDay);
         renderConversionRing(rate);
         renderStatusDonut(s.byStatus);
@@ -3292,6 +3311,7 @@ function trackingSection(t) {
         t.ip         ? ['IP',          t.ip,                                            'accent'] : null,
         geo.city     ? ['Localisation', `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country || ''}`, ''] : null,
         geo.isp      ? ['Opérateur',   geo.isp,                                         ''] : null,
+        (geo.isp && !/orange|free|sfr|bouygues|proximus|swisscom|vodafone|iliad|numericable|red by|sosh|starlink|t-mobile|verizon|comcast|movistar|deutsche telekom|kpn|virgin media|bt group|sky uk|o2|scaleway|ovh|amazon|google|microsoft|apple|cloudflare|hetzner|digitalocean/i.test(geo.isp)) ? ['🏢 Entreprise probable', geo.isp, 'accent'] : null,
         geo.timezone ? ['Fuseau',       geo.timezone,                                   ''] : null,
         t.browser    ? ['Navigateur',  t.browser,                                       ''] : null,
         t.os         ? ['OS',          t.os,                                            ''] : null,
@@ -3887,6 +3907,7 @@ async function loadContentHero() {
         const content = await fetchContent();
         document.getElementById('heroTitleInput').value = content.hero?.title || '';
         document.getElementById('heroTaglineInput').value = content.hero?.tagline || '';
+        document.getElementById('heroTaglineBInput').value = content.hero?.taglineB || '';
     } catch (e) { toast(e.message); }
 }
 document.getElementById('saveHeroBtn').addEventListener('click', async () => {
@@ -3894,6 +3915,7 @@ document.getElementById('saveHeroBtn').addEventListener('click', async () => {
         await saveContent({ hero: {
             title: document.getElementById('heroTitleInput').value,
             tagline: document.getElementById('heroTaglineInput').value,
+            taglineB: document.getElementById('heroTaglineBInput').value.trim(),
         } });
     } catch (e) { toast(e.message); }
 });
@@ -4744,6 +4766,30 @@ function quoteItemRowHTML(item = {}) {
 
 function attachQuoteItemEvents(wrap) {
     wrap.querySelectorAll('.qi-remove').forEach(btn => btn.onclick = () => btn.closest('.quote-item-row').remove());
+}
+
+/* ---- A/B test du hero ---- */
+async function renderAbStats() {
+    const panel = document.getElementById('abPanel');
+    const wrap = document.getElementById('abWrap');
+    if (!panel || !wrap) return;
+    try {
+        const { active, stats } = await api('/api/ab-stats');
+        const total = stats.A.leads + stats.B.leads;
+        if (!active && !total) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        wrap.innerHTML = ['A', 'B'].map(v => {
+            const st = stats[v];
+            const pct = total ? Math.round(st.leads / total * 100) : 0;
+            return `<div style="margin-bottom:0.7rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.3rem;">
+                    <span><strong>Variante ${v}</strong> — ${st.leads} lead${st.leads > 1 ? 's' : ''}${st.won ? ` · ${st.won} gagné${st.won > 1 ? 's' : ''}` : ''}</span>
+                    <span class="cell-muted">${pct}%</span>
+                </div>
+                <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#da2c48,#ff2f76);border-radius:4px;"></div></div>
+            </div>`;
+        }).join('') + (active ? '' : '<p class="cell-muted" style="font-size:0.72rem;">Test désactivé (tagline B vide) — données historiques ci-dessus.</p>');
+    } catch { panel.style.display = 'none'; }
 }
 
 /* ---- Heatmap jour × heure des leads ---- */
@@ -5616,8 +5662,46 @@ async function loadBlog() {
         ftpConfigured = status.ftpConfigured;
         renderFtpBanner(status);
         renderBlogList();
+        loadSerp();
     } catch (e) { toast(e.message); }
 }
+
+async function loadSerp() {
+    const wrap = document.getElementById('serpWrap');
+    if (!wrap) return;
+    try {
+        const { enabled, rankings } = await api('/api/serp-rankings');
+        if (!enabled) {
+            wrap.innerHTML = '<p class="cell-muted" style="font-size:0.8rem;">Non configuré — ajoute tes mots-clés dans "Mon entreprise" et la variable <strong>SERPAPI_KEY</strong> sur Railway (clé gratuite sur serpapi.com).</p>';
+            return;
+        }
+        if (!rankings.length) {
+            wrap.innerHTML = '<p class="cell-muted" style="font-size:0.8rem;">Aucun relevé encore — vérification automatique chaque lundi à 7h30, ou clique "Vérifier maintenant".</p>';
+            return;
+        }
+        const byKw = {};
+        rankings.forEach(r => { (byKw[r.keyword] = byKw[r.keyword] || []).push(r); });
+        wrap.innerHTML = `<table class="data-table"><thead><tr><th>Mot-clé</th><th>Position</th><th>Évolution</th><th>Dernier relevé</th></tr></thead><tbody>
+            ${Object.entries(byKw).map(([kw, hist]) => {
+                const last = hist[hist.length - 1];
+                const prev = hist.length > 1 ? hist[hist.length - 2] : null;
+                const delta = prev && prev.position && last.position ? prev.position - last.position : null;
+                return `<tr>
+                    <td>${escapeHtml(kw)}</td>
+                    <td>${last.position ? '<strong>#' + last.position + '</strong>' : '<span class="cell-muted">hors top 50</span>'}</td>
+                    <td>${delta === null ? '<span class="cell-muted">—</span>' : delta > 0 ? `<span style="color:#22c55e;">▲ +${delta}</span>` : delta < 0 ? `<span style="color:#f59e0b;">▼ ${delta}</span>` : '='}</td>
+                    <td class="cell-muted">${formatDate(last.date)}</td>
+                </tr>`;
+            }).join('')}
+        </tbody></table>`;
+    } catch { wrap.innerHTML = ''; }
+}
+document.getElementById('serpRunBtn')?.addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Vérification…';
+    try { await api('/api/serp-run', { method: 'POST', timeoutMs: 120000 }); toast('Positions relevées ✅'); loadSerp(); }
+    catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = 'Vérifier maintenant';
+});
 
 function renderFtpBanner(status) {
     const el = document.getElementById('ftpStatusBanner');
@@ -5868,6 +5952,7 @@ async function loadBusinessSettings() {
         document.querySelectorAll('.bs-rdv-day').forEach(cb => { cb.checked = closedDaysRdv.includes(cb.value); });
         document.getElementById('bsRdvBlocked').value = b.rdvBlockedDates || '';
         document.getElementById('bsWatchUrls').value = b.watchUrls || '';
+        document.getElementById('bsSeoKeywords').value = b.seoKeywords || '';
         loadWatchStatus();
         renderLegalReadiness(b);
     } catch (e) { toast(e.message); }
@@ -5931,6 +6016,7 @@ document.getElementById('saveBusinessBtn').addEventListener('click', async () =>
             rdvClosedWeekdays: [...document.querySelectorAll('.bs-rdv-day:checked')].map(cb => Number(cb.value)),
             rdvBlockedDates: document.getElementById('bsRdvBlocked').value.trim(),
             watchUrls: document.getElementById('bsWatchUrls').value.trim(),
+            seoKeywords: document.getElementById('bsSeoKeywords').value.trim(),
         };
         await api('/api/business-settings', { method: 'PUT', body: JSON.stringify(payload) });
         toast('Informations enregistrées ✅');

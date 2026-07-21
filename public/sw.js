@@ -10,13 +10,23 @@ self.addEventListener('push', (event) => {
         tag: data.tag || undefined,
         icon: '/dashboard/icon-192.png',
         badge: '/dashboard/icon-192.png',
-        data: { url: data.url || '/dashboard/' },
+        data: { url: data.url || '/dashboard/', actions: data.actions || [] },
+        actions: (data.actions || []).map(a => ({ action: a.action, title: a.title })),
     }));
 });
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const url = (event.notification.data && event.notification.data.url) || '/dashboard/';
+    const d = event.notification.data || {};
+    // Bouton d'action tapé (ex : "Accusé de réception") → on exécute sans ouvrir l'app
+    if (event.action && d.actions) {
+        const act = d.actions.find(a => a.action === event.action);
+        if (act && act.url) {
+            event.waitUntil(fetch(act.url, { method: 'POST' }).catch(() => {}));
+            return;
+        }
+    }
+    const url = d.url || '/dashboard/';
     event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
         for (const c of list) { if (c.url.includes('/dashboard') && 'focus' in c) return c.focus(); }
         return clients.openWindow(url);

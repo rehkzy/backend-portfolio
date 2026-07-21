@@ -98,14 +98,14 @@ function absImage(src) {
     return SITE_URL + '/' + String(src).replace(/^\/+/, '');
 }
 
-function blogArticleHtml(post) {
+function blogArticleHtml(post, hasOgImage) {
     const dateStr = new Date(post.publishedAt || post.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     const cover = absImage(post.coverUrl);
     return pageShell({
         title: `${post.title} — Florian B.`,
         description: post.excerpt || post.title,
         canonicalPath: `/blog/${post.slug}/`,
-        ogImage: cover || absImage('hero-photo-flo.webp'),
+        ogImage: hasOgImage ? `${SITE_URL}/blog/${post.slug}/og.png` : (cover || absImage('hero-photo-flo.webp')),
         jsonLd: {
             '@context': 'https://schema.org', '@type': 'Article',
             headline: post.title, description: post.excerpt || post.title,
@@ -198,4 +198,32 @@ ${all.map(u => `  <url><loc>${esc(u)}</loc><lastmod>${today}</lastmod></url>`).j
 </urlset>`;
 }
 
-module.exports = { slugify, blogArticleHtml, blogIndexHtml, projectPageHtml, mergedSitemap, SITE_URL };
+// Image Open Graph 1200x630 générée aux couleurs du site (nécessite le module
+// "sharp" — si indisponible, on renvoie null et la couverture sert d'og:image).
+async function ogImagePng(title, subtitle) {
+    let sharp;
+    try { sharp = require('sharp'); } catch { return null; }
+    const escT = esc(String(title || '').slice(0, 90));
+    // Découpe le titre en lignes de ~28 caractères max
+    const words = escT.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+        if ((cur + ' ' + w).trim().length > 28) { lines.push(cur.trim()); cur = w; }
+        else cur += ' ' + w;
+    }
+    if (cur.trim()) lines.push(cur.trim());
+    const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+<rect width="1200" height="630" fill="#0a0a0a"/>
+<rect x="0" y="610" width="1200" height="20" fill="#da2c48"/>
+<circle cx="1080" cy="120" r="220" fill="#da2c48" opacity="0.12"/>
+<text x="80" y="120" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#ff2f76" letter-spacing="4">FLORIAN B. — STUDIO</text>
+${lines.slice(0, 4).map((l, i) => `<text x="80" y="${230 + i * 78}" font-family="Arial, sans-serif" font-size="62" font-weight="bold" fill="#f5f5f5">${l}</text>`).join('')}
+<text x="80" y="560" font-family="Arial, sans-serif" font-size="26" fill="#9a9a9a">${esc(String(subtitle || 'Graphiste &amp; Directeur Artistique — Paris').slice(0, 70))}</text>
+</svg>`;
+    try {
+        return await sharp(Buffer.from(svg)).png().toBuffer();
+    } catch { return null; }
+}
+
+module.exports = { slugify, blogArticleHtml, blogIndexHtml, projectPageHtml, mergedSitemap, ogImagePng, SITE_URL };

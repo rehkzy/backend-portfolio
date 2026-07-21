@@ -524,6 +524,7 @@ app.post('/api/leads', async (req, res) => {
         timezone:   req.body.timezone   || null,
         screen:     req.body.screen     || null,
         connection: req.body.connection || null,
+        abVariant:  ['A', 'B'].includes(req.body.abVariant) ? req.body.abVariant : null,
         utmSource:  req.body.utmSource  || null,
         utmMedium:  req.body.utmMedium  || null,
         utmCampaign:req.body.utmCampaign|| null,
@@ -556,6 +557,9 @@ app.post('/api/leads', async (req, res) => {
             title: '🎯 Nouveau lead !',
             body: `${lead.name || lead.email}${lead.tracking.geo?.city ? ' · ' + lead.tracking.geo.city : ''} — ${(lead.message || '').slice(0, 90)}`,
             tag: 'lead-' + lead.id,
+            // Bouton directement dans la notification : envoie l'accusé de réception
+            // sans même ouvrir le dashboard (jeton signé à usage unique dans l'URL)
+            actions: [{ action: 'ack', title: "✉️ Accusé de réception", url: (process.env.DASHBOARD_URL || '') + '/api/push-action?type=lead-ack&id=' + lead.id + '&token=' + pushActionToken('lead-ack', lead.id) }],
         }).catch(() => {});
     })();
 });
@@ -2338,6 +2342,94 @@ async function buildAndSendDailyBrief() {
 }
 
 /* ============================================================
+   ACTIONS DEPUIS LES NOTIFICATIONS PUSH — le bouton dans la notif
+   appelle cette route avec un jeton signé (pas besoin d'être connecté)
+   ============================================================ */
+function pushActionToken(type, id) {
+    return crypto.createHmac('sha256', JWT_SECRET).update('push-action-' + type + '-' + id).digest('hex').slice(0, 32);
+}
+app.post('/api/push-action', async (req, res) => {
+    const { type, id, token } = req.query || {};
+    const numId = Number(id);
+    if (!type || !numId || token !== pushActionToken(type, numId)) return res.status(403).json({ error: 'Jeton invalide' });
+    if (type === 'lead-ack') {
+        const lead = db.get('leads').find({ id: numId }).value();
+        if (!lead) return res.status(404).json({ error: 'Lead introuvable' });
+        if (lead.ackSentAt) return res.json({ ok: true, already: true }); // idempotent : un seul envoi
+        const message = `Bonjour ${lead.name || ''},\n\nMerci pour votre message ! Je l'ai bien reçu et je reviens vers vous rapidement avec une réponse détaillée.\n\nÀ très vite,`;
+        const result = await mailer.sendMail({ ...mailer.leadReplyEmail(lead, message), meta: { type: 'lead_reply', relatedId: lead.id } });
+        if (!result.sent) return res.status(500).json({ error: result.reason });
+        db.get('leads').find({ id: numId }).assign({ status: lead.status === 'new' ? 'contacted' : lead.status, ackSentAt: now() }).write();
+        push.notifyAll({ title: '✅ Accusé envoyé', body: `${lead.name || lead.email} a reçu ton accusé de réception — lead passé en "Contacté"`, tag: 'ack-' + numId }).catch(() => {});
+        return res.json({ ok: true });
+    }
+    res.status(400).json({ error: 'Action inconnue' });
+});
+
+/* ============================================================
+   SUIVI DE POSITION GOOGLE (SERP) — optionnel, via SerpApi
+   Variable Railway SERPAPI_KEY (offre gratuite : 100 recherches/mois,
+   largement assez pour 5 mots-clés vérifiés 1 fois par semaine).
+   Mots-clés configurés dans "Mon entreprise".
+   ============================================================ */
+async function runSerpCheck() {
+    if (!process.env.SERPAPI_KEY) return;
+    const b = db.get('businessSettings').value() || {};
+    const keywords = String(b.seoKeywords || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean).slice(0, 5);
+    if (!keywords.length) return;
+    const domain = (process.env.SITE_URL || 'https://florian-b.fr').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    for (const keyword of keywords) {
+        try {
+            const params = new URLSearchParams({ engine: 'google', q: keyword, gl: 'fr', hl: 'fr', num: '50', api_key: process.env.SERPAPI_KEY });
+            const r = await fetch('https://serpapi.com/search.json?' + params, { signal: AbortSignal.timeout(20000) });
+            const d = await r.json();
+            const organic = d.organic_results || [];
+            const hit = organic.find(x => (x.link || '').includes(domain));
+            const position = hit ? hit.position : null; // null = pas dans le top 50
+            db.get('serpRankings').push({ id: nextId('serpRankings'), date: now().slice(0, 10), keyword, position }).write();
+        } catch (err) { console.error('SERP:', keyword, err.message); }
+    }
+    // Notifie les belles progressions
+    try {
+        const all = db.get('serpRankings').value();
+        for (const keyword of keywords) {
+            const hist = all.filter(x => x.keyword === keyword).slice(-2);
+            if (hist.length === 2 && hist[1].position && (!hist[0].position || hist[1].position < hist[0].position)) {
+                push.notifyAll({ title: '📈 SEO en progression', body: `« ${keyword} » : position ${hist[1].position} sur Google${hist[0].position ? ' (avant : ' + hist[0].position + ')' : ' (nouvelle entrée !)'}`, tag: 'serp-' + keyword }).catch(() => {});
+            }
+        }
+    } catch {}
+}
+cron.schedule('30 7 * * 1', () => {
+    runSerpCheck().catch(err => console.error('Erreur SERP:', err.message));
+}, { timezone: 'Europe/Paris' });
+app.get('/api/serp-rankings', auth, (req, res) => {
+    res.json({ enabled: Boolean(process.env.SERPAPI_KEY), rankings: db.get('serpRankings').value() || [] });
+});
+app.post('/api/serp-run', auth, adminOnly, async (req, res) => {
+    if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway (clé gratuite sur serpapi.com)' });
+    await runSerpCheck();
+    res.json({ ok: true, rankings: db.get('serpRankings').value() || [] });
+});
+
+/* ============================================================
+   A/B TEST DU HERO — le site affiche la variante A ou B (50/50),
+   le dashboard mesure laquelle convertit le mieux.
+   ============================================================ */
+app.get('/api/ab-stats', auth, (req, res) => {
+    const leads = db.get('leads').value();
+    const stats = { A: { leads: 0, won: 0 }, B: { leads: 0, won: 0 } };
+    leads.forEach(l => {
+        const v = l.tracking?.abVariant;
+        if (v !== 'A' && v !== 'B') return;
+        stats[v].leads++;
+        if (l.status === 'won') stats[v].won++;
+    });
+    const taglineB = (db.get('site_content').value()?.hero?.taglineB) || '';
+    res.json({ active: Boolean(taglineB), stats });
+});
+
+/* ============================================================
    BLOG & PUBLICATION FTP — écrit directement sur florian-b.fr (OVH)
    ============================================================ */
 app.get('/api/publish/status', auth, (req, res) => {
@@ -2407,11 +2499,15 @@ app.post('/api/blog/:id/publish', auth, adminOnly, async (req, res) => {
         const posts = db.get('blogPosts').value() || [];
         const blogUrls = posts.filter(p => p.status === 'published').map(p => `${publisher.SITE_URL}/blog/${p.slug}/`);
         const sitemap = await publisher.mergedSitemap([`${publisher.SITE_URL}/blog/`, ...blogUrls]);
-        await ftpPub.uploadFiles([
-            { remotePath: `blog/${fresh.slug}/index.html`, content: publisher.blogArticleHtml(fresh) },
+        // Image de partage générée automatiquement (si le module sharp est dispo)
+        const ogPng = await publisher.ogImagePng(fresh.title, fresh.excerpt).catch(() => null);
+        const files = [
+            { remotePath: `blog/${fresh.slug}/index.html`, content: publisher.blogArticleHtml(fresh, Boolean(ogPng)) },
             { remotePath: 'blog/index.html', content: publisher.blogIndexHtml(posts) },
             { remotePath: 'sitemap.xml', content: sitemap },
-        ]);
+        ];
+        if (ogPng) files.push({ remotePath: `blog/${fresh.slug}/og.png`, content: ogPng });
+        await ftpPub.uploadFiles(files);
         logTeamAction(req, 'other', `Article publié sur le site : ${fresh.title}`, id);
         res.json({ ok: true, url: `${publisher.SITE_URL}/blog/${fresh.slug}/` });
     } catch (err) {

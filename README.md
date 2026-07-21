@@ -246,3 +246,15 @@ Configuration : OVH Manager → Hebergements → onglet FTP-SSH pour recuperer s
 
 **Chat IA du site (optionnel)**
 Variable Railway `ANTHROPIC_API_KEY` (cle creee sur console.anthropic.com, paiement a l'usage, quelques centimes). Sans la variable, le chat garde ses scenarios actuels. Necessite aussi la mise a jour du site (index.html livre separement).
+
+
+## Derniere vague — les fonctionnalites restantes
+
+- **Boutons d'action dans les notifications** : la notif "Nouveau lead" a un bouton "Accuse de reception" — appuie dessus et l'email de reponse part au prospect sans meme ouvrir l'app (le lead passe en "Contacte", envoi unique garanti). Necessite `DASHBOARD_URL`.
+- **Detection d'entreprise** : si un lead se connecte depuis un reseau d'entreprise (pas Orange/Free/SFR...), son score de priorite gagne +10 et une puce "Entreprise probable" apparait dans son tracking avec le nom du reseau.
+- **Suivi de position Google (SERP)** : mots-cles a suivre dans "Mon entreprise", positions relevees chaque lundi 7h30, tableau avec evolution dans l'onglet Blog SEO, notification push quand tu progresses. Configuration : cree une cle gratuite sur serpapi.com (100 recherches/mois offertes, aucun paiement requis) → variable Railway `SERPAPI_KEY`. Sans la cle, la fonctionnalite reste simplement inactive.
+- **A/B test du hero** : dans Contenu du site → Hero, remplis "Tagline variante B". La moitie des visiteurs voit A, l'autre B ; le panneau A/B de la Vue d'ensemble montre laquelle amene le plus de leads. Laisse le champ vide pour desactiver. (Necessite le nouvel index.html sur le site.)
+- **Images de partage (OG) generees** : chaque article de blog publie recoit une image 1200x630 aux couleurs du site pour les partages sur les reseaux (module "sharp" — si l'installation echouait sur Railway, l'image de couverture sert de repli, rien ne casse).
+- **Raccourci Siri (rien a installer cote serveur)** : iPhone → app Raccourcis → "+" → "Ajouter une action" → "Ouvrir l'app" → choisis "Florian B." → renomme le raccourci "Mes leads". Tu peux ensuite dire "Dis Siri, mes leads".
+
+La seule idee de la liste initiale non retenue : le mini-rapport quotidien en image pour iPhone — redondant avec le digest push du matin et le brief email quotidien deja en place.

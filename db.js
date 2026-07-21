@@ -14,6 +14,7 @@ const DEFAULTS = {
     "leads": [],
     "watchSites": [],
     "blogPosts": [],
+    "serpRankings": [],
     "appointments": [],
     "events": [],
     "liveSessions": [],
