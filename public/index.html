@@ -183,7 +183,7 @@
     .cmdk-hint { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; }
     .cmdk-hint kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.65rem; }
 
-    .main { padding: 1.6rem 2rem 4rem; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
+    .main { padding: 1.6rem 2rem 4rem; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }
     .global-toolbar { position: sticky; top: 0; z-index: 400; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin: -1.6rem -2rem 1.4rem; padding: 0.8rem 2rem; background: var(--bg); border-bottom: 1px solid var(--border); }
     .global-toolbar-status { font-size: 0.7rem; color: var(--text-muted); margin-right: 0.2rem; white-space: nowrap; }
     .global-toolbar .icon-btn.spinning svg { animation: spin 0.6s linear; }
@@ -1811,6 +1811,24 @@ document.getElementById('sidebarOverlay').addEventListener('click', closeMobileS
 
 function switchView(view) {
     currentView = view;
+    const mainEl = document.querySelector('.main');
+    const resetScroll = () => {
+        if (mainEl) mainEl.scrollTop = 0;
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    };
+    resetScroll();
+    requestAnimationFrame(resetScroll);
+    setTimeout(resetScroll, 150);
+    // Contournement d'un bug de rendu Safari/WebKit : un conteneur en overflow-y:auto
+    // ne repeint pas toujours correctement son contenu visible après un changement
+    // brusque de display sur ses enfants — on force un reflow complet.
+    if (mainEl) {
+        mainEl.style.display = 'none';
+        void mainEl.offsetHeight;
+        mainEl.style.display = '';
+    }
     document.querySelectorAll('.nav-item[data-view]').forEach(i => i.classList.toggle('active', i.dataset.view === view));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
