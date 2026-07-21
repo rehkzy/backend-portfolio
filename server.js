@@ -11,7 +11,9 @@ const db = require('./db');
 const mailer = require('./mailer');
 const pdfGen = require('./pdf');
 const analytics = require('./analytics');
+const push = require('./push');
 const cron = require('node-cron');
+push.init();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -337,6 +339,129 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
 /* ============================================================
    INGESTION PUBLIQUE — appelée par le chat widget du site
    ============================================================ */
+/* ============================================================
+   NOTIFICATIONS PUSH — abonnement des appareils du dashboard
+   ============================================================ */
+app.get('/api/push/public-key', auth, (req, res) => {
+    res.json({ publicKey: push.getPublicKey(), subscriptions: push.countSubscriptions() });
+});
+
+app.post('/api/push/subscribe', auth, (req, res) => {
+    const ok = push.addSubscription(req.body || {}, req.user);
+    if (!ok) return res.status(400).json({ error: 'Abonnement invalide' });
+    logTeamAction(req, 'push_subscribed', 'Notifications push activées sur un appareil');
+    res.json({ ok: true, subscriptions: push.countSubscriptions() });
+});
+
+app.post('/api/push/unsubscribe', auth, (req, res) => {
+    push.removeSubscription((req.body || {}).endpoint);
+    res.json({ ok: true, subscriptions: push.countSubscriptions() });
+});
+
+app.post('/api/push/test', auth, async (req, res) => {
+    const result = await push.notifyAll({
+        title: '🔔 Test réussi !',
+        body: 'Les notifications push du dashboard fonctionnent sur cet appareil.',
+        tag: 'test',
+    });
+    res.json(result);
+});
+
+/* ============================================================
+   JOURS FÉRIÉS FRANÇAIS — calculés automatiquement chaque année
+   (fêtes fixes + fêtes mobiles basées sur Pâques, algorithme de Meeus)
+   ============================================================ */
+function easterDate(year) {
+    const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+    const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(Date.UTC(year, month - 1, day));
+}
+
+function frenchHolidays(year) {
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const plus = (d, days) => new Date(d.getTime() + days * 86400000);
+    const easter = easterDate(year);
+    return [
+        { date: `${year}-01-01`, name: "Jour de l'an" },
+        { date: iso(plus(easter, 1)),  name: 'Lundi de Pâques' },
+        { date: `${year}-05-01`, name: 'Fête du Travail' },
+        { date: `${year}-05-08`, name: 'Victoire 1945' },
+        { date: iso(plus(easter, 39)), name: 'Ascension' },
+        { date: iso(plus(easter, 50)), name: 'Lundi de Pentecôte' },
+        { date: `${year}-07-14`, name: 'Fête nationale' },
+        { date: `${year}-08-15`, name: 'Assomption' },
+        { date: `${year}-11-01`, name: 'Toussaint' },
+        { date: `${year}-11-11`, name: 'Armistice 1918' },
+        { date: `${year}-12-25`, name: 'Noël' },
+    ].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+app.get('/api/holidays', auth, (req, res) => {
+    const year = Number(req.query.year) || new Date().getFullYear();
+    // Année demandée + la suivante, pour couvrir la fin d'année sans requête supplémentaire
+    res.json([...frenchHolidays(year), ...frenchHolidays(year + 1)]);
+});
+
+/* ============================================================
+   CONTEXTE LOCAL D'UN VISITEUR — météo + heure locale
+   Météo via open-meteo.com (gratuit, sans clé API)
+   ============================================================ */
+const WEATHER_CODES = {
+    0: '☀️ Ciel dégagé', 1: '🌤️ Plutôt dégagé', 2: '⛅ Partiellement nuageux', 3: '☁️ Couvert',
+    45: '🌫️ Brouillard', 48: '🌫️ Brouillard givrant',
+    51: '🌦️ Bruine légère', 53: '🌦️ Bruine', 55: '🌧️ Bruine dense',
+    61: '🌧️ Pluie légère', 63: '🌧️ Pluie', 65: '🌧️ Pluie forte',
+    66: '🌧️ Pluie verglaçante', 67: '🌧️ Pluie verglaçante forte',
+    71: '🌨️ Neige légère', 73: '🌨️ Neige', 75: '❄️ Neige forte', 77: '❄️ Grésil',
+    80: '🌦️ Averses légères', 81: '🌧️ Averses', 82: '⛈️ Averses violentes',
+    85: '🌨️ Averses de neige', 86: '🌨️ Fortes averses de neige',
+    95: '⛈️ Orage', 96: '⛈️ Orage avec grêle', 99: '⛈️ Orage violent avec grêle',
+};
+
+app.get('/api/local-context', auth, async (req, res) => {
+    const lat = Number(req.query.lat), lon = Number(req.query.lon);
+    const tz = req.query.tz || null;
+    const out = { weather: null, localTime: null, timezone: tz };
+
+    // Heure locale du visiteur, calculée depuis son fuseau
+    if (tz) {
+        try {
+            out.localTime = new Intl.DateTimeFormat('fr-FR', {
+                timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit',
+            }).format(new Date());
+        } catch { /* fuseau invalide — on ignore */ }
+    }
+
+    // Météo actuelle à sa position
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 5000);
+            const r = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`,
+                { signal: ctrl.signal }
+            ).finally(() => clearTimeout(tid));
+            if (r.ok) {
+                const d = await r.json();
+                const cw = d.current_weather;
+                if (cw) {
+                    out.weather = {
+                        temperature: Math.round(cw.temperature),
+                        label: WEATHER_CODES[cw.weathercode] || '🌡️ Météo',
+                        windspeed: Math.round(cw.windspeed),
+                    };
+                }
+            }
+        } catch { /* météo indisponible — pas bloquant */ }
+    }
+    res.json(out);
+});
+
 app.post('/api/leads', async (req, res) => {
     const { name, email, message, source, budget } = req.body || {};
     if (!email || !message) return res.status(400).json({ error: 'email et message requis' });
@@ -383,6 +508,11 @@ app.post('/api/leads', async (req, res) => {
         }
         mailer.sendMail({ ...mailer.leadConfirmationEmail(lead), meta: { type: 'lead_confirmation', relatedId: lead.id } }).catch(() => {});
         mailer.sendMail({ ...mailer.leadNotificationEmail(lead), meta: { type: 'lead_notification', relatedId: lead.id } }).catch(() => {});
+        push.notifyAll({
+            title: '🎯 Nouveau lead !',
+            body: `${lead.name || lead.email}${lead.tracking.geo?.city ? ' · ' + lead.tracking.geo.city : ''} — ${(lead.message || '').slice(0, 90)}`,
+            tag: 'lead-' + lead.id,
+        }).catch(() => {});
     })();
 });
 
@@ -459,6 +589,11 @@ app.post('/api/appointments', async (req, res) => {
         }
         mailer.sendMail({ ...mailer.appointmentConfirmationEmail(appt), meta: { type: 'appointment_confirmation', relatedId: appt.id } }).catch(() => {});
         mailer.sendMail({ ...mailer.appointmentNotificationEmail(appt), meta: { type: 'appointment_notification', relatedId: appt.id } }).catch(() => {});
+        push.notifyAll({
+            title: '📅 Nouvelle demande de RDV !',
+            body: `${appt.email} — ${appt.subject}${appt.date_text ? ' (' + appt.date_text + ')' : ''}`,
+            tag: 'appt-' + appt.id,
+        }).catch(() => {});
     })();
 });
 

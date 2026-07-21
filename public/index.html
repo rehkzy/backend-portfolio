@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Florian B.</title>
+<link rel="manifest" href="/dashboard/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/dashboard/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Florian B.">
+<meta name="theme-color" content="#0a0a0a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -1720,6 +1726,25 @@
                 <div class="drawer-field"><label>Rôle</label><div class="value" id="accRole">—</div></div>
                 <button class="btn-primary" id="saveAccountNameBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer le nom</button>
             </div>
+            <div class="panel" style="max-width:480px; margin-bottom:1.2rem;">
+                <h3>🔔 Notifications push</h3>
+                <p class="cell-muted" style="font-size:0.8rem; margin-bottom:0.8rem;">
+                    Reçois une notification sur cet appareil à chaque nouveau lead ou demande de RDV, même quand le dashboard est fermé.
+                </p>
+                <div id="pushIosHint" class="cell-muted" style="display:none; font-size:0.78rem; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:0.7rem 0.8rem; margin-bottom:0.8rem; line-height:1.6;">
+                    📱 <strong>Sur iPhone</strong>, les notifications ne marchent que si le dashboard est installé sur l'écran d'accueil :<br>
+                    1. Ouvre cette page dans <strong>Safari</strong><br>
+                    2. Touche le bouton <strong>Partager</strong> (carré avec flèche vers le haut)<br>
+                    3. Choisis <strong>« Sur l'écran d'accueil »</strong> puis <strong>Ajouter</strong><br>
+                    4. Ouvre l'app <strong>« Florian B. »</strong> depuis l'écran d'accueil et reviens ici activer les notifications
+                </div>
+                <div id="pushStatus" class="cell-muted" style="font-size:0.8rem; margin-bottom:0.8rem;">Vérification…</div>
+                <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                    <button class="btn-primary" id="pushEnableBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Activer sur cet appareil</button>
+                    <button class="btn-secondary" id="pushDisableBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Désactiver</button>
+                    <button class="btn-secondary" id="pushTestBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Envoyer un test</button>
+                </div>
+            </div>
             <div class="panel" style="max-width:480px;">
                 <h3>Changer mon mot de passe</h3>
                 <div class="login-error" id="accPasswordError" style="display:none;"></div>
@@ -1993,7 +2018,7 @@ function switchView(view) {
     if (view === 'projects') loadProjectsTrack();
     if (view === 'calendar') loadContentCalendar();
     if (view === 'team') loadTeam();
-    if (view === 'account') loadAccount();
+    if (view === 'account') { loadAccount(); refreshPushUI(); }
     if (view === 'journal') loadJournal();
     if (view === 'emails') loadEmails();
 }
@@ -3194,11 +3219,39 @@ function trackingSection(t) {
                 <div class="tc-value">${escapeHtml(String(value))}</div>
             </div>`).join('')}
         </div>
+        <div id="localContextChips"></div>
         ${t.pagesVisited ? `
         <div class="tc-label" style="margin-top:0.6rem;">Parcours de navigation</div>
         <div class="tracking-path">${escapeHtml(t.pagesVisited)}</div>
         ` : ''}
     </div>`;
+}
+
+/* Météo actuelle + heure locale du visiteur — chargées après ouverture du drawer */
+async function loadLocalContext(t) {
+    const el = document.getElementById('localContextChips');
+    if (!el || !t) return;
+    const geo = t.geo || {};
+    const tz = geo.timezone || t.timezone || null;
+    if (!tz && (geo.lat == null || geo.lon == null)) return;
+    try {
+        const params = new URLSearchParams();
+        if (geo.lat != null) params.set('lat', geo.lat);
+        if (geo.lon != null) params.set('lon', geo.lon);
+        if (tz) params.set('tz', tz);
+        const ctx = await api('/api/local-context?' + params.toString());
+        const chips = [];
+        if (ctx.localTime) chips.push(['Heure locale', '🕐 ' + ctx.localTime]);
+        if (ctx.weather) chips.push(['Météo sur place', `${ctx.weather.label} · ${ctx.weather.temperature}°C`]);
+        if (!chips.length) return;
+        el.innerHTML = `<div class="tracking-grid" style="margin-top:0.6rem;">
+            ${chips.map(([label, value]) => `
+            <div class="tracking-chip">
+                <div class="tc-label">${label}</div>
+                <div class="tc-value">${escapeHtml(value)}</div>
+            </div>`).join('')}
+        </div>`;
+    } catch { /* silencieux — juste un bonus de contexte */ }
 }
 
 function countryFlag(code) {
@@ -3253,6 +3306,7 @@ function openLeadDrawer(id) {
     document.querySelectorAll('.reply-template-btn').forEach(btn => {
         btn.onclick = () => { document.getElementById('replyMessage').value = REPLY_TEMPLATES[btn.dataset.template](l); };
     });
+    loadLocalContext(l.tracking);
 }
 
 const REPLY_TEMPLATES = {
@@ -3493,6 +3547,7 @@ function openApptDrawer(id) {
         ${trackingSection(a.tracking)}
     `;
     openDrawer();
+    loadLocalContext(a.tracking);
 }
 
 async function addApptToLeads(id) {
@@ -4858,18 +4913,44 @@ let calendarCache = [];
 const CONTENT_STATUS_LABELS = { idea: 'Idée', scheduled: 'Programmé', posted: 'Publié' };
 const PLATFORM_ICONS = { instagram: '📸', linkedin: '💼', newsletter: '✉️', autre: '📱' };
 
+let holidaysCache = [];
 async function loadContentCalendar() {
-    try { calendarCache = await api('/api/content-calendar'); renderCalendarList(); }
+    try {
+        if (!holidaysCache.length) {
+            try { holidaysCache = await api('/api/holidays'); } catch { holidaysCache = []; }
+        }
+        calendarCache = await api('/api/content-calendar');
+        renderCalendarList();
+    }
     catch (e) { toast(e.message); }
+}
+
+function isHoliday(dateStr) {
+    if (!dateStr) return null;
+    return holidaysCache.find(h => h.date === dateStr.slice(0, 10)) || null;
+}
+
+function upcomingHolidaysHTML() {
+    const today = new Date().toISOString().slice(0, 10);
+    const limit = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+    const next = holidaysCache.filter(h => h.date >= today && h.date <= limit);
+    if (!next.length) return '';
+    return `
+    <div class="panel" style="margin-bottom:1.2rem;">
+        <div class="edit-card-label" style="margin-bottom:0.6rem;">🇫🇷 Jours fériés dans les 3 prochains mois — pense à adapter tes publications et tes délais de réponse</div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            ${next.map(h => `<span class="badge contacted" style="font-size:0.72rem;">${formatDate(h.date)} · ${h.name}</span>`).join('')}
+        </div>
+    </div>`;
 }
 
 function renderCalendarList() {
     const wrap = document.getElementById('calendarListWrap');
-    if (!calendarCache.length) { wrap.innerHTML = emptyStateHTML('Aucune idée de contenu pour le moment.'); return; }
-    wrap.innerHTML = calendarCache.map(c => `
+    if (!calendarCache.length) { wrap.innerHTML = upcomingHolidaysHTML() + emptyStateHTML('Aucune idée de contenu pour le moment.'); return; }
+    wrap.innerHTML = upcomingHolidaysHTML() + calendarCache.map(c => `
         <div class="edit-card" onclick="openCalendarDrawer(${c.id})" style="cursor:pointer;">
             <div class="edit-card-fields">
-                <div class="edit-card-label">${PLATFORM_ICONS[c.platform] || '📱'} ${c.date ? formatDate(c.date) : 'Date non définie'}</div>
+                <div class="edit-card-label">${PLATFORM_ICONS[c.platform] || '📱'} ${c.date ? formatDate(c.date) : 'Date non définie'}${isHoliday(c.date) ? ` <span class="badge new" style="font-size:0.62rem;">🇫🇷 ${isHoliday(c.date).name}</span>` : ''}</div>
                 <strong style="color:var(--text); font-size:0.95rem;">${escapeHtml(c.title)}</strong>
                 ${c.caption ? `<p class="cell-muted" style="font-size:0.8rem;">${escapeHtml(c.caption.slice(0, 80))}${c.caption.length > 80 ? '…' : ''}</p>` : ''}
             </div>
@@ -5995,6 +6076,105 @@ function toast(msg) {
     if (isInvite) { document.getElementById('loginScreen').style.display = 'flex'; return; }
     if (TOKEN) boot(); else document.getElementById('loginScreen').style.display = 'flex';
 })();
+
+/* ============================================================
+   NOTIFICATIONS PUSH — activation depuis "Mon compte"
+   ============================================================ */
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const IS_STANDALONE = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+async function getSWRegistration() {
+    return navigator.serviceWorker.register('/dashboard/sw.js', { scope: '/dashboard/' });
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function refreshPushUI() {
+    const status = document.getElementById('pushStatus');
+    const enableBtn = document.getElementById('pushEnableBtn');
+    const disableBtn = document.getElementById('pushDisableBtn');
+    const testBtn = document.getElementById('pushTestBtn');
+    const iosHint = document.getElementById('pushIosHint');
+    if (!status) return;
+    enableBtn.style.display = disableBtn.style.display = testBtn.style.display = 'none';
+
+    // iPhone hors PWA installée : le navigateur ne propose pas les notifications
+    if (IS_IOS && !IS_STANDALONE) {
+        iosHint.style.display = 'block';
+        status.textContent = "⚠️ Installe d'abord le dashboard sur ton écran d'accueil (voir ci-dessus).";
+        return;
+    }
+    if (!pushSupported()) {
+        status.textContent = "❌ Ce navigateur ne prend pas en charge les notifications push. Sur iPhone : iOS 16.4 minimum requis.";
+        return;
+    }
+    if (Notification.permission === 'denied') {
+        status.textContent = "🚫 Les notifications sont bloquées dans les réglages de cet appareil. Réactive-les dans Réglages → Notifications → Florian B.";
+        return;
+    }
+    try {
+        const reg = await getSWRegistration();
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+            status.textContent = '✅ Notifications activées sur cet appareil.';
+            disableBtn.style.display = 'inline-block';
+            testBtn.style.display = 'inline-block';
+        } else {
+            status.textContent = 'Les notifications ne sont pas encore activées sur cet appareil.';
+            enableBtn.style.display = 'inline-block';
+        }
+    } catch (e) {
+        status.textContent = 'Erreur : ' + e.message;
+    }
+}
+
+document.getElementById('pushEnableBtn')?.addEventListener('click', async () => {
+    const status = document.getElementById('pushStatus');
+    try {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') { status.textContent = '🚫 Permission refusée.'; return; }
+        const { publicKey } = await api('/api/push/public-key');
+        if (!publicKey) throw new Error('Clé serveur indisponible — redéploie le backend.');
+        const reg = await getSWRegistration();
+        await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+        await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(sub.toJSON()) });
+        toast('🔔 Notifications activées !');
+        refreshPushUI();
+    } catch (e) { status.textContent = 'Erreur : ' + e.message; }
+});
+
+document.getElementById('pushDisableBtn')?.addEventListener('click', async () => {
+    try {
+        const reg = await getSWRegistration();
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+            await api('/api/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
+            await sub.unsubscribe();
+        }
+        toast('Notifications désactivées sur cet appareil');
+        refreshPushUI();
+    } catch (e) { toast('Erreur : ' + e.message); }
+});
+
+document.getElementById('pushTestBtn')?.addEventListener('click', async () => {
+    try {
+        const r = await api('/api/push/test', { method: 'POST' });
+        toast(r.sent ? '📤 Notification de test envoyée !' : 'Aucun appareil abonné trouvé');
+    } catch (e) { toast('Erreur : ' + e.message); }
+});
 </script>
 </body>
 </html>
