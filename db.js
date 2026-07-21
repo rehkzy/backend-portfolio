@@ -12,12 +12,11 @@ const db = low(adapter);
 // Données par défaut — contenu réel de florian-b.fr pré-rempli
 const DEFAULTS = {
     "leads": [],
-    "pushSubscriptions": [],
     "watchSites": [],
     "blogPosts": [],
-    "pushVapidKeys": null,
     "appointments": [],
     "events": [],
+    "liveSessions": [],
     "quotes": [],
     "invoices": [],
     "clients": [],
@@ -435,6 +434,10 @@ const DEFAULTS = {
 };
 
 db.defaults(DEFAULTS).write();
+
+// Collections ajoutées après coup (les bases existantes ne les ont pas encore)
+if (!db.has('pushSubscriptions').value()) db.set('pushSubscriptions', []).write();
+if (!db.has('pushConfig').value()) db.set('pushConfig', null).write();
 
 // Migration douce : si aucun utilisateur n'existe encore, on crée le compte
 // admin historique à partir de ADMIN_PASSWORD_HASH (variable Railway existante),

@@ -3,15 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<title>Dashboard — Florian B.</title>
 <link rel="manifest" href="/dashboard/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/dashboard/icon-192.png">
+<link rel="apple-touch-icon" href="/dashboard/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Florian B.">
 <meta name="theme-color" content="#0a0a0a">
-<title>Dashboard — Florian B.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
     :root {
         --accent: #da2c48;
@@ -598,6 +601,10 @@
         .login-card { padding: 1.8rem 1.4rem; }
         .kanban-col { min-width: 78vw; }
     }
+    #liveMap { border-radius: var(--radius-lg); }
+    .leaflet-popup-content-wrapper { border-radius: 10px; }
+    .leaflet-popup-content { margin: 0.8rem 0.9rem; }
+    .leaflet-container { font-family: 'Inter', sans-serif; background: #0a0a0a; }
 </style>
 </head>
 <body data-theme="light">
@@ -671,6 +678,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
                 Analytics
                 <span class="badge" id="realtimeBadge" style="display:none; background:#22c55e;"></span>
+            </div>
+            <div class="nav-item" data-view="live-map">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                Visiteurs en direct
+                <span class="badge" id="liveMapBadge" style="display:none; background:#22c55e;"></span>
             </div>
         </div>
 
@@ -791,10 +803,6 @@
 
         <div class="nav-group">
             <div class="nav-group-label">Système</div>
-            <div class="nav-item" id="pushNotifBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                <span id="pushNotifLabel">Notifications iPhone</span>
-            </div>
             <div class="nav-item" id="backupBtn" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Télécharger une sauvegarde
@@ -882,7 +890,7 @@
                 </div>
                 <div class="panel">
                     <h3>À quelles heures arrivent tes leads ?</h3>
-                    <p class="cell-muted" style="font-size:0.72rem;margin-bottom:0.6rem;">Jour × heure — plus c'est rose, plus tu reçois de contacts à ce moment. Utile pour caler tes posts et tes dispos.</p>
+                    <p class="cell-muted" style="font-size:0.72rem;margin-bottom:0.6rem;">Jour × heure — plus c'est rose, plus tu reçois de contacts à ce moment.</p>
                     <div id="leadsHeatmap" style="overflow-x:auto;"></div>
                 </div>
                 <div class="panel">
@@ -1649,7 +1657,7 @@
             </div>
             <div class="panel" id="profitabilityPanel" style="margin-bottom:1rem;display:none;">
                 <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">💶 Rentabilité réelle par projet</h3>
-                <p class="cell-muted" style="font-size:0.75rem;margin-bottom:0.8rem;">Heures enregistrées (⏱️ dans chaque fiche projet) × factures payées du client = ton vrai taux horaire. Tu sauras quels types de projets valent ton temps.</p>
+                <p class="cell-muted" style="font-size:0.75rem;margin-bottom:0.8rem;">Heures enregistrées (⏱️ dans chaque fiche projet) × factures payées du client = ton vrai taux horaire.</p>
                 <div id="profitabilityWrap"></div>
             </div>
             <div class="kanban-board" id="projectsKanban"></div>
@@ -1708,6 +1716,27 @@
                 </div>
             </div>
             <div id="expensesTableWrap"></div>
+        </section>
+
+        <section class="view" id="view-live-map">
+            <div class="topbar">
+                <h2>Visiteurs en direct</h2>
+                <div class="topbar-actions">
+                    <span class="cell-muted" style="font-size:0.78rem; display:flex; align-items:center; gap:0.4rem;">
+                        <span id="liveMapDot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                        <span id="liveMapCount">0 en ligne</span>
+                    </span>
+                </div>
+            </div>
+            <p class="cell-muted" style="font-size:0.8rem; margin-bottom:1rem;">
+                Position, IP, appareil et durée de visite de chaque visiteur actuellement sur florian-b.fr — mis à jour automatiquement toutes les 8 secondes. Basé sur la géolocalisation de l'adresse IP : précision généralement à l'échelle de la ville, pas de l'adresse exacte.
+            </p>
+            <div class="panel" style="padding:0; overflow:hidden; margin-bottom:1.2rem;">
+                <div id="liveMap" style="width:100%; height:480px; background:#0a0a0a;"></div>
+            </div>
+            <div class="panel" style="padding:0;">
+                <div id="liveMapTableWrap"></div>
+            </div>
         </section>
 
         <!-- CALENDRIER DE CONTENU -->
@@ -1783,6 +1812,25 @@
                 <div class="drawer-field"><label>Email</label><div class="value" id="accEmail">—</div></div>
                 <div class="drawer-field"><label>Rôle</label><div class="value" id="accRole">—</div></div>
                 <button class="btn-primary" id="saveAccountNameBtn" style="width:auto; padding:0.6rem 1.2rem;">Enregistrer le nom</button>
+            </div>
+            <div class="panel" style="max-width:480px; margin-bottom:1.2rem;">
+                <h3>🔔 Notifications push</h3>
+                <p class="cell-muted" style="font-size:0.8rem; margin-bottom:0.8rem;">
+                    Reçois une notification sur cet appareil à chaque nouveau lead ou demande de RDV, même quand le dashboard est fermé.
+                </p>
+                <div id="pushIosHint" class="cell-muted" style="display:none; font-size:0.78rem; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:0.7rem 0.8rem; margin-bottom:0.8rem; line-height:1.6;">
+                    📱 <strong>Sur iPhone</strong>, les notifications ne marchent que si le dashboard est installé sur l'écran d'accueil :<br>
+                    1. Ouvre cette page dans <strong>Safari</strong><br>
+                    2. Touche le bouton <strong>Partager</strong> (carré avec flèche vers le haut)<br>
+                    3. Choisis <strong>« Sur l'écran d'accueil »</strong> puis <strong>Ajouter</strong><br>
+                    4. Ouvre l'app <strong>« Florian B. »</strong> depuis l'écran d'accueil et reviens ici activer les notifications
+                </div>
+                <div id="pushStatus" class="cell-muted" style="font-size:0.8rem; margin-bottom:0.8rem;">Vérification…</div>
+                <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                    <button class="btn-primary" id="pushEnableBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Activer sur cet appareil</button>
+                    <button class="btn-secondary" id="pushDisableBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Désactiver</button>
+                    <button class="btn-secondary" id="pushTestBtn" style="width:auto; padding:0.6rem 1.2rem; display:none;">Envoyer un test</button>
+                </div>
             </div>
             <div class="panel" style="max-width:480px;">
                 <h3>Changer mon mot de passe</h3>
@@ -2057,8 +2105,10 @@ function switchView(view) {
     if (view === 'business-settings') loadBusinessSettings();
     if (view === 'projects') loadProjectsTrack();
     if (view === 'calendar') loadContentCalendar();
+    if (view === 'live-map') loadLiveMap();
+    else stopLiveMapPolling();
     if (view === 'team') loadTeam();
-    if (view === 'account') loadAccount();
+    if (view === 'account') { loadAccount(); refreshPushUI(); }
     if (view === 'journal') loadJournal();
     if (view === 'emails') loadEmails();
 }
@@ -3053,33 +3103,6 @@ async function loadOverview() {
     } catch (e) { toast(e.message); }
 }
 
-/* ---- Heatmap jour × heure des leads ---- */
-async function renderLeadsHeatmap() {
-    const el = document.getElementById('leadsHeatmap');
-    if (!el) return;
-    try {
-        if (!leadsCache.length) leadsCache = await api('/api/leads');
-    } catch { return; }
-    const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
-    let max = 0;
-    leadsCache.forEach(l => {
-        const d = new Date(l.created_at);
-        if (isNaN(d)) return;
-        const day = (d.getDay() + 6) % 7; // lundi = 0
-        grid[day][d.getHours()]++;
-        if (grid[day][d.getHours()] > max) max = grid[day][d.getHours()];
-    });
-    if (!max) { el.innerHTML = '<p class="cell-muted" style="font-size:0.8rem;">Pas encore assez de données.</p>'; return; }
-    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-    el.innerHTML = `<table style="border-collapse:separate;border-spacing:2px;font-size:0.6rem;">
-        <tr><td></td>${Array.from({ length: 24 }, (_, h) => `<td style="color:var(--text-muted);text-align:center;padding:0 1px;">${h % 3 === 0 ? h : ''}</td>`).join('')}</tr>
-        ${grid.map((row, d) => `<tr><td style="color:var(--text-muted);padding-right:4px;">${days[d]}</td>${row.map((v, h) => {
-            const a = v / max;
-            return `<td title="${days[d]} ${h}h — ${v} lead${v > 1 ? 's' : ''}" style="width:14px;height:14px;border-radius:3px;background:${v ? `rgba(255,47,118,${(0.15 + a * 0.85).toFixed(2)})` : 'var(--border)'};"></td>`;
-        }).join('')}</tr>`).join('')}
-    </table>`;
-}
-
 /* ---- Anneau de progression (taux de conversion) ---- */
 function renderConversionRing(pct) {
     const el = document.getElementById('conversionRing');
@@ -3293,11 +3316,39 @@ function trackingSection(t) {
                 <div class="tc-value">${escapeHtml(String(value))}</div>
             </div>`).join('')}
         </div>
+        <div id="localContextChips"></div>
         ${t.pagesVisited ? `
         <div class="tc-label" style="margin-top:0.6rem;">Parcours de navigation</div>
         <div class="tracking-path">${escapeHtml(t.pagesVisited)}</div>
         ` : ''}
     </div>`;
+}
+
+/* Météo actuelle + heure locale du visiteur — chargées après ouverture du drawer */
+async function loadLocalContext(t) {
+    const el = document.getElementById('localContextChips');
+    if (!el || !t) return;
+    const geo = t.geo || {};
+    const tz = geo.timezone || t.timezone || null;
+    if (!tz && (geo.lat == null || geo.lon == null)) return;
+    try {
+        const params = new URLSearchParams();
+        if (geo.lat != null) params.set('lat', geo.lat);
+        if (geo.lon != null) params.set('lon', geo.lon);
+        if (tz) params.set('tz', tz);
+        const ctx = await api('/api/local-context?' + params.toString());
+        const chips = [];
+        if (ctx.localTime) chips.push(['Heure locale', '🕐 ' + ctx.localTime]);
+        if (ctx.weather) chips.push(['Météo sur place', `${ctx.weather.label} · ${ctx.weather.temperature}°C`]);
+        if (!chips.length) return;
+        el.innerHTML = `<div class="tracking-grid" style="margin-top:0.6rem;">
+            ${chips.map(([label, value]) => `
+            <div class="tracking-chip">
+                <div class="tc-label">${label}</div>
+                <div class="tc-value">${escapeHtml(value)}</div>
+            </div>`).join('')}
+        </div>`;
+    } catch { /* silencieux — juste un bonus de contexte */ }
 }
 
 function countryFlag(code) {
@@ -3347,58 +3398,13 @@ function openLeadDrawer(id) {
         <div class="drawer-actions">
             <button class="btn-primary" id="sendReplyBtn" onclick="sendLeadReply(${l.id})">Envoyer la réponse</button>
         </div>
-        <div id="leadLocalContext"></div>
         ${trackingSection(l.tracking)}
     `;
     openDrawer();
-    loadLeadLocalContext(l.id);
     document.querySelectorAll('.reply-template-btn').forEach(btn => {
         btn.onclick = () => { document.getElementById('replyMessage').value = REPLY_TEMPLATES[btn.dataset.template](l); };
     });
-}
-
-// Dictée vocale (API du navigateur, gratuite — Safari iPhone et Chrome)
-let activeRecognition = null;
-function dictateInto(targetId, btn) {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { toast('La dictée vocale n\'est pas disponible sur ce navigateur.'); return; }
-    if (activeRecognition) { activeRecognition.stop(); return; }
-    const target = document.getElementById(targetId);
-    if (!target) return;
-    const rec = new SR();
-    rec.lang = 'fr-FR';
-    rec.continuous = true;
-    rec.interimResults = false;
-    const originalLabel = btn.textContent;
-    btn.textContent = '⏹ Stop';
-    rec.onresult = (e) => {
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            if (e.results[i].isFinal) {
-                const txt = e.results[i][0].transcript.trim();
-                target.value = (target.value ? target.value + ' ' : '') + txt;
-            }
-        }
-    };
-    rec.onend = () => { activeRecognition = null; btn.textContent = originalLabel; };
-    rec.onerror = () => { activeRecognition = null; btn.textContent = originalLabel; toast('Dictée interrompue.'); };
-    activeRecognition = rec;
-    rec.start();
-    toast('🎤 Je t\'écoute... (re-clique pour arrêter)');
-}
-
-// Heure locale + météo du lead (utile pour savoir quand l'appeler)
-async function loadLeadLocalContext(id) {
-    const el = document.getElementById('leadLocalContext');
-    if (!el) return;
-    try {
-        const ctx = await api(`/api/admin/leads/${id}/local-context`);
-        if (!ctx.localTime && !ctx.weather) return;
-        el.innerHTML = `
-        <div style="margin-top:1.2rem; padding:0.9rem 1rem; border:1px solid var(--border); border-radius:10px; display:flex; gap:1.2rem; flex-wrap:wrap;">
-            ${ctx.localTime ? `<div><div class="tc-label">🕐 Heure locale${ctx.city ? ' à ' + escapeHtml(ctx.city) : ''}</div><div class="tc-value" style="text-transform:capitalize;">${escapeHtml(ctx.localTime)}</div></div>` : ''}
-            ${ctx.weather ? `<div><div class="tc-label">Météo actuelle</div><div class="tc-value">${escapeHtml(ctx.weather.label)} · ${ctx.weather.temperature}°C</div></div>` : ''}
-        </div>`;
-    } catch {}
+    loadLocalContext(l.tracking);
 }
 
 const REPLY_TEMPLATES = {
@@ -3639,6 +3645,7 @@ function openApptDrawer(id) {
         ${trackingSection(a.tracking)}
     `;
     openDrawer();
+    loadLocalContext(a.tracking);
 }
 
 async function addApptToLeads(id) {
@@ -4609,7 +4616,7 @@ function renderTreasuryReminders(reminders) {
                 ${quotesToRemind.map(q => `
                     <tr>
                         <td><span class="badge" style="background:var(--surface-2);color:var(--text-muted);">Devis</span></td>
-                        <td>${escapeHtml(q.clientName || q.clientEmail)}${q.opens && q.opens.length ? ` <span title="Ouvert ${q.opens.length} fois — première ouverture le ${formatDate(q.firstOpenedAt, true)}" style="font-size:0.75rem;">👀${q.opens.length > 1 ? '×' + q.opens.length : ''}</span>` : ''}</td>
+                        <td>${escapeHtml(q.clientName || q.clientEmail)}</td>
                         <td class="cell-muted">${(q.total || 0).toFixed(2)} €</td>
                         <td class="cell-muted">Envoyé le ${formatDate(q.sent_at)}, sans réponse</td>
                         <td><button class="btn-secondary" style="width:auto;padding:0.4rem 0.8rem;font-size:0.78rem;" onclick="sendQuoteReminder(${q.id})">Relancer</button></td>
@@ -4739,14 +4746,75 @@ function attachQuoteItemEvents(wrap) {
     wrap.querySelectorAll('.qi-remove').forEach(btn => btn.onclick = () => btn.closest('.quote-item-row').remove());
 }
 
+/* ---- Heatmap jour × heure des leads ---- */
+async function renderLeadsHeatmap() {
+    const el = document.getElementById('leadsHeatmap');
+    if (!el) return;
+    try {
+        if (!leadsCache.length) leadsCache = await api('/api/leads');
+    } catch { return; }
+    const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+    let max = 0;
+    leadsCache.forEach(l => {
+        const d = new Date(l.created_at);
+        if (isNaN(d)) return;
+        const day = (d.getDay() + 6) % 7; // lundi = 0
+        grid[day][d.getHours()]++;
+        if (grid[day][d.getHours()] > max) max = grid[day][d.getHours()];
+    });
+    if (!max) { el.innerHTML = '<p class="cell-muted" style="font-size:0.8rem;">Pas encore assez de données.</p>'; return; }
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    el.innerHTML = `<table style="border-collapse:separate;border-spacing:2px;font-size:0.6rem;">
+        <tr><td></td>${Array.from({ length: 24 }, (_, h) => `<td style="color:var(--text-muted);text-align:center;padding:0 1px;">${h % 3 === 0 ? h : ''}</td>`).join('')}</tr>
+        ${grid.map((row, d) => `<tr><td style="color:var(--text-muted);padding-right:4px;">${days[d]}</td>${row.map((v, h) => {
+            const a = v / max;
+            return `<td title="${days[d]} ${h}h — ${v} lead${v > 1 ? 's' : ''}" style="width:14px;height:14px;border-radius:3px;background:${v ? `rgba(255,47,118,${(0.15 + a * 0.85).toFixed(2)})` : 'var(--border)'};"></td>`;
+        }).join('')}</tr>`).join('')}
+    </table>`;
+}
+
+
+// Dictée vocale (API du navigateur, gratuite — Safari iPhone et Chrome)
+let activeRecognition = null;
+function dictateInto(targetId, btn) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast('La dictée vocale n\'est pas disponible sur ce navigateur.'); return; }
+    if (activeRecognition) { activeRecognition.stop(); return; }
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    const rec = new SR();
+    rec.lang = 'fr-FR';
+    rec.continuous = true;
+    rec.interimResults = false;
+    const originalLabel = btn.textContent;
+    btn.textContent = '⏹ Stop';
+    rec.onresult = (e) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) {
+                const txt = e.results[i][0].transcript.trim();
+                target.value = (target.value ? target.value + ' ' : '') + txt;
+            }
+        }
+    };
+    rec.onend = () => { activeRecognition = null; btn.textContent = originalLabel; };
+    rec.onerror = () => { activeRecognition = null; btn.textContent = originalLabel; toast('Dictée interrompue.'); };
+    activeRecognition = rec;
+    rec.start();
+    toast('🎤 Je t\'écoute... (re-clique pour arrêter)');
+}
+
+
 function openQuoteDrawer(id) {
     const q = id ? quotesCache.find(x => x.id === id) : null;
+    window.__quoteOpensBanner = q && q.opens && q.opens.length
+        ? `<div style="margin-bottom:1rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:9px;font-size:0.82rem;">👀 Ouvert <strong>${q.opens.length} fois</strong> par le client — dernière fois ${formatDate(q.opens[q.opens.length-1], true)}</div>`
+        : (q && q.status === 'sent' ? `<div style="margin-bottom:1rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:9px;font-size:0.82rem;color:var(--text-muted);">📭 Pas encore ouvert par le client</div>` : '');
     document.getElementById('drawer').innerHTML = `
         <div class="drawer-header">
             <h3>${q ? 'Devis ' + (q.quoteNumber || '#' + q.id) : 'Nouveau devis'}</h3>
             <button class="drawer-close" onclick="closeDrawer()">✕</button>
         </div>
-        ${q && q.opens && q.opens.length ? `<div style="margin-bottom:1rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:9px;font-size:0.82rem;">👀 Ouvert <strong>${q.opens.length} fois</strong> par le client — dernière fois ${formatDate(q.opens[q.opens.length-1], true)}</div>` : q && q.status === 'sent' ? `<div style="margin-bottom:1rem;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:9px;font-size:0.82rem;color:var(--text-muted);">📭 Pas encore ouvert par le client</div>` : ''}
+        ${window.__quoteOpensBanner || ''}
         <div class="drawer-field autocomplete-wrap">
             <label>Nom du client</label>
             <input type="text" id="qClientName" value="${escapeAttr(q?.clientName || '')}" autocomplete="off">
@@ -4940,12 +5008,9 @@ function openProjectTrackDrawer(id) {
         </div>` : ''}
         <div class="drawer-actions">
             <button class="btn-secondary" onclick="saveProjectTrack(${p ? p.id : 'null'})">Enregistrer</button>
+            ${p ? `<button type="button" class="btn-secondary" onclick="copyProjectTrackLink(${p.id})">🔗 Lien de suivi client</button>` : ''}
             ${p ? `<button class="btn-danger" onclick="deleteProjectTrack(${p.id})">Supprimer</button>` : ''}
         </div>
-        ${p ? `<div class="drawer-field" style="margin-top:0.8rem;">
-            <button type="button" class="btn-secondary" onclick="copyProjectTrackLink(${p.id})">🔗 Copier le lien de suivi client</button>
-            <p class="cell-muted" style="font-size:0.72rem;margin-top:0.4rem;">Page privée où le client voit l'avancement de son projet (étapes, checklist, factures). À lui envoyer par email.</p>
-        </div>` : ''}
         ${p ? `
         <div class="drawer-field" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
             <label>⏱️ Suivi du temps — <span id="ptTimeTotal">—</span></label>
@@ -5002,7 +5067,7 @@ async function copyProjectTrackLink(id) {
     try {
         const { url } = await api('/api/projects/' + id + '/track-link');
         await navigator.clipboard.writeText(url);
-        toast('🔗 Lien de suivi copié — colle-le dans un email au client !');
+        toast('🔗 Lien de suivi copié — page privée où le client voit l\'avancement. Colle-le dans un email !');
     } catch (e) { toast('Erreur : ' + e.message); }
 }
 
@@ -5042,48 +5107,41 @@ const PLATFORM_ICONS = { instagram: '📸', linkedin: '💼', newsletter: '✉�
 let holidaysCache = [];
 async function loadContentCalendar() {
     try {
+        if (!holidaysCache.length) {
+            try { holidaysCache = await api('/api/holidays'); } catch { holidaysCache = []; }
+        }
         calendarCache = await api('/api/content-calendar');
-        try { holidaysCache = (await api('/api/holidays')).holidays || []; } catch {}
         renderCalendarList();
-        renderHolidaysPanel();
     }
     catch (e) { toast(e.message); }
 }
 
-function holidayForDate(dateStr) {
+function isHoliday(dateStr) {
     if (!dateStr) return null;
-    const d = String(dateStr).slice(0, 10);
-    return holidaysCache.find(h => h.date === d) || null;
+    return holidaysCache.find(h => h.date === dateStr.slice(0, 10)) || null;
 }
 
-// Panneau "prochains jours fériés" au-dessus du calendrier de contenu
-function renderHolidaysPanel() {
-    let panel = document.getElementById('holidaysPanel');
-    if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'holidaysPanel';
-        const wrap = document.getElementById('calendarListWrap');
-        wrap.parentNode.insertBefore(panel, wrap);
-    }
+function upcomingHolidaysHTML() {
     const today = new Date().toISOString().slice(0, 10);
-    const next = holidaysCache.filter(h => h.date >= today).slice(0, 4);
-    if (!next.length) { panel.innerHTML = ''; return; }
-    panel.innerHTML = `
-    <div class="panel" style="margin-bottom:1rem;">
-        <div class="tc-label" style="margin-bottom:0.5rem;">🇫🇷 Prochains jours fériés (ajoutés automatiquement)</div>
+    const limit = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+    const next = holidaysCache.filter(h => h.date >= today && h.date <= limit);
+    if (!next.length) return '';
+    return `
+    <div class="panel" style="margin-bottom:1.2rem;">
+        <div class="edit-card-label" style="margin-bottom:0.6rem;">🇫🇷 Jours fériés dans les 3 prochains mois — pense à adapter tes publications et tes délais de réponse</div>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            ${next.map(h => `<span class="badge contacted" title="${h.date}">${h.name} · ${formatDate(h.date)}</span>`).join('')}
+            ${next.map(h => `<span class="badge contacted" style="font-size:0.72rem;">${formatDate(h.date)} · ${h.name}</span>`).join('')}
         </div>
     </div>`;
 }
 
 function renderCalendarList() {
     const wrap = document.getElementById('calendarListWrap');
-    if (!calendarCache.length) { wrap.innerHTML = emptyStateHTML('Aucune idée de contenu pour le moment.'); return; }
-    wrap.innerHTML = calendarCache.map(c => `
+    if (!calendarCache.length) { wrap.innerHTML = upcomingHolidaysHTML() + emptyStateHTML('Aucune idée de contenu pour le moment.'); return; }
+    wrap.innerHTML = upcomingHolidaysHTML() + calendarCache.map(c => `
         <div class="edit-card" onclick="openCalendarDrawer(${c.id})" style="cursor:pointer;">
             <div class="edit-card-fields">
-                <div class="edit-card-label">${PLATFORM_ICONS[c.platform] || '📱'} ${c.date ? formatDate(c.date) : 'Date non définie'}${holidayForDate(c.date) ? ` <span class="badge lost" title="Jour férié">🇫🇷 ${holidayForDate(c.date).name}</span>` : ''}</div>
+                <div class="edit-card-label">${PLATFORM_ICONS[c.platform] || '📱'} ${c.date ? formatDate(c.date) : 'Date non définie'}${isHoliday(c.date) ? ` <span class="badge new" style="font-size:0.62rem;">🇫🇷 ${isHoliday(c.date).name}</span>` : ''}</div>
                 <strong style="color:var(--text); font-size:0.95rem;">${escapeHtml(c.title)}</strong>
                 ${c.caption ? `<p class="cell-muted" style="font-size:0.8rem;">${escapeHtml(c.caption.slice(0, 80))}${c.caption.length > 80 ? '…' : ''}</p>` : ''}
             </div>
@@ -5678,50 +5736,6 @@ document.getElementById('publishProjectPagesBtn')?.addEventListener('click', asy
 });
 
 /* ============================================================
-   NOTIFICATIONS PUSH (iPhone / Android / desktop)
-   ============================================================ */
-function urlB64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = window.atob(base64);
-    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-}
-
-async function enablePushNotifications() {
-    // iPhone : les notifications ne marchent que si le dashboard est installé sur l'écran d'accueil
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (isIOS && !isStandalone) {
-        alert("Pour recevoir les notifications sur iPhone :\n\n1. Ouvre cette page dans Safari\n2. Touche le bouton Partager (carré avec une flèche)\n3. Choisis « Sur l'écran d'accueil »\n4. Ouvre l'app « Florian B. » depuis l'écran d'accueil\n5. Reviens ici (menu Système → Notifications iPhone)");
-        return;
-    }
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        alert("Ce navigateur ne prend pas en charge les notifications push.");
-        return;
-    }
-    try {
-        const reg = await navigator.serviceWorker.register('/dashboard/sw.js', { scope: '/dashboard' });
-        await navigator.serviceWorker.ready;
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') { toast('Autorisation refusée — active les notifications dans les réglages.'); return; }
-        const { publicKey } = await api('/api/admin/push/public-key');
-        let sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(publicKey) });
-        }
-        const label = isIOS ? 'iPhone' : (/Android/.test(navigator.userAgent) ? 'Android' : 'Ordinateur');
-        await api('/api/admin/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription: sub.toJSON(), label }) });
-        toast('🔔 Notifications activées sur cet appareil !');
-        await api('/api/admin/push/test', { method: 'POST' });
-    } catch (e) {
-        toast('Erreur : ' + e.message);
-    }
-}
-document.getElementById('pushNotifBtn').addEventListener('click', enablePushNotifications);
-// Ré-enregistre silencieusement le service worker si déjà installé
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/dashboard/sw.js', { scope: '/dashboard' }).catch(() => {}); }
-
-/* ============================================================
    SAUVEGARDE
    ============================================================ */
 document.getElementById('backupBtn').addEventListener('click', async () => {
@@ -5850,8 +5864,8 @@ async function loadBusinessSettings() {
         document.getElementById('bsLeadFollowUpDays').value = b.leadFollowUpDays || 3;
         document.getElementById('bsRdvOpen').value = b.rdvOpenHour || 9;
         document.getElementById('bsRdvClose').value = b.rdvCloseHour || 19;
-        const closed = Array.isArray(b.rdvClosedWeekdays) ? b.rdvClosedWeekdays.map(String) : ['0'];
-        document.querySelectorAll('.bs-rdv-day').forEach(cb => { cb.checked = closed.includes(cb.value); });
+        const closedDaysRdv = Array.isArray(b.rdvClosedWeekdays) ? b.rdvClosedWeekdays.map(String) : ['0'];
+        document.querySelectorAll('.bs-rdv-day').forEach(cb => { cb.checked = closedDaysRdv.includes(cb.value); });
         document.getElementById('bsRdvBlocked').value = b.rdvBlockedDates || '';
         document.getElementById('bsWatchUrls').value = b.watchUrls || '';
         loadWatchStatus();
@@ -6417,6 +6431,229 @@ function toast(msg) {
     if (isInvite) { document.getElementById('loginScreen').style.display = 'flex'; return; }
     if (TOKEN) boot(); else document.getElementById('loginScreen').style.display = 'flex';
 })();
+
+/* ============================================================
+   VISITEURS EN DIRECT — carte Leaflet réelle (tuiles OpenStreetMap
+   sombres), IP, appareil, durée, position précise par ville.
+   ============================================================ */
+let liveMapInstance = null;
+let liveMapMarkers = {};
+let liveMapPollTimer = null;
+
+const DEVICE_ICON = { mobile: '📱', tablet: '📲', desktop: '💻' };
+
+function ensureLiveMap() {
+    if (liveMapInstance) return liveMapInstance;
+    liveMapInstance = L.map('liveMap', { worldCopyJump: true }).setView([46.6, 2.4], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19,
+        subdomains: 'abcd',
+    }).addTo(liveMapInstance);
+    return liveMapInstance;
+}
+
+function liveMapPopupHTML(s) {
+    const geo = s.geo || {};
+    const flag = geo.countryCode ? countryFlag(geo.countryCode) : '';
+    const loc = geo.city ? `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country || ''}` : 'Localisation inconnue';
+    const dur = formatDuration(s.visitDuration || 0);
+    const since = s.online ? "à l'instant" : `il y a ${formatDuration(s.secondsSinceSeen)}`;
+    return `
+        <div style="min-width:240px; font-family:Inter,sans-serif;">
+            <div style="font-weight:800; font-size:0.9rem; margin-bottom:0.35rem;">${flag} ${escapeHtml(loc)}</div>
+            <div style="font-size:0.78rem; line-height:1.7; color:#333;">
+                <div><strong>IP :</strong> ${escapeHtml(s.ip || '—')}</div>
+                ${geo.isp ? `<div><strong>Opérateur :</strong> ${escapeHtml(geo.isp)}</div>` : ''}
+                <div><strong>Appareil :</strong> ${DEVICE_ICON[s.device] || ''} ${escapeHtml(s.device || '—')} · ${escapeHtml(s.browser || '—')} · ${escapeHtml(s.os || '—')}</div>
+                <div><strong>Fuseau :</strong> ${escapeHtml(geo.timezone || s.timezone || '—')}</div>
+                <div><strong>Temps sur le site :</strong> ${dur}</div>
+                <div><strong>Page actuelle :</strong> ${escapeHtml(s.currentPath || '—')}</div>
+                ${s.referrer ? `<div><strong>Venu depuis :</strong> ${escapeHtml(s.referrer)}</div>` : ''}
+                <div style="margin-top:0.3rem; color:${s.online ? '#16a34a' : '#888'};">${s.online ? '🟢 En ligne' : '⚪ Vu ' + since}</div>
+            </div>
+        </div>`;
+}
+
+function formatDuration(sec) {
+    sec = Math.max(0, Math.round(sec || 0));
+    if (sec < 60) return sec + 's';
+    const m = Math.floor(sec / 60), s2 = sec % 60;
+    if (m < 60) return `${m}min ${s2}s`;
+    return `${Math.floor(m / 60)}h ${m % 60}min`;
+}
+
+function renderLiveMapMarkers(sessions) {
+    const map = ensureLiveMap();
+    const seen = new Set();
+    sessions.forEach(s => {
+        if (s.mapLat == null || s.mapLon == null) return;
+        seen.add(s.sessionId);
+        const html = `<div style="width:16px;height:16px;border-radius:50%;background:${s.online ? '#22c55e' : '#666'};border:2px solid #fff;box-shadow:0 0 0 4px ${s.online ? 'rgba(34,197,94,0.35)' : 'rgba(150,150,150,0.25)'};"></div>`;
+        const icon = L.divIcon({ html, className: '', iconSize: [16, 16] });
+        if (liveMapMarkers[s.sessionId]) {
+            liveMapMarkers[s.sessionId].setLatLng([s.mapLat, s.mapLon]);
+            liveMapMarkers[s.sessionId].setIcon(icon);
+            liveMapMarkers[s.sessionId].setPopupContent(liveMapPopupHTML(s));
+        } else {
+            liveMapMarkers[s.sessionId] = L.marker([s.mapLat, s.mapLon], { icon })
+                .addTo(map)
+                .bindPopup(liveMapPopupHTML(s));
+        }
+    });
+    Object.keys(liveMapMarkers).forEach(id => {
+        if (!seen.has(id)) { map.removeLayer(liveMapMarkers[id]); delete liveMapMarkers[id]; }
+    });
+}
+
+function renderLiveMapTable(sessions) {
+    const wrap = document.getElementById('liveMapTableWrap');
+    if (!sessions.length) { wrap.innerHTML = emptyStateHTML('Aucun visiteur suivi pour le moment.'); return; }
+    wrap.innerHTML = `
+    <table class="data-table">
+        <thead><tr>
+            <th></th><th>Localisation</th><th>IP</th><th>Appareil</th><th>Page actuelle</th><th>Depuis</th><th>Durée</th>
+        </tr></thead>
+        <tbody>
+            ${sessions.map(s => {
+                const geo = s.geo || {};
+                const flag = geo.countryCode ? countryFlag(geo.countryCode) : '';
+                const loc = geo.city ? `${geo.city}, ${geo.country || ''}` : '—';
+                return `<tr onclick="flyToLiveVisitor('${s.sessionId}')" style="cursor:pointer;">
+                    <td>${s.online ? '<span title="En ligne" style="color:#22c55e;">●</span>' : '<span title="Récemment" style="color:#666;">●</span>'}</td>
+                    <td>${flag} ${escapeHtml(loc)}</td>
+                    <td class="cell-muted">${escapeHtml(s.ip || '—')}</td>
+                    <td>${DEVICE_ICON[s.device] || ''} ${escapeHtml(s.browser || '—')} · ${escapeHtml(s.os || '—')}</td>
+                    <td class="cell-muted">${escapeHtml(s.currentPath || '—')}</td>
+                    <td class="cell-muted">${formatDate(s.firstSeenAt, true)}</td>
+                    <td class="cell-muted">${formatDuration(s.visitDuration || 0)}</td>
+                </tr>`;
+            }).join('')}
+        </tbody>
+    </table>`;
+}
+
+function flyToLiveVisitor(sessionId) {
+    const m = liveMapMarkers[sessionId];
+    if (!m || !liveMapInstance) return;
+    liveMapInstance.flyTo(m.getLatLng(), 11, { duration: 0.8 });
+    setTimeout(() => m.openPopup(), 700);
+}
+
+async function loadLiveMap() {
+    ensureLiveMap();
+    try {
+        const data = await api('/api/live-visitors');
+        document.getElementById('liveMapCount').textContent = `${data.online} en ligne · ${data.sessions.length} suivi(s)`;
+        document.getElementById('liveMapBadge').style.display = data.online > 0 ? 'inline-block' : 'none';
+        if (data.online > 0) document.getElementById('liveMapBadge').textContent = data.online;
+        renderLiveMapMarkers(data.sessions);
+        renderLiveMapTable(data.sessions);
+    } catch (e) { toast(e.message); }
+    if (liveMapPollTimer) clearTimeout(liveMapPollTimer);
+    liveMapPollTimer = setTimeout(loadLiveMap, 8000);
+}
+
+function stopLiveMapPolling() {
+    if (liveMapPollTimer) { clearTimeout(liveMapPollTimer); liveMapPollTimer = null; }
+}
+
+
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const IS_STANDALONE = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+async function getSWRegistration() {
+    return navigator.serviceWorker.register('/dashboard/sw.js', { scope: '/dashboard/' });
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function refreshPushUI() {
+    const status = document.getElementById('pushStatus');
+    const enableBtn = document.getElementById('pushEnableBtn');
+    const disableBtn = document.getElementById('pushDisableBtn');
+    const testBtn = document.getElementById('pushTestBtn');
+    const iosHint = document.getElementById('pushIosHint');
+    if (!status) return;
+    enableBtn.style.display = disableBtn.style.display = testBtn.style.display = 'none';
+
+    // iPhone hors PWA installée : le navigateur ne propose pas les notifications
+    if (IS_IOS && !IS_STANDALONE) {
+        iosHint.style.display = 'block';
+        status.textContent = "⚠️ Installe d'abord le dashboard sur ton écran d'accueil (voir ci-dessus).";
+        return;
+    }
+    if (!pushSupported()) {
+        status.textContent = "❌ Ce navigateur ne prend pas en charge les notifications push. Sur iPhone : iOS 16.4 minimum requis.";
+        return;
+    }
+    if (Notification.permission === 'denied') {
+        status.textContent = "🚫 Les notifications sont bloquées dans les réglages de cet appareil. Réactive-les dans Réglages → Notifications → Florian B.";
+        return;
+    }
+    try {
+        const reg = await getSWRegistration();
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+            status.textContent = '✅ Notifications activées sur cet appareil.';
+            disableBtn.style.display = 'inline-block';
+            testBtn.style.display = 'inline-block';
+        } else {
+            status.textContent = 'Les notifications ne sont pas encore activées sur cet appareil.';
+            enableBtn.style.display = 'inline-block';
+        }
+    } catch (e) {
+        status.textContent = 'Erreur : ' + e.message;
+    }
+}
+
+document.getElementById('pushEnableBtn')?.addEventListener('click', async () => {
+    const status = document.getElementById('pushStatus');
+    try {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') { status.textContent = '🚫 Permission refusée.'; return; }
+        const { publicKey } = await api('/api/push/public-key');
+        if (!publicKey) throw new Error('Clé serveur indisponible — redéploie le backend.');
+        const reg = await getSWRegistration();
+        await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+        await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify(sub.toJSON()) });
+        toast('🔔 Notifications activées !');
+        refreshPushUI();
+    } catch (e) { status.textContent = 'Erreur : ' + e.message; }
+});
+
+document.getElementById('pushDisableBtn')?.addEventListener('click', async () => {
+    try {
+        const reg = await getSWRegistration();
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+            await api('/api/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
+            await sub.unsubscribe();
+        }
+        toast('Notifications désactivées sur cet appareil');
+        refreshPushUI();
+    } catch (e) { toast('Erreur : ' + e.message); }
+});
+
+document.getElementById('pushTestBtn')?.addEventListener('click', async () => {
+    try {
+        const r = await api('/api/push/test', { method: 'POST' });
+        toast(r.sent ? '📤 Notification de test envoyée !' : 'Aucun appareil abonné trouvé');
+    } catch (e) { toast('Erreur : ' + e.message); }
+});
 </script>
 </body>
 </html>

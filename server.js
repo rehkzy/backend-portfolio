@@ -11,11 +11,11 @@ const db = require('./db');
 const mailer = require('./mailer');
 const pdfGen = require('./pdf');
 const analytics = require('./analytics');
-const cron = require('node-cron');
 const push = require('./push');
-const { frenchHolidays } = require('./holidays');
+const cron = require('node-cron');
 const ftpPub = require('./ftp');
 const publisher = require('./publisher');
+push.init();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -341,6 +341,171 @@ app.delete('/api/admin/users/:id', auth, adminOnly, (req, res) => {
 /* ============================================================
    INGESTION PUBLIQUE — appelée par le chat widget du site
    ============================================================ */
+/* ============================================================
+   NOTIFICATIONS PUSH — abonnement des appareils du dashboard
+   ============================================================ */
+app.get('/api/push/public-key', auth, (req, res) => {
+    res.json({ publicKey: push.getPublicKey(), subscriptions: push.countSubscriptions() });
+});
+
+app.post('/api/push/subscribe', auth, (req, res) => {
+    const ok = push.addSubscription(req.body || {}, req.user);
+    if (!ok) return res.status(400).json({ error: 'Abonnement invalide' });
+    logTeamAction(req, 'push_subscribed', 'Notifications push activées sur un appareil');
+    res.json({ ok: true, subscriptions: push.countSubscriptions() });
+});
+
+app.post('/api/push/unsubscribe', auth, (req, res) => {
+    push.removeSubscription((req.body || {}).endpoint);
+    res.json({ ok: true, subscriptions: push.countSubscriptions() });
+});
+
+app.post('/api/push/test', auth, async (req, res) => {
+    const result = await push.notifyAll({
+        title: '🔔 Test réussi !',
+        body: 'Les notifications push du dashboard fonctionnent sur cet appareil.',
+        tag: 'test',
+    });
+    res.json(result);
+});
+
+/* ============================================================
+   JOURS FÉRIÉS FRANÇAIS — calculés automatiquement chaque année
+   (fêtes fixes + fêtes mobiles basées sur Pâques, algorithme de Meeus)
+   ============================================================ */
+function easterDate(year) {
+    const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+    const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(Date.UTC(year, month - 1, day));
+}
+
+function frenchHolidays(year) {
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const plus = (d, days) => new Date(d.getTime() + days * 86400000);
+    const easter = easterDate(year);
+    return [
+        { date: `${year}-01-01`, name: "Jour de l'an" },
+        { date: iso(plus(easter, 1)),  name: 'Lundi de Pâques' },
+        { date: `${year}-05-01`, name: 'Fête du Travail' },
+        { date: `${year}-05-08`, name: 'Victoire 1945' },
+        { date: iso(plus(easter, 39)), name: 'Ascension' },
+        { date: iso(plus(easter, 50)), name: 'Lundi de Pentecôte' },
+        { date: `${year}-07-14`, name: 'Fête nationale' },
+        { date: `${year}-08-15`, name: 'Assomption' },
+        { date: `${year}-11-01`, name: 'Toussaint' },
+        { date: `${year}-11-11`, name: 'Armistice 1918' },
+        { date: `${year}-12-25`, name: 'Noël' },
+    ].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+app.get('/api/holidays', auth, (req, res) => {
+    const year = Number(req.query.year) || new Date().getFullYear();
+    // Année demandée + la suivante, pour couvrir la fin d'année sans requête supplémentaire
+    res.json([...frenchHolidays(year), ...frenchHolidays(year + 1)]);
+});
+
+/* ============================================================
+   CONTEXTE LOCAL D'UN VISITEUR — météo + heure locale
+   Météo via open-meteo.com (gratuit, sans clé API)
+   ============================================================ */
+const WEATHER_CODES = {
+    0: '☀️ Ciel dégagé', 1: '🌤️ Plutôt dégagé', 2: '⛅ Partiellement nuageux', 3: '☁️ Couvert',
+    45: '🌫️ Brouillard', 48: '🌫️ Brouillard givrant',
+    51: '🌦️ Bruine légère', 53: '🌦️ Bruine', 55: '🌧️ Bruine dense',
+    61: '🌧️ Pluie légère', 63: '🌧️ Pluie', 65: '🌧️ Pluie forte',
+    66: '🌧️ Pluie verglaçante', 67: '🌧️ Pluie verglaçante forte',
+    71: '🌨️ Neige légère', 73: '🌨️ Neige', 75: '❄️ Neige forte', 77: '❄️ Grésil',
+    80: '🌦️ Averses légères', 81: '🌧️ Averses', 82: '⛈️ Averses violentes',
+    85: '🌨️ Averses de neige', 86: '🌨️ Fortes averses de neige',
+    95: '⛈️ Orage', 96: '⛈️ Orage avec grêle', 99: '⛈️ Orage violent avec grêle',
+};
+
+app.get('/api/local-context', auth, async (req, res) => {
+    const lat = Number(req.query.lat), lon = Number(req.query.lon);
+    const tz = req.query.tz || null;
+    const out = { weather: null, localTime: null, timezone: tz };
+
+    // Heure locale du visiteur, calculée depuis son fuseau
+    if (tz) {
+        try {
+            out.localTime = new Intl.DateTimeFormat('fr-FR', {
+                timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit',
+            }).format(new Date());
+        } catch { /* fuseau invalide — on ignore */ }
+    }
+
+    // Météo actuelle à sa position
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 5000);
+            const r = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`,
+                { signal: ctrl.signal }
+            ).finally(() => clearTimeout(tid));
+            if (r.ok) {
+                const d = await r.json();
+                const cw = d.current_weather;
+                if (cw) {
+                    out.weather = {
+                        temperature: Math.round(cw.temperature),
+                        label: WEATHER_CODES[cw.weathercode] || '🌡️ Météo',
+                        windspeed: Math.round(cw.windspeed),
+                    };
+                }
+            }
+        } catch { /* météo indisponible — pas bloquant */ }
+    }
+    res.json(out);
+});
+
+/* ============================================================
+   VISITEURS EN DIRECT — carte précise, IP, appareil, durée...
+   Une session est considérée "en ligne" si un heartbeat est arrivé
+   il y a moins de 45s (le tracker en envoie un toutes les 15s).
+   ============================================================ */
+const LIVE_ONLINE_WINDOW_MS = 45 * 1000;
+const LIVE_SESSION_KEEP_MS = 30 * 60 * 1000; // on garde 30 min l'historique "récemment parti"
+
+app.get('/api/live-visitors', auth, (req, res) => {
+    const nowMs = Date.now();
+    const all = db.get('liveSessions').value();
+
+    // Purge des sessions trop vieilles pour ne pas faire grossir le fichier
+    const kept = all.filter(s => nowMs - new Date(s.lastSeenAt).getTime() < LIVE_SESSION_KEEP_MS);
+    if (kept.length !== all.length) db.set('liveSessions', kept).write();
+
+    const enriched = kept.map(s => {
+        const lastSeenMs = new Date(s.lastSeenAt).getTime();
+        const online = (nowMs - lastSeenMs) < LIVE_ONLINE_WINDOW_MS;
+        // Petit décalage déterministe (basé sur l'IP) pour éviter que plusieurs
+        // visiteurs de la même ville se superposent exactement sur la carte
+        let jitterLat = 0, jitterLon = 0;
+        if (s.geo && s.geo.lat != null) {
+            const h = crypto.createHash('md5').update(s.sessionId).digest();
+            jitterLat = ((h[0] / 255) - 0.5) * 0.06;
+            jitterLon = ((h[1] / 255) - 0.5) * 0.06;
+        }
+        return {
+            ...s,
+            online,
+            secondsSinceSeen: Math.round((nowMs - lastSeenMs) / 1000),
+            mapLat: s.geo && s.geo.lat != null ? s.geo.lat + jitterLat : null,
+            mapLon: s.geo && s.geo.lon != null ? s.geo.lon + jitterLon : null,
+        };
+    }).sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt));
+
+    res.json({
+        online: enriched.filter(s => s.online).length,
+        sessions: enriched,
+    });
+});
+
 app.post('/api/leads', async (req, res) => {
     const { name, email, message, source, budget } = req.body || {};
     if (!email || !message) return res.status(400).json({ error: 'email et message requis' });
@@ -388,9 +553,9 @@ app.post('/api/leads', async (req, res) => {
         mailer.sendMail({ ...mailer.leadConfirmationEmail(lead), meta: { type: 'lead_confirmation', relatedId: lead.id } }).catch(() => {});
         mailer.sendMail({ ...mailer.leadNotificationEmail(lead), meta: { type: 'lead_notification', relatedId: lead.id } }).catch(() => {});
         push.notifyAll({
-            title: '🔥 Nouveau lead' + (lead.name ? ' — ' + lead.name : ''),
-            body: (lead.message || '').slice(0, 120) + (geo && geo.city ? `\n📍 ${geo.city}` : ''),
-            url: '/dashboard', tag: 'lead-' + lead.id,
+            title: '🎯 Nouveau lead !',
+            body: `${lead.name || lead.email}${lead.tracking.geo?.city ? ' · ' + lead.tracking.geo.city : ''} — ${(lead.message || '').slice(0, 90)}`,
+            tag: 'lead-' + lead.id,
         }).catch(() => {});
     })();
 });
@@ -469,9 +634,9 @@ app.post('/api/appointments', async (req, res) => {
         mailer.sendMail({ ...mailer.appointmentConfirmationEmail(appt), meta: { type: 'appointment_confirmation', relatedId: appt.id } }).catch(() => {});
         mailer.sendMail({ ...mailer.appointmentNotificationEmail(appt), meta: { type: 'appointment_notification', relatedId: appt.id } }).catch(() => {});
         push.notifyAll({
-            title: '📅 Nouvelle demande de RDV',
-            body: `${appt.subject}${appt.date_text ? ' — ' + appt.date_text : ''}${appt.time_text ? ' ' + appt.time_text : ''}`,
-            url: '/dashboard', tag: 'appt-' + appt.id,
+            title: '📅 Nouvelle demande de RDV !',
+            body: `${appt.email} — ${appt.subject}${appt.date_text ? ' (' + appt.date_text + ')' : ''}`,
+            tag: 'appt-' + appt.id,
         }).catch(() => {});
     })();
 });
@@ -480,7 +645,7 @@ app.post('/api/appointments', async (req, res) => {
 // consultation de projet, ouverture du chat, FAQ, téléchargements, etc.)
 // Format envoyé par le site : { event, sessionId, path, referrer, timestamp, ...données propres à l'événement }
 // Reste compatible avec l'ancien format { type, meta } utilisé par le code existant.
-app.post('/api/events', (req, res) => {
+app.post('/api/events', async (req, res) => {
     const body = req.body || {};
     const type = body.event || body.type;
     if (!type) return res.status(400).json({ error: 'event (ou type) requis' });
@@ -500,6 +665,45 @@ app.post('/api/events', (req, res) => {
     const events = db.get('events').value();
     if (events.length > 5000) db.set('events', events.slice(events.length - 5000)).write();
     res.status(201).json({ ok: true });
+
+    // Mise à jour de la session en direct (carte "Visiteurs en direct") — seulement
+    // pour les événements de suivi de navigation (page_view / heartbeat) porteurs de sessionId
+    if ((type === 'page_view' || type === 'heartbeat') && body.sessionId) {
+        const ip = getRealIp(req);
+        const ua = req.headers['user-agent'] || null;
+        const sessions = db.get('liveSessions');
+        const existing = sessions.find({ sessionId: body.sessionId }).value();
+        const uaParsed = parseUA(ua);
+        const patch = {
+            sessionId: body.sessionId,
+            ip,
+            ...uaParsed,
+            lang: body.lang || (existing && existing.lang) || null,
+            timezone: body.timezone || (existing && existing.timezone) || null,
+            screen: body.screen || (existing && existing.screen) || null,
+            connection: body.connection || (existing && existing.connection) || null,
+            referrer: body.referrer || (existing && existing.referrer) || null,
+            utmSource: body.utmSource || (existing && existing.utmSource) || null,
+            utmMedium: body.utmMedium || (existing && existing.utmMedium) || null,
+            utmCampaign: body.utmCampaign || (existing && existing.utmCampaign) || null,
+            currentPath: body.path || null,
+            pagesVisited: body.pagesVisited || (existing && existing.pagesVisited) || null,
+            visitDuration: body.visitDuration != null ? body.visitDuration : (existing && existing.visitDuration) || 0,
+            lastSeenAt: now(),
+            firstSeenAt: (existing && existing.firstSeenAt) || now(),
+            geo: (existing && existing.geo) || null,
+        };
+        if (existing) sessions.find({ sessionId: body.sessionId }).assign(patch).write();
+        else sessions.push(patch).write();
+
+        // Géolocalisation IP une seule fois par session (pas à chaque heartbeat, pour
+        // rester sous la limite gratuite de 45 requêtes/min du service de géoloc)
+        if (!patch.geo) {
+            geolocateIp(ip).then((geo) => {
+                if (geo) db.get('liveSessions').find({ sessionId: body.sessionId }).assign({ geo }).write();
+            }).catch(() => {});
+        }
+    }
 });
 
 app.get('/api/events', auth, (req, res) => {
@@ -1301,8 +1505,8 @@ app.post('/api/quotes/:id/send', auth, adminOnly, async (req, res) => {
     const business = db.get('businessSettings').value() || {};
     const mail = mailer.quoteEmail(quote, quoteAcceptToken(id));
     // Pixel invisible : on saura quand (et combien de fois) le client ouvre le devis
-    const base = process.env.DASHBOARD_URL || '';
-    if (base) mail.html = mail.html.replace('</body>', `<img src="${base}/api/quotes/${id}/open.gif?token=${quoteAcceptToken(id)}" width="1" height="1" alt="" style="display:none;"></body>`);
+    const pixelBase = process.env.DASHBOARD_URL || '';
+    if (pixelBase) mail.html = mail.html.replace('</body>', `<img src="${pixelBase}/api/quotes/${id}/open.gif?token=${quoteAcceptToken(id)}" width="1" height="1" alt="" style="display:none;"></body>`);
     mail.meta = { type: 'quote_sent', relatedId: id };
     try {
         const pdfBuffer = await pdfGen.generateQuotePdf(quote, business);
@@ -2450,8 +2654,8 @@ app.post('/api/chat', async (req, res) => {
         .map(m => ({ role: m.role, content: m.content.slice(0, 1500) }));
     if (!messages.length) return res.status(400).json({ error: 'messages requis' });
 
-    const content = db.get('content').value() || {};
-    const faq = (content.faq || []).map(f => `Q: ${f.question}\nR: ${f.answer}`).join('\n');
+    const content = db.get('site_content').value() || {};
+    const faq = (content.faq || []).map(f => `Q: ${f.q || f.question || ''}\nR: ${f.a || f.answer || ''}`).join('\n');
     const projects = (content.projects || []).map(p => p.title).filter(Boolean).join(', ');
     const system = `Tu es l'assistant du site de Florian Bonnet (florian-b.fr), graphiste et directeur artistique freelance de 23 ans à Paris.
 Ton rôle : renseigner les visiteurs et les encourager à laisser un message ou prendre RDV. Réponds en français, chaleureux mais professionnel, en 1 à 3 phrases courtes. Tutoie jamais le visiteur (vouvoiement).
@@ -2615,75 +2819,6 @@ async function sendMorningPushDigest() {
 cron.schedule('30 8 * * *', () => {
     sendMorningPushDigest().catch(err => console.error('Erreur digest push:', err.message));
 }, { timezone: 'Europe/Paris' });
-
-/* ============================================================
-   NOTIFICATIONS PUSH (iPhone / Android / desktop)
-   ============================================================ */
-app.get('/api/admin/push/public-key', auth, (req, res) => {
-    res.json({ publicKey: push.getPublicKey() });
-});
-app.post('/api/admin/push/subscribe', auth, (req, res) => {
-    const { subscription, label } = req.body || {};
-    if (!push.addSubscription(subscription, label)) return res.status(400).json({ error: 'abonnement invalide' });
-    logTeamAction(req, 'push_subscribed', `Notifications push activées (${label || 'appareil'})`);
-    res.json({ ok: true });
-});
-app.post('/api/admin/push/unsubscribe', auth, (req, res) => {
-    const { endpoint } = req.body || {};
-    if (endpoint) push.removeSubscription(endpoint);
-    res.json({ ok: true });
-});
-app.post('/api/admin/push/test', auth, async (req, res) => {
-    const r = await push.notifyAll({ title: '🔔 Test de notification', body: 'Tout fonctionne ! Tu recevras les nouveaux leads et RDV ici.', url: '/dashboard', tag: 'test' });
-    res.json(r);
-});
-
-/* ============================================================
-   JOURS FÉRIÉS FRANÇAIS (calcul automatique, aucune API)
-   ============================================================ */
-app.get('/api/holidays', (req, res) => {
-    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.json({ year, holidays: [...frenchHolidays(year), ...frenchHolidays(year + 1)] });
-});
-
-/* ============================================================
-   CONTEXTE LOCAL D'UN LEAD — heure locale + météo (Open-Meteo, gratuit, sans clé)
-   ============================================================ */
-const WEATHER_LABELS = {
-    0:'☀️ Ciel dégagé',1:'🌤 Plutôt dégagé',2:'⛅ Partiellement nuageux',3:'☁️ Couvert',
-    45:'🌫 Brouillard',48:'🌫 Brouillard givrant',51:'🌦 Bruine légère',53:'🌦 Bruine',55:'🌧 Bruine forte',
-    61:'🌧 Pluie légère',63:'🌧 Pluie',65:'🌧 Pluie forte',66:'🌧 Pluie verglaçante',67:'🌧 Pluie verglaçante forte',
-    71:'🌨 Neige légère',73:'🌨 Neige',75:'❄️ Neige forte',77:'🌨 Grésil',
-    80:'🌦 Averses légères',81:'🌧 Averses',82:'⛈ Averses violentes',85:'🌨 Averses de neige',86:'🌨 Fortes averses de neige',
-    95:'⛈ Orage',96:'⛈ Orage avec grêle',99:'⛈ Orage avec forte grêle',
-};
-app.get('/api/admin/leads/:id/local-context', auth, async (req, res) => {
-    const id = parseInt(req.params.id, 10);
-    const item = req.query.type === 'appointment' ? db.get('appointments').find({ id }).value() : db.get('leads').find({ id }).value();
-    if (!item) return res.status(404).json({ error: 'introuvable' });
-    const geo = (item.tracking && item.tracking.geo) || {};
-    const tz = geo.timezone || (item.tracking && item.tracking.timezone) || null;
-    const out = { timezone: tz, localTime: null, weather: null, city: geo.city || null };
-    if (tz) {
-        try {
-            out.localTime = new Intl.DateTimeFormat('fr-FR', { timeZone: tz, weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date());
-        } catch {}
-    }
-    if (geo.lat != null && geo.lon != null) {
-        try {
-            const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current=temperature_2m,weather_code&timezone=auto`, { signal: AbortSignal.timeout(5000) });
-            const d = await r.json();
-            if (d && d.current) {
-                out.weather = {
-                    temperature: Math.round(d.current.temperature_2m),
-                    label: WEATHER_LABELS[d.current.weather_code] || '🌡 Conditions inconnues',
-                };
-            }
-        } catch {}
-    }
-    res.json(out);
-});
 
 // Rapport mensuel automatique — le 1er de chaque mois à 8h (heure de Paris)
 cron.schedule('0 8 1 * *', () => {
