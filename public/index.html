@@ -204,18 +204,23 @@
     .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem 1.3rem; box-shadow: var(--shadow); transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s; display: flex; flex-direction: column; }
     .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
     @keyframes pulseDot { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); } 50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34,197,94,0); } }
-    .ga-list-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .ga-list-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; position: relative; overflow: hidden; border-radius: 6px; text-decoration: none; color: inherit; }
     .ga-list-row:last-child { border-bottom: none; }
-    .ga-list-row .label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
-    .ga-list-row .value { font-weight: 700; }
+    .ga-list-row .label { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; position: relative; z-index: 1; }
+    .ga-list-row .value { font-weight: 700; position: relative; z-index: 1; display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+    .ga-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-glow); z-index: 0; border-radius: 6px; transition: width 0.4s var(--ease); }
+    .ga-share { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 100px; padding: 0.1rem 0.4rem; }
+    a.ga-list-row:hover { background: var(--surface-2); }
+    a.ga-list-row:hover .label { color: var(--accent); }
     .kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
     .kpi-card .kpi-value { font-family: var(--font-display); font-size: 1.9rem; font-weight: 800; color: var(--text); }
     .kpi-card .kpi-delta { font-size: 0.75rem; font-weight: 700; margin-top: 0.3rem; }
     .kpi-delta.up { color: var(--success); }
-    .kpi-card.hero { grid-column: span 2; grid-row: span 2; position: relative; border-top: 2px solid var(--accent); justify-content: space-between; }
-    .kpi-card.hero .kpi-value { font-size: 2.6rem; }
+    .kpi-card.hero { grid-column: span 2; }
+    .kpi-grid-bento .kpi-card.hero { grid-row: span 2; position: relative; border-top: 2px solid var(--accent); justify-content: space-between; }
+    .kpi-grid-bento .kpi-card.hero .kpi-value { font-size: 2.6rem; }
     .kpi-card.compact { justify-content: center; }
-    .kpi-card-ring { grid-column: span 2; flex-direction: row; align-items: center; gap: 1.1rem; }
+    .kpi-grid-bento .kpi-card-ring { grid-column: span 2; flex-direction: row; align-items: center; gap: 1.1rem; }
     .kpi-card-ring .kpi-ring-text { display: flex; flex-direction: column; }
 
     /* ============ PANELS / CHARTS ============ */
@@ -803,9 +808,7 @@
                 <h2>Overview</h2>
             </div>
 
-            <div class="kpi-grid">
-                <div class="kpi-card hero">
-                    <div class="kpi-label">Nouveaux leads (7 derniers jours)</div>
+            <div class="kpi-grid kpi-grid-bento">
                     <div class="kpi-value" id="kpiNewLeads">—</div>
                     <div class="kpi-delta up" id="kpiNewLeadsDelta"></div>
                     <div class="kpi-sparkline-wrap"><canvas id="kpiSparkline"></canvas></div>
@@ -1962,8 +1965,8 @@ async function loadAnalytics() {
 
         renderGaList('gaSources', overview.sources.map(s => ({ label: channelLabel(s.channel), value: s.sessions })));
         renderGaList('gaReferrers', overview.referrers.map(r => ({ label: r.source, value: r.sessions })));
-        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views, sub: formatDuration(p.avgDuration) })));
-        renderGaList('gaLandingPages', overview.landingPages.map(p => ({ label: p.path, value: p.sessions, sub: Math.round(p.bounceRate * 100) + '% rebond' })));
+        renderGaList('gaTopPages', overview.topPages.map(p => ({ label: p.path, value: p.views, sub: formatDuration(p.avgDuration), href: SITE_URL + p.path })));
+        renderGaList('gaLandingPages', overview.landingPages.map(p => ({ label: p.path, value: p.sessions, sub: Math.round(p.bounceRate * 100) + '% rebond', href: SITE_URL + p.path })));
         renderGaList('gaDevices', overview.devices.map(d => ({ label: deviceLabel(d.device), value: d.users })));
         renderGaList('gaBrowsers', overview.browsers.map(b => ({ label: b.browser, value: b.users })));
         renderGaList('gaGeo', overview.geo.map(g => ({ label: g.country, value: g.users })));
@@ -2362,12 +2365,20 @@ function initMapInteractions() {
 function renderGaList(elId, items) {
     const wrap = document.getElementById(elId);
     if (!items.length) { wrap.innerHTML = '<p class="cell-muted">Pas encore de données.</p>'; return; }
-    wrap.innerHTML = items.slice(0, 10).map(i => `
-        <div class="ga-list-row">
-            <span class="label">${escapeHtml(i.label)}</span>
-            <span class="value">${i.value.toLocaleString('fr-FR')}${i.sub ? ` <span class="cell-muted" style="font-weight:400;">· ${i.sub}</span>` : ''}</span>
-        </div>
-    `).join('');
+    const max = Math.max(...items.map(i => i.value), 1);
+    const total = items.reduce((s, i) => s + i.value, 0) || 1;
+    wrap.innerHTML = items.map(i => {
+        const pct = Math.round((i.value / max) * 100);
+        const share = Math.round((i.value / total) * 100);
+        const inner = `
+            <span class="ga-bar" style="width:${pct}%"></span>
+            <span class="label" title="${escapeHtml(i.label)}">${escapeHtml(i.label)}</span>
+            <span class="value">${i.value.toLocaleString('fr-FR')}${i.sub ? ` <span class="cell-muted" style="font-weight:400;">· ${i.sub}</span>` : ''}<span class="ga-share">${share}%</span></span>
+        `;
+        return i.href
+            ? `<a class="ga-list-row" href="${i.href}" target="_blank" rel="noopener" title="Ouvrir la page">${inner}</a>`
+            : `<div class="ga-list-row">${inner}</div>`;
+    }).join('');
 }
 
 function formatDuration(seconds) {
