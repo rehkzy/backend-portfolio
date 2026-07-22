@@ -327,6 +327,56 @@ Toutes optionnelles, activees des que la variable `SERPAPI_KEY` est presente. Mo
 Les deux sont gratuites, sans cle, sans inscription — rien a configurer sur Railway, ca fonctionne immediatement apres le deploiement.
 
 
+## 9. Quatre nouvelles API gratuites — analytics plus riches et vérification d'email
+
+Toutes optionnelles. Sans rien configurer, le site continue de fonctionner exactement comme avant (repli automatique sur les outils déjà en place).
+
+### Détection d'appareil (ua-parser-js)
+Rien à faire — c'est une librairie installée automatiquement par Railway au déploiement (`package.json`), pas un service externe. Elle rend simplement la détection navigateur/OS/appareil plus fiable dans l'onglet **Historique visiteurs**.
+
+### Microsoft Clarity — cartes de chaleur et enregistrements de session (gratuit, illimité)
+Montre où les visiteurs cliquent, jusqu'où ils scrollent, où ils hésitent — en vidéo anonymisée.
+
+1. Va sur [clarity.microsoft.com](https://clarity.microsoft.com) → **"Se connecter"** → connecte-toi avec un compte Microsoft, Google ou Facebook (n'importe lequel, gratuit)
+2. **"Ajouter un nouveau projet"** → nom : `florian-b.fr` → URL du site : `https://florian-b.fr` → catégorie : au choix
+3. Une fois le projet créé, une page d'installation s'affiche avec un **ID de projet** (une dizaine de caractères, ex: `abc123xyz0`) — copie-le
+4. Dans `index.html` (le fichier du site), cherche la ligne :
+   ```js
+   window.FB_CLARITY_ID = 'CLARITY_PROJECT_ID';
+   ```
+   Remplace `CLARITY_PROJECT_ID` par l'ID copié, entre les guillemets. Remets le fichier en ligne via FileZilla.
+
+### PostHog — statistiques d'usage détaillées (gratuit jusqu'à 1 million d'événements/mois)
+Entonnoirs de conversion, cohortes de visiteurs, replay de session.
+
+1. Va sur [posthog.com](https://posthog.com) → **"Get started free"** → crée un compte (email + mot de passe, aucune carte bancaire)
+2. Choisis la région d'hébergement **"EU"** (Europe) quand on te le demande — c'est plus simple pour le RGPD
+3. Une fois le projet créé, menu **"Project settings"** (ou il te le propose directement à la fin de l'inscription) → tu trouveras une **clé API du projet** qui commence par `phc_`
+4. Dans `index.html`, cherche les lignes :
+   ```js
+   window.FB_POSTHOG_KEY = 'POSTHOG_API_KEY';
+   window.FB_POSTHOG_HOST = 'https://eu.i.posthog.com';
+   ```
+   Remplace `POSTHOG_API_KEY` par ta clé `phc_...`. Si tu as choisi l'hébergement US au lieu d'EU, remplace aussi l'URL par `https://us.i.posthog.com`. Remets le fichier en ligne via FileZilla.
+
+### ipinfo.io — géolocalisation IP plus précise (gratuit, 50 000 requêtes/mois)
+Remplace automatiquement le service actuel (ip-api.com, qui reste utilisé si tu ne configures rien) par un service plus précis, avec fournisseur d'accès et code postal.
+
+1. Va sur [ipinfo.io](https://ipinfo.io/signup) → crée un compte gratuit (email + mot de passe)
+2. Une fois connecté, ton **jeton (token)** s'affiche directement sur le tableau de bord — copie-le
+3. Railway → ton projet → onglet **"Variables"** → **"+ New Variable"** → nom : `IPINFO_TOKEN` → colle le jeton → **"Add"**
+
+### Abstract API — vérification d'email des leads (gratuit, 100 vérifications/mois)
+Dit si l'email d'un lead a des chances d'être valide, et signale les adresses jetables (Yopmail et compagnie) avant que tu perdes du temps à répondre.
+
+1. Va sur [app.abstractapi.com/users/signup](https://app.abstractapi.com/users/signup) → crée un compte gratuit
+2. Dans le tableau de bord, cherche la carte **"Email Validation API"** → clique dessus → ta **clé API** s'affiche
+3. Railway → ton projet → onglet **"Variables"** → **"+ New Variable"** → nom : `ABSTRACT_EMAIL_API_KEY` → colle la clé → **"Add"**
+4. Résultat visible dans le dashboard : ouvre la fiche d'un nouveau lead, un badge apparaît à côté de son email (**Email vérifié**, **Email douteux**, ou **Adresse jetable**)
+
+Pour Railway, une seule variable ajoutée redéploie automatiquement le service — pas besoin de re-uploader le zip.
+
+
 ## ⚠️ Volume trouvé mais programmé pour suppression — action urgente
 
 Si tu as suivi la procédure de dépannage avec la CLI Railway (`railway volume list`) et que tu vois un volume nommé `data`, attaché à `backend-portfolio`, avec une ligne **"Deletes on: ..."** : ce volume contient déjà tes vraies données (probablement récupérées lors d'un test), mais Railway va le supprimer définitivement à la date indiquée (délai de grâce de 48h après une suppression déclenchée, volontairement ou par un bug d'interface).

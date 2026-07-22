@@ -3476,6 +3476,14 @@ function countryFlag(code) {
     } catch { return ''; }
 }
 
+function emailCheckBadge(check) {
+    if (!check) return '';
+    if (check.disposable) return ' <span class="badge" style="background:#ef4444;margin-left:6px;">Adresse jetable</span>';
+    if (check.deliverable === false) return ' <span class="badge" style="background:#f59e0b;margin-left:6px;">Email douteux</span>';
+    if (check.deliverable === true) return ' <span class="badge" style="background:#22c55e;margin-left:6px;">Email vérifié</span>';
+    return '';
+}
+
 function openLeadDrawer(id) {
     const l = leadsCache.find(x => x.id === id);
     if (!l) return;
@@ -3484,7 +3492,7 @@ function openLeadDrawer(id) {
             <h3>${escapeHtml(l.name || 'Lead #' + l.id)}</h3>
             <button class="drawer-close" onclick="closeDrawer()">✕</button>
         </div>
-        <div class="drawer-field"><label>Email</label><div class="value">${escapeHtml(l.email)}</div></div>
+        <div class="drawer-field"><label>Email</label><div class="value">${escapeHtml(l.email)}${emailCheckBadge(l.emailCheck)}</div></div>
         <div class="drawer-field"><label>Message</label><div class="value">${escapeHtml(l.message || '')}</div></div>
         <div class="drawer-field"><label>Source</label><div class="value">${escapeHtml(l.source || 'chat')}</div></div>
         <div class="drawer-field"><label>Priorité</label><div class="value">${priorityBadge(l.priorityScore || 0)} ${l.isReturningClient ? '· 🔁 Client déjà connu' : '· Nouveau contact'}</div></div>
@@ -3969,7 +3977,7 @@ function renderVisitorsTable() {
     if (!visitorsCache.length) { wrap.innerHTML = emptyStateHTML('Aucun visiteur enregistré pour le moment — ils apparaîtront ici dès qu\'un visiteur aura accepté les cookies de mesure d\'audience.'); return; }
     wrap.innerHTML = `
         <table class="data-table">
-            <thead><tr><th>Visiteur</th><th>Visites</th><th>Provenance</th><th>Ville</th><th>Appareil</th><th>Dernière visite</th></tr></thead>
+            <thead><tr><th>Visiteur</th><th>Visites</th><th>IP</th><th>Provenance</th><th>Ville</th><th>Appareil</th><th>Dernière visite</th></tr></thead>
             <tbody>
                 ${visitorsCache.map(v => `
                     <tr onclick="openVisitorDrawer('${v.visitorId}')">
@@ -3981,6 +3989,7 @@ function renderVisitorsTable() {
                             ${v.visitCount || 1}
                             ${(v.visitCount || 1) > 1 ? '<span class="badge" style="background:#22c55e;margin-left:6px;">Récurrent</span>' : ''}
                         </td>
+                        <td class="cell-muted" style="font-family:monospace; font-size:0.78rem;">${escapeHtml(v.ip || v.lastIp || '—')}</td>
                         <td class="cell-muted">${escapeHtml(v.utmSource || (v.lastReferrer ? new URL(v.lastReferrer, location.href).hostname : 'Accès direct'))}</td>
                         <td class="cell-muted">${v.geo && v.geo.city ? escapeHtml(v.geo.city) + (v.geo.country ? ', ' + escapeHtml(v.geo.country) : '') : '—'}</td>
                         <td class="cell-muted">${escapeHtml(v.device || '—')} · ${escapeHtml(v.browser || '—')}</td>
@@ -4016,8 +4025,16 @@ async function openVisitorDrawer(visitorId) {
         <div class="drawer-field"><label>Nombre de visites</label><div class="value">${v.visitCount || 1}${(v.visitCount || 1) > 1 ? ' · visiteur récurrent' : ''}</div></div>
         <div class="drawer-field"><label>Première visite</label><div class="value">${firstSeen}</div></div>
         <div class="drawer-field"><label>Dernière visite</label><div class="value">${lastSeen}</div></div>
+        <div class="drawer-field"><label>Adresse IP (visite en cours)</label><div class="value" style="font-family:monospace;">${escapeHtml(v.ip || v.lastIp || '—')}</div></div>
+        ${(v.ips && v.ips.length > 1) ? `<div class="drawer-field"><label>Autres IP vues pour ce visiteur</label><div class="value" style="font-family:monospace; font-size:0.82rem;">${v.ips.filter(x => x !== (v.ip || v.lastIp)).map(escapeHtml).join(', ')}</div></div>` : ''}
+        <div class="drawer-field"><label>Fournisseur d'accès</label><div class="value">${v.geo && v.geo.isp ? escapeHtml(v.geo.isp) : 'Inconnu'}</div></div>
         <div class="drawer-field"><label>Localisation approximative</label><div class="value">${v.geo && v.geo.city ? escapeHtml(v.geo.city) + ', ' + escapeHtml(v.geo.country || '') : 'Inconnue'}</div></div>
         <div class="drawer-field"><label>Appareil</label><div class="value">${escapeHtml(v.device || '—')} · ${escapeHtml(v.browser || '—')} · ${escapeHtml(v.os || '—')}</div></div>
+        <div class="drawer-field"><label>Résolution d'écran</label><div class="value">${escapeHtml(v.screen || '—')}</div></div>
+        <div class="drawer-field"><label>Fuseau horaire / Langue</label><div class="value">${escapeHtml(v.timezone || '—')} · ${escapeHtml(v.lang || '—')}</div></div>
+        <div class="drawer-field"><label>Type de connexion</label><div class="value">${escapeHtml(v.connection || '—')}</div></div>
+        <div class="drawer-field"><label>Provenance (referrer)</label><div class="value">${escapeHtml(v.lastReferrer || 'Accès direct')}</div></div>
+        ${(v.utmSource || v.utmMedium || v.utmCampaign) ? `<div class="drawer-field"><label>Campagne (UTM)</label><div class="value">${escapeHtml(v.utmSource || '—')} / ${escapeHtml(v.utmMedium || '—')} / ${escapeHtml(v.utmCampaign || '—')}</div></div>` : ''}
         <div class="drawer-field"><label>Dernière page consultée</label><div class="value">${escapeHtml(v.lastPath || '—')}</div></div>
         <div class="drawer-field"><label>Historique des pages (200 derniers événements)</label>${pagesHistory}</div>
         <div class="drawer-actions">
@@ -6964,7 +6981,12 @@ function statusLabel(s) {
 }
 function formatDate(iso, full = false) {
     if (!iso) return '—';
-    const d = new Date(iso.replace(' ', 'T') + 'Z');
+    // iso peut déjà se terminer par Z ou un fuseau (+02:00...) — dans ce cas on ne
+    // rajoute rien, sinon on obtient "...Z Z" et une Invalid Date. On ne complète
+    // que les formats sans fuseau (ex: "2026-07-22 14:03:38").
+    const hasTimezone = /Z$|[+-]\d{2}:?\d{2}$/.test(iso);
+    const d = new Date(hasTimezone ? iso : iso.replace(' ', 'T') + 'Z');
+    if (isNaN(d.getTime())) return '—';
     return full ? d.toLocaleString('fr-FR') : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 function timeAgo(date) {

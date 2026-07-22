@@ -15,6 +15,7 @@ const push = require('./push');
 const cron = require('node-cron');
 const ftpPub = require('./ftp');
 const publisher = require('./publisher');
+const { UAParser } = require('ua-parser-js');
 push.init();
 
 const app = express();
@@ -61,18 +62,38 @@ function getRealIp(req) {
     return req.socket?.remoteAddress || req.ip || null;
 }
 
-/* ---- Parsing User-Agent simple (sans lib externe) ---- */
+/* ---- Parsing User-Agent — via ua-parser-js (gratuit, npm), avec repli sur un
+   parsing maison si jamais la librairie n'est pas disponible ou échoue, pour
+   ne jamais faire planter une requête à cause de ça. ---- */
 function parseUA(ua) {
-    if (!ua) return { browser: 'Inconnu', os: 'Inconnu', device: 'desktop' };
+    if (!ua) return { browser: 'Inconnu', os: 'Inconnu', device: 'desktop', deviceVendor: null, deviceModel: null, engine: null, cpu: null };
+    try {
+        const r = new UAParser(ua).getResult();
+        const deviceType = r.device.type; // 'mobile' | 'tablet' | 'console' | 'smarttv' | 'wearable' | undefined (= desktop)
+        const device = deviceType === 'mobile' ? 'mobile' : deviceType === 'tablet' ? 'tablet' : 'desktop';
+        return {
+            browser: [r.browser.name, r.browser.version ? r.browser.version.split('.')[0] : null].filter(Boolean).join(' ') || 'Autre',
+            os: [r.os.name, r.os.version].filter(Boolean).join(' ') || 'Autre',
+            device,
+            deviceVendor: r.device.vendor || null,
+            deviceModel: r.device.model || null,
+            engine: r.engine.name || null,
+            cpu: r.cpu.architecture || null,
+        };
+    } catch (e) {
+        return parseUAFallback(ua);
+    }
+}
+
+/* ---- Ancien parsing maison, conservé uniquement comme filet de sécurité ---- */
+function parseUAFallback(ua) {
     let browser = 'Autre';
     let os      = 'Autre';
     let device  = 'desktop';
 
-    // Device
     if (/mobile|android|iphone|ipod/i.test(ua))  device = 'mobile';
     else if (/ipad|tablet/i.test(ua))             device = 'tablet';
 
-    // Browser (ordre important — Edge avant Chrome, etc.)
     if      (/Edg\//i.test(ua))         browser = 'Edge '      + (ua.match(/Edg\/([\d.]+)/)?.[1]||'').split('.')[0];
     else if (/OPR\//i.test(ua))         browser = 'Opera '     + (ua.match(/OPR\/([\d.]+)/)?.[1]||'').split('.')[0];
     else if (/Firefox\//i.test(ua))     browser = 'Firefox '   + (ua.match(/Firefox\/([\d.]+)/)?.[1]||'').split('.')[0];
@@ -80,7 +101,6 @@ function parseUA(ua) {
     else if (/Safari\//i.test(ua))      browser = 'Safari '    + (ua.match(/Version\/([\d.]+)/)?.[1]||'').split('.')[0];
     else if (/MSIE|Trident/i.test(ua))  browser = 'IE';
 
-    // OS
     if      (/Windows NT 10/i.test(ua))     os = 'Windows 10/11';
     else if (/Windows NT/i.test(ua))        os = 'Windows';
     else if (/iPhone.*OS ([\d_]+)/i.test(ua)) os = 'iOS ' + ua.match(/iPhone.*OS ([\d_]+)/i)?.[1]?.replace(/_/g,'.');
@@ -89,14 +109,52 @@ function parseUA(ua) {
     else if (/Mac OS X ([\d_]+)/i.test(ua)) os = 'macOS ' + ua.match(/Mac OS X ([\d_]+)/i)?.[1]?.replace(/_/g,'.');
     else if (/Linux/i.test(ua))             os = 'Linux';
 
-    return { browser, os, device };
+    return { browser, os, device, deviceVendor: null, deviceModel: null, engine: null, cpu: null };
 }
 
-/* ---- Géolocalisation IP via api.ip-api.com (gratuit, 45 req/min) ---- */
+/* ---- Géolocalisation IP ----
+   Deux sources possibles :
+   - ipinfo.io (gratuit, 50 000 requêtes/mois, nécessite un compte + jeton —
+     voir IPINFO_TOKEN dans .env.example) : plus précis, donne aussi le nom
+     du fournisseur d'accès et le code postal.
+   - api.ip-api.com (gratuit, aucun compte requis, 45 req/min) : utilisé par
+     défaut si IPINFO_TOKEN n'est pas configuré, ou si ipinfo.io échoue.
+   Le site ne casse jamais si aucune des deux ne répond : geolocateIp renvoie
+   simplement null et le visiteur reste sans localisation. ---- */
 async function geolocateIp(ip) {
     if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168') || ip.startsWith('10.')) {
         return { country: 'Local', city: 'Local', region: null, lat: null, lon: null, isp: null, timezone: null };
     }
+    if (process.env.IPINFO_TOKEN) {
+        const viaIpinfo = await geolocateIpViaIpinfo(ip);
+        if (viaIpinfo) return viaIpinfo;
+    }
+    return geolocateIpViaIpApi(ip);
+}
+
+async function geolocateIpViaIpinfo(ip) {
+    try {
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => ctrl.abort(), 4000);
+        const res  = await fetch(
+            `https://ipinfo.io/${ip}?token=${process.env.IPINFO_TOKEN}`,
+            { signal: ctrl.signal }
+        ).finally(() => clearTimeout(tid));
+        if (!res.ok) return null;
+        const d = await res.json();
+        if (d.bogon || d.error) return null;
+        const [lat, lon] = (d.loc || '').split(',').map(Number);
+        return {
+            country: d.country || null, countryCode: d.country || null,
+            region: d.region || null, city: d.city || null,
+            lat: Number.isFinite(lat) ? lat : null, lon: Number.isFinite(lon) ? lon : null,
+            timezone: d.timezone || null, isp: d.org || null, postal: d.postal || null,
+            source: 'ipinfo',
+        };
+    } catch { return null; }
+}
+
+async function geolocateIpViaIpApi(ip) {
     try {
         const ctrl = new AbortController();
         const tid  = setTimeout(() => ctrl.abort(), 4000);
@@ -112,6 +170,34 @@ async function geolocateIp(ip) {
             region: d.regionName, city: d.city,
             lat: d.lat, lon: d.lon,
             timezone: d.timezone, isp: d.isp || d.org || null,
+            source: 'ip-api',
+        };
+    } catch { return null; }
+}
+
+/* ---- Vérification d'email — Abstract API (gratuit, 100 vérifications/mois,
+   nécessite un compte + clé — voir ABSTRACT_EMAIL_API_KEY dans .env.example).
+   Dit si une adresse email a des chances d'exister vraiment, si c'est une
+   adresse jetable (Yopmail, Temp-Mail...), avant de perdre du temps à
+   répondre à un lead avec une fausse adresse. Désactivé si pas de clé —
+   ne bloque jamais la création d'un lead si l'API ne répond pas. ---- */
+async function verifyEmail(email) {
+    if (!process.env.ABSTRACT_EMAIL_API_KEY || !email) return null;
+    try {
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => ctrl.abort(), 4000);
+        const res  = await fetch(
+            `https://emailvalidation.abstractapi.com/v1/?api_key=${process.env.ABSTRACT_EMAIL_API_KEY}&email=${encodeURIComponent(email)}`,
+            { signal: ctrl.signal }
+        ).finally(() => clearTimeout(tid));
+        if (!res.ok) return null;
+        const d = await res.json();
+        return {
+            deliverable: d.deliverability === 'DELIVERABLE',
+            validFormat: d.is_valid_format?.value ?? null,
+            disposable: d.is_disposable_email?.value ?? null,
+            freeProvider: d.is_free_email?.value ?? null,
+            qualityScore: d.quality_score != null ? Number(d.quality_score) : null,
         };
     } catch { return null; }
 }
@@ -561,6 +647,8 @@ app.post('/api/leads', async (req, res) => {
             db.get('leads').find({ id: lead.id }).assign({ tracking: { ...tracking, geo } }).write();
             lead.tracking.geo = geo; // pour l'email de notif
         }
+        const emailCheck = await verifyEmail(email);
+        if (emailCheck) db.get('leads').find({ id: lead.id }).assign({ emailCheck }).write();
         mailer.sendMail({ ...mailer.leadConfirmationEmail(lead), meta: { type: 'lead_confirmation', relatedId: lead.id } }).catch(() => {});
         mailer.sendMail({ ...mailer.leadNotificationEmail(lead), meta: { type: 'lead_notification', relatedId: lead.id } }).catch(() => {});
         push.notifyAll({
@@ -733,11 +821,19 @@ app.post('/api/events', async (req, res) => {
             const sessionIds = existingV
                 ? Array.from(new Set([...(existingV.sessionIds || []), body.sessionId].filter(Boolean))).slice(-50)
                 : [body.sessionId].filter(Boolean);
+            // Historique des IP utilisées par ce visiteur — utile car une IP change
+            // souvent d'une visite à l'autre (box qui redémarre, 4G, wifi public...).
+            const ips = Array.from(new Set([...(existingV && existingV.ips || []), ip].filter(Boolean))).slice(-20);
             const vPatch = {
                 visitorId: body.visitorId,
-                lastIp: ip,
+                ip,                                  // IP de la visite en cours
+                lastIp: ip,                          // conservé pour compatibilité
+                ips,                                 // toutes les IP vues pour ce visiteur (20 dernières)
                 ...uaParsed,
                 lang: body.lang || (existingV && existingV.lang) || null,
+                timezone: body.timezone || (existingV && existingV.timezone) || null,
+                screen: body.screen || (existingV && existingV.screen) || null,
+                connection: body.connection || (existingV && existingV.connection) || null,
                 lastPath: body.path || null,
                 lastReferrer: body.referrer || (existingV && existingV.lastReferrer) || null,
                 utmSource: body.utmSource || (existingV && existingV.utmSource) || null,
