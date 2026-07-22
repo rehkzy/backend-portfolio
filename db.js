@@ -32,6 +32,7 @@ const DEFAULTS = {
     "appointments": [],
     "events": [],
     "liveSessions": [],
+    "visitors": [],
     "quotes": [],
     "invoices": [],
     "clients": [],

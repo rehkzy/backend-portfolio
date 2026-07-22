@@ -702,6 +702,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 Activité
             </div>
+            <div class="nav-item" data-view="visitors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                Historique visiteurs
+            </div>
             <div class="nav-item" data-view="clients">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Clients
@@ -1322,6 +1326,48 @@
                 </select>
             </div>
             <div id="eventsTableWrap"></div>
+        </section>
+
+        <!-- VISITEURS : HISTORIQUE ET RECURRENCE -->
+        <section class="view" id="view-visitors">
+            <div class="topbar">
+                <h2>Historique visiteurs</h2>
+                <div class="topbar-actions">
+                    <button class="btn-secondary" id="refreshVisitorsBtn" style="width:auto; padding:0.55rem 1rem;">Rafraîchir</button>
+                </div>
+            </div>
+            <p class="cell-muted" style="margin-bottom:1.2rem;">Qui revient sur le site, et combien de fois. Un visiteur reste anonyme tant qu'il ne remplit pas lui-même un formulaire — dès qu'il le fait, son historique de navigation est rattaché à sa fiche lead ou RDV. Conservé 13 mois glissants, purgé automatiquement ensuite (voir la <a href="/confidentialite.html" target="_blank" style="color:var(--accent-2);">politique de confidentialité</a>).</p>
+
+            <div class="kpi-grid">
+                <div class="kpi-card hero">
+                    <div class="kpi-label">Visiteurs suivis</div>
+                    <div class="kpi-value" id="kpiVisitorsTotal">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Récurrents</div>
+                    <div class="kpi-value" id="kpiVisitorsRecurring">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Identifiés (lead / RDV)</div>
+                    <div class="kpi-value" id="kpiVisitorsIdentified">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Actifs (30 derniers jours)</div>
+                    <div class="kpi-value" id="kpiVisitorsActive">—</div>
+                </div>
+            </div>
+
+            <div class="toolbar" id="visitorsToolbar">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="visitorsSearch" placeholder="Rechercher un nom, un email, une ville...">
+                </div>
+                <button class="filter-chip active" data-vfilter="">Tous</button>
+                <button class="filter-chip" data-vfilter="recurring">Récurrents</button>
+                <button class="filter-chip" data-vfilter="identified">Identifiés</button>
+                <button class="filter-chip" data-vfilter="anonymous">Anonymes</button>
+            </div>
+            <div id="visitorsTableWrap"></div>
         </section>
 
         <!-- CONTENU : HERO -->
@@ -2158,6 +2204,7 @@ function switchView(view) {
     if (view === 'leads') loadLeads();
     if (view === 'appointments') loadAppointments();
     if (view === 'events') loadEvents();
+    if (view === 'visitors') loadVisitors();
     if (view === 'clients') loadClients();
     if (view === 'treasury') loadTreasury();
     if (view === 'content-hero') loadContentHero();
@@ -3872,6 +3919,122 @@ async function deleteEvent(id) {
     if (!confirm('Supprimer cet événement ?')) return;
     try { await api('/api/events/' + id, { method: 'DELETE' }); toast('Événement supprimé'); closeDrawer(); loadEvents(); }
     catch (e) { toast(e.message); }
+}
+
+/* ---------------- VISITEURS (historique et récurrence) ---------------- */
+let visitorsCache = [];
+let visitorsFilter = '';
+
+document.querySelectorAll('#view-visitors .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        document.querySelectorAll('#view-visitors .filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        visitorsFilter = chip.dataset.vfilter;
+        loadVisitors();
+    });
+});
+let visitorsSearchDebounce;
+document.getElementById('visitorsSearch').addEventListener('input', () => {
+    clearTimeout(visitorsSearchDebounce);
+    visitorsSearchDebounce = setTimeout(loadVisitors, 300);
+});
+document.getElementById('refreshVisitorsBtn').addEventListener('click', loadVisitors);
+
+async function loadVisitors() {
+    const q = document.getElementById('visitorsSearch').value;
+    const params = new URLSearchParams();
+    if (visitorsFilter) params.set('filter', visitorsFilter);
+    if (q) params.set('q', q);
+    try {
+        const [visitors, summary] = await Promise.all([
+            api('/api/visitors?' + params.toString()),
+            api('/api/visitors/summary'),
+        ]);
+        visitorsCache = visitors;
+        document.getElementById('kpiVisitorsTotal').textContent = summary.total;
+        document.getElementById('kpiVisitorsRecurring').textContent = summary.recurring;
+        document.getElementById('kpiVisitorsIdentified').textContent = summary.identified;
+        document.getElementById('kpiVisitorsActive').textContent = summary.activeLast30d;
+        renderVisitorsTable();
+    } catch (e) { toast(e.message); }
+}
+
+function visitorLabel(v) {
+    if (v.identity && v.identity.name) return v.identity.name;
+    return 'Visiteur anonyme';
+}
+
+function renderVisitorsTable() {
+    const wrap = document.getElementById('visitorsTableWrap');
+    if (!visitorsCache.length) { wrap.innerHTML = emptyStateHTML('Aucun visiteur enregistré pour le moment — ils apparaîtront ici dès qu\'un visiteur aura accepté les cookies de mesure d\'audience.'); return; }
+    wrap.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Visiteur</th><th>Visites</th><th>Provenance</th><th>Ville</th><th>Appareil</th><th>Dernière visite</th></tr></thead>
+            <tbody>
+                ${visitorsCache.map(v => `
+                    <tr onclick="openVisitorDrawer('${v.visitorId}')">
+                        <td>
+                            ${escapeHtml(visitorLabel(v))}
+                            ${v.identity ? '<span class="badge" style="background:var(--accent);margin-left:6px;">Identifié</span>' : ''}
+                        </td>
+                        <td class="cell-muted">
+                            ${v.visitCount || 1}
+                            ${(v.visitCount || 1) > 1 ? '<span class="badge" style="background:#22c55e;margin-left:6px;">Récurrent</span>' : ''}
+                        </td>
+                        <td class="cell-muted">${escapeHtml(v.utmSource || (v.lastReferrer ? new URL(v.lastReferrer, location.href).hostname : 'Accès direct'))}</td>
+                        <td class="cell-muted">${v.geo && v.geo.city ? escapeHtml(v.geo.city) + (v.geo.country ? ', ' + escapeHtml(v.geo.country) : '') : '—'}</td>
+                        <td class="cell-muted">${escapeHtml(v.device || '—')} · ${escapeHtml(v.browser || '—')}</td>
+                        <td class="cell-muted">${formatDate(v.lastSeenAt, true)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+async function openVisitorDrawer(visitorId) {
+    let v;
+    try { v = await api('/api/visitors/' + encodeURIComponent(visitorId)); }
+    catch (e) { toast(e.message); return; }
+
+    const firstSeen = formatDate(v.firstSeenAt, true);
+    const lastSeen = formatDate(v.lastSeenAt, true);
+    const pagesHistory = (v.events || [])
+        .filter(e => e.type === 'page_view' || e.event === 'page_view')
+        .map(e => `<div class="status-row"><span class="cell-muted">${escapeHtml(e.path || '—')}</span><span class="cell-muted">${formatDate(e.created_at, true)}</span></div>`)
+        .join('') || '<p class="cell-muted">Aucune page enregistrée.</p>';
+
+    document.getElementById('drawer').innerHTML = `
+        <div class="drawer-header">
+            <h3>${escapeHtml(visitorLabel(v))}</h3>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        ${v.identity ? `
+            <div class="drawer-field"><label>Identité</label><div class="value">${escapeHtml(v.identity.name || '')} — ${escapeHtml(v.identity.email || '')}</div></div>
+            <div class="drawer-field"><label>Origine</label><div class="value">${v.identity.type === 'lead' ? 'Lead' : 'Rendez-vous'} #${v.identity.id}</div></div>
+        ` : `<div class="drawer-field"><label>Identité</label><div class="value cell-muted">Anonyme — ce visiteur ne s'est jamais manifesté via un formulaire.</div></div>`}
+        <div class="drawer-field"><label>Nombre de visites</label><div class="value">${v.visitCount || 1}${(v.visitCount || 1) > 1 ? ' · visiteur récurrent' : ''}</div></div>
+        <div class="drawer-field"><label>Première visite</label><div class="value">${firstSeen}</div></div>
+        <div class="drawer-field"><label>Dernière visite</label><div class="value">${lastSeen}</div></div>
+        <div class="drawer-field"><label>Localisation approximative</label><div class="value">${v.geo && v.geo.city ? escapeHtml(v.geo.city) + ', ' + escapeHtml(v.geo.country || '') : 'Inconnue'}</div></div>
+        <div class="drawer-field"><label>Appareil</label><div class="value">${escapeHtml(v.device || '—')} · ${escapeHtml(v.browser || '—')} · ${escapeHtml(v.os || '—')}</div></div>
+        <div class="drawer-field"><label>Dernière page consultée</label><div class="value">${escapeHtml(v.lastPath || '—')}</div></div>
+        <div class="drawer-field"><label>Historique des pages (200 derniers événements)</label>${pagesHistory}</div>
+        <div class="drawer-actions">
+            <button class="btn-danger" onclick="deleteVisitor('${v.visitorId}')">Effacer cet historique</button>
+        </div>
+    `;
+    openDrawer();
+}
+
+async function deleteVisitor(visitorId) {
+    if (!confirm("Effacer définitivement l'historique de ce visiteur ? Cette action ne supprime pas son lead ou RDV s'il en a un — seulement son historique de navigation.")) return;
+    try {
+        await api('/api/visitors/' + encodeURIComponent(visitorId), { method: 'DELETE' });
+        toast('Historique effacé');
+        closeDrawer();
+        loadVisitors();
+    } catch (e) { toast(e.message); }
 }
 
 /* ---------------- DRAWER ---------------- */

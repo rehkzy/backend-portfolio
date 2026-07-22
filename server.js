@@ -548,6 +548,12 @@ app.post('/api/leads', async (req, res) => {
     db.get('leads').push(lead).write();
     res.status(201).json({ id: lead.id });
 
+    // Ce visiteur vient de nous donner son identité lui-même (formulaire) : on relie
+    // son historique de navigation anonyme (s'il en a un) à son nom, pour que le
+    // dashboard puisse montrer "3 visites avant de prendre contact". On ne fait jamais
+    // l'inverse — jamais de recherche d'identité à partir d'un visiteur anonyme.
+    linkVisitorIdentity(tracking.sessionId, { type: 'lead', id: lead.id, name: lead.name || lead.email, email: lead.email });
+
     // Géolocalisation + emails en arrière-plan (ne bloquent pas la réponse)
     (async () => {
         const geo = await geolocateIp(ip);
@@ -633,6 +639,8 @@ app.post('/api/appointments', async (req, res) => {
     db.get('appointments').push(appt).write();
     res.status(201).json({ id: appt.id });
 
+    linkVisitorIdentity(tracking.sessionId, { type: 'appointment', id: appt.id, name: appt.email, email: appt.email });
+
     (async () => {
         const geo = await geolocateIp(ip);
         if (geo) {
@@ -711,8 +719,75 @@ app.post('/api/events', async (req, res) => {
                 if (geo) db.get('liveSessions').find({ sessionId: body.sessionId }).assign({ geo }).write();
             }).catch(() => {});
         }
+
+        // Historique visiteur (distinct de liveSessions, qui n'est que "qui est en ligne
+        // là maintenant" et purgé au bout de 30 min). Ici on garde une trace par visiteur
+        // anonyme (identifié par visitorId, stable d'une visite à l'autre) pour savoir
+        // s'il revient — sans jamais connaître son identité tant qu'il ne se manifeste
+        // pas lui-même via un formulaire. Conservé 13 mois max, purge automatique
+        // mensuelle (voir purgeOldVisitorData). Ne tourne que si le visiteur a accepté
+        // le bandeau cookies, puisque c'est ce qui charge tracker.js.
+        if (body.visitorId) {
+            const visitors = db.get('visitors');
+            const existingV = visitors.find({ visitorId: body.visitorId }).value();
+            const sessionIds = existingV
+                ? Array.from(new Set([...(existingV.sessionIds || []), body.sessionId].filter(Boolean))).slice(-50)
+                : [body.sessionId].filter(Boolean);
+            const vPatch = {
+                visitorId: body.visitorId,
+                lastIp: ip,
+                ...uaParsed,
+                lang: body.lang || (existingV && existingV.lang) || null,
+                lastPath: body.path || null,
+                lastReferrer: body.referrer || (existingV && existingV.lastReferrer) || null,
+                utmSource: body.utmSource || (existingV && existingV.utmSource) || null,
+                utmMedium: body.utmMedium || (existingV && existingV.utmMedium) || null,
+                utmCampaign: body.utmCampaign || (existingV && existingV.utmCampaign) || null,
+                sessionIds,
+                visitCount: sessionIds.length,
+                lastSeenAt: now(),
+                firstSeenAt: (existingV && existingV.firstSeenAt) || now(),
+                geo: (existingV && existingV.geo) || null,
+                // Identité : jamais déduite, uniquement copiée depuis un lead/RDV que
+                // CE visiteur a lui-même rempli (voir linkVisitorIdentity plus bas).
+                identity: (existingV && existingV.identity) || null,
+            };
+            if (existingV) visitors.find({ visitorId: body.visitorId }).assign(vPatch).write();
+            else visitors.push(vPatch).write();
+
+            if (!vPatch.geo) {
+                geolocateIp(ip).then((geo) => {
+                    if (geo) db.get('visitors').find({ visitorId: body.visitorId }).assign({ geo }).write();
+                }).catch(() => {});
+            }
+        }
     }
 });
+
+// Relie un visiteur anonyme à l'identité qu'IL a lui-même fournie (lead ou RDV).
+// Ne fait jamais l'inverse : on ne part jamais d'une identité pour aller chercher
+// un visiteur, seulement d'un sessionId que le visiteur nous a transmis en remplissant
+// un formulaire — donc uniquement des gens qui se sont eux-mêmes identifiés.
+function linkVisitorIdentity(sessionId, identity) {
+    if (!sessionId) return;
+    try {
+        const v = db.get('visitors').find(x => Array.isArray(x.sessionIds) && x.sessionIds.includes(sessionId)).value();
+        if (v) db.get('visitors').find({ visitorId: v.visitorId }).assign({ identity }).write();
+    } catch (e) { /* jamais bloquant */ }
+}
+
+// Détache l'identité d'un visiteur (droit à l'effacement) sans supprimer l'historique
+// de navigation anonyme, qui redevient un visiteur anonyme comme un autre.
+function unlinkVisitorsByLead(type, id) {
+    try {
+        const visitors = db.get('visitors').value();
+        visitors.forEach(v => {
+            if (v.identity && v.identity.type === type && v.identity.id === id) {
+                db.get('visitors').find({ visitorId: v.visitorId }).assign({ identity: null }).write();
+            }
+        });
+    } catch (e) { /* jamais bloquant */ }
+}
 
 app.get('/api/events', auth, (req, res) => {
     const { type, q } = req.query;
@@ -743,6 +818,61 @@ app.get('/api/events/summary', auth, (req, res) => {
 
 app.delete('/api/events/:id', auth, canWrite, (req, res) => {
     db.get('events').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
+});
+
+/* ============================================================
+   HISTORIQUE DES VISITEURS — distinct de "Visiteurs en direct" (qui ne montre
+   que la minute présente). Ici : qui revient, combien de fois, et depuis quand.
+   Conservé 13 mois glissants (mesure d'audience), purgé automatiquement chaque
+   mois — voir purgeOldVisitorData(). Les visiteurs qui se sont eux-mêmes
+   identifiés (lead ou RDV) restent rattachés à leur fiche tant qu'elle existe.
+   ============================================================ */
+app.get('/api/visitors', auth, (req, res) => {
+    const { q, filter } = req.query;
+    let visitors = db.get('visitors').value();
+    if (filter === 'recurring') visitors = visitors.filter(v => (v.visitCount || 1) > 1);
+    if (filter === 'identified') visitors = visitors.filter(v => !!v.identity);
+    if (filter === 'anonymous') visitors = visitors.filter(v => !v.identity);
+    if (q) {
+        const lq = q.toLowerCase();
+        visitors = visitors.filter(v => [
+            v.identity && v.identity.name, v.identity && v.identity.email,
+            v.geo && v.geo.city, v.geo && v.geo.country, v.browser, v.os, v.lastPath,
+        ].some(f => f && String(f).toLowerCase().includes(lq)));
+    }
+    const limit = Math.min(Number(req.query.limit) || 200, 1000);
+    const sorted = visitors.slice().sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt));
+    res.json(sorted.slice(0, limit));
+});
+
+app.get('/api/visitors/summary', auth, (req, res) => {
+    const visitors = db.get('visitors').value();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+    res.json({
+        total: visitors.length,
+        recurring: visitors.filter(v => (v.visitCount || 1) > 1).length,
+        identified: visitors.filter(v => !!v.identity).length,
+        activeLast30d: visitors.filter(v => v.lastSeenAt >= thirtyDaysAgo).length,
+    });
+});
+
+app.get('/api/visitors/:visitorId', auth, (req, res) => {
+    const v = db.get('visitors').find({ visitorId: req.params.visitorId }).value();
+    if (!v) return res.status(404).json({ error: 'Visiteur introuvable' });
+    // Historique détaillé : tous les événements liés aux sessions de ce visiteur
+    const events = db.get('events').value()
+        .filter(e => e.sessionId && (v.sessionIds || []).includes(e.sessionId))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 200);
+    res.json({ ...v, events });
+});
+
+// Effacement manuel d'un visiteur (droit à l'effacement / demande RGPD),
+// indépendamment de la purge automatique à 13 mois.
+app.delete('/api/visitors/:visitorId', auth, canWrite, (req, res) => {
+    db.get('visitors').remove({ visitorId: req.params.visitorId }).write();
+    logTeamAction(req, 'visitor_deleted', `Historique visiteur effacé (${req.params.visitorId})`);
     res.json({ ok: true });
 });
 
@@ -920,6 +1050,7 @@ app.delete('/api/leads/:id', auth, canWrite, (req, res) => {
     const lead = db.get('leads').find({ id }).value();
     logTeamAction(req, 'lead_deleted', `Lead #${id}${lead ? ` (${lead.email})` : ''}`, id);
     db.get('leads').remove({ id }).write();
+    unlinkVisitorsByLead('lead', id);
     res.json({ ok: true });
 });
 
@@ -972,7 +1103,9 @@ app.patch('/api/appointments/:id', auth, canWrite, (req, res) => {
 });
 
 app.delete('/api/appointments/:id', auth, canWrite, (req, res) => {
-    db.get('appointments').remove({ id: Number(req.params.id) }).write();
+    const id = Number(req.params.id);
+    db.get('appointments').remove({ id }).write();
+    unlinkVisitorsByLead('appointment', id);
     res.json({ ok: true });
 });
 
@@ -2322,6 +2455,32 @@ function runAutoArchiving() {
         }
     });
     if (archivedLeads || archivedInvoices) console.log(`🗄️  Archivage auto : ${archivedLeads} lead(s), ${archivedInvoices} facture(s)`);
+
+    purgeOldVisitorData();
+}
+
+// Purge RGPD des données de mesure d'audience — 13 mois glissants (la durée
+// recommandée par la CNIL pour ce type de traitement, voir /confidentialite.html).
+// Un visiteur qui s'est lui-même identifié (lead ou RDV encore existant) est
+// conservé au-delà : son historique de navigation fait alors partie de sa fiche
+// client, régie par la durée de conservation du lead lui-même (voir
+// unlinkVisitorsByLead, appelé quand ce lead/RDV est supprimé).
+function purgeOldVisitorData() {
+    const cutoff = new Date(Date.now() - 397 * 86400000).toISOString(); // 13 mois
+
+    const visitors = db.get('visitors').value();
+    const keptVisitors = visitors.filter(v => v.lastSeenAt >= cutoff || v.identity);
+    if (keptVisitors.length !== visitors.length) db.set('visitors', keptVisitors).write();
+
+    const events = db.get('events').value();
+    const keptEvents = events.filter(e => e.created_at >= cutoff);
+    if (keptEvents.length !== events.length) db.set('events', keptEvents).write();
+
+    const purgedVisitors = visitors.length - keptVisitors.length;
+    const purgedEvents = events.length - keptEvents.length;
+    if (purgedVisitors || purgedEvents) {
+        console.log(`🧹 Purge RGPD (13 mois) : ${purgedVisitors} visiteur(s) anonyme(s), ${purgedEvents} événement(s).`);
+    }
 }
 
 // Alertes proactives — signaux faibles à repérer avant qu'ils ne deviennent un problème.

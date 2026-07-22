@@ -10,13 +10,26 @@
 (function () {
     'use strict';
 
-    /* ---- Génère ou récupère un identifiant de session stable ---- */
+    /* ---- Génère ou récupère un identifiant de session stable (le temps d'un onglet) ---- */
     function getSessionId() {
         try {
             let sid = sessionStorage.getItem('_fb_sid');
             if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('_fb_sid', sid); }
             return sid;
         } catch { return Math.random().toString(36).slice(2); }
+    }
+
+    /* ---- Identifiant visiteur anonyme, stable d'une visite à l'autre (contrairement
+       au sessionId ci-dessus). Sert uniquement à détecter qu'un même navigateur revient
+       plusieurs fois — jamais associé à une identité tant que le visiteur ne se
+       manifeste pas lui-même (formulaire, RDV). Ce script n'est chargé qu'après
+       acceptation du bandeau cookies : pas de traçage sans consentement. ---- */
+    function getVisitorId() {
+        try {
+            let vid = localStorage.getItem('_fb_vid');
+            if (!vid) { vid = 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10); localStorage.setItem('_fb_vid', vid); }
+            return vid;
+        } catch { return getSessionId(); }
     }
 
     /* ---- Parse les UTM depuis l'URL ---- */
@@ -64,6 +77,7 @@
         const utm = getUtm();
         return {
             sessionId:     getSessionId(),
+            visitorId:     getVisitorId(),
             referrer:      document.referrer || null,
             page:          location.pathname + location.search,
             lang:          navigator.language || null,
@@ -80,6 +94,7 @@
     window.FBTracker = {
         getPayload,
         getSessionId,
+        getVisitorId,
     };
 
     /* ---- Ping d'activité pour le suivi de session en direct ---- */
