@@ -2470,6 +2470,61 @@ app.post('/api/serp-run', auth, adminOnly, async (req, res) => {
 });
 
 /* ============================================================
+   ANNUAIRE DES ENTREPRISES (API gouv.fr, gratuite, sans clé)
+   Vérifie l'existence d'une entreprise et récupère ses infos
+   légales (SIRET, adresse, forme juridique, statut).
+   ============================================================ */
+app.get('/api/company-lookup', auth, async (req, res) => {
+    const q = String(req.query.q || '').trim();
+    if (!q) return res.status(400).json({ error: 'Indique un nom d\'entreprise ou un SIRET/SIREN' });
+    try {
+        const params = new URLSearchParams({ q, per_page: '5' });
+        const r = await fetch('https://recherche-entreprises.api.gouv.fr/search?' + params, { signal: AbortSignal.timeout(10000) });
+        if (!r.ok) throw new Error('Service indisponible (HTTP ' + r.status + ')');
+        const d = await r.json();
+        const results = (d.results || []).map(x => {
+            const siege = x.siege || {};
+            const adresse = [siege.adresse, siege.code_postal, siege.libelle_commune].filter(Boolean).join(', ');
+            return {
+                siren: x.siren, siret: siege.siret || null,
+                name: x.nom_complet || x.nom_raison_sociale || x.nom_complet,
+                legalForm: x.nature_juridique || null,
+                address: adresse || null,
+                active: x.etat_administratif === 'A',
+                employeeRange: x.tranche_effectif_salarie || null,
+                activity: siege.activite_principale || x.activite_principale || null,
+            };
+        });
+        res.json({ results });
+    } catch (err) {
+        res.status(502).json({ error: 'Annuaire des Entreprises injoignable : ' + err.message });
+    }
+});
+
+/* ============================================================
+   AUTOCOMPLÉTION D'ADRESSE (API Géoplateforme / IGN, gratuite,
+   sans clé) — remplace l'ancienne api-adresse.data.gouv.fr
+   (décommissionnée fin janvier 2026).
+   ============================================================ */
+app.get('/api/address-search', auth, async (req, res) => {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 3) return res.json({ results: [] });
+    try {
+        const params = new URLSearchParams({ text: q, maximumResponses: '6' });
+        const r = await fetch('https://data.geopf.fr/geocodage/completion?' + params, { signal: AbortSignal.timeout(8000) });
+        if (!r.ok) throw new Error('Service indisponible (HTTP ' + r.status + ')');
+        const d = await r.json();
+        const results = (d.results || []).map(x => ({
+            label: x.fulltext || [x.street, x.zipcode, x.city].filter(Boolean).join(', '),
+            city: x.city || null, zipcode: x.zipcode || null,
+        }));
+        res.json({ results });
+    } catch (err) {
+        res.status(502).json({ error: 'Service d\'adresse injoignable : ' + err.message });
+    }
+});
+
+/* ============================================================
    GOOGLE MAPS — ton classement local + les concurrents à proximité
    Relevé chaque lundi 8h (juste après le SERP classique).
    Mots-clés locaux configurés dans "Mon entreprise" (bsMapsKeywords).

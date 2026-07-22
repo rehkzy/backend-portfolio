@@ -283,3 +283,14 @@ Toutes optionnelles, activees des que la variable `SERPAPI_KEY` est presente. Mo
 - **Google News** (`bsNewsWatchTerms`, 5 termes max) : mentions de ta marque ou actu de tes clients (bon pretexte de reprise de contact), notification push sur nouvel article. Releve chaque mardi 8h.
 
 **Compteur de quota** : en haut du panneau SERP, le nombre de recherches SerpApi restantes ce mois-ci s'affiche en temps reel (n'en consomme aucune pour se verifier). Sous 15 recherches restantes, les relevés automatiques hebdo/mensuels se mettent en pause tout seuls pour ne jamais depasser le quota gratuit — tu peux toujours forcer une verification manuelle si besoin.
+
+
+## Deux nouvelles API gratuites (donnees publiques francaises, sans cle)
+
+- **Annuaire des Entreprises** (recherche-entreprises.api.gouv.fr, INSEE) : verifie l'existence d'une entreprise et recupere SIRET, forme juridique, adresse, statut actif/inactif.
+  - "Mon entreprise" : bouton "Verifier" a cote du SIRET — pre-remplit nom legal et adresse a partir de ton propre SIRET.
+  - Fiche client (onglet Clients) : champ "Entreprise associee" pour verifier un lead pro avant de partir sur un devis (utile avec la detection de connexion entreprise deja en place).
+- **Geocodage Geoplateforme / IGN** (data.geopf.fr, remplace l'ancienne api-adresse.data.gouv.fr decommissionnee fin janvier 2026) : autocompletion d'adresse.
+  - Champ adresse de "Mon entreprise" et adresse client des factures : tape 4 caracteres, choisis dans la liste, l'adresse est validee et bien formatee — fini les erreurs de saisie sur les documents legaux.
+
+Les deux sont gratuites, sans cle, sans inscription — rien a configurer sur Railway, ca fonctionne immediatement apres le deploiement.

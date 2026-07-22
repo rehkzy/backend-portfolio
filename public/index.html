@@ -1641,8 +1641,14 @@
             <p class="cell-muted" style="margin-bottom:1.2rem;">Ces informations apparaissent automatiquement sur tes factures officielles (obligatoire légalement).</p>
             <div class="panel" style="max-width:560px;">
                 <div class="drawer-field"><label>Nom / raison sociale</label><input type="text" id="bsLegalName" placeholder="Florian Bonnet"></div>
-                <div class="drawer-field"><label>Adresse</label><textarea id="bsAddress" placeholder="Adresse complète, code postal, ville"></textarea></div>
-                <div class="drawer-field"><label>N° SIRET</label><input type="text" id="bsSiret" placeholder="123 456 789 00012"></div>
+                <div class="drawer-field autocomplete-wrap"><label>Adresse</label><textarea id="bsAddress" placeholder="Adresse complète, code postal, ville" autocomplete="off"></textarea><div class="autocomplete-dropdown" id="bsAddressDropdown"></div></div>
+                <div class="drawer-field"><label>N° SIRET</label>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="text" id="bsSiret" placeholder="123 456 789 00012" style="flex:1;">
+                        <button type="button" class="btn-secondary" id="bsSiretLookupBtn" style="width:auto;padding:0 0.9rem;font-size:0.78rem;">🔍 Vérifier</button>
+                    </div>
+                    <p class="cell-muted" style="font-size:0.72rem;margin-top:0.4rem;">Cherche ton SIRET dans l'annuaire officiel des entreprises et pré-remplit nom légal + adresse.</p>
+                </div>
                 <div class="drawer-field"><label>Mention TVA</label><input type="text" id="bsVatMention" placeholder="TVA non applicable, art. 293 B du CGI"></div>
                 <div class="drawer-field"><label>IBAN (pour règlement)</label><input type="text" id="bsIban" placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"></div>
                 <div class="drawer-field"><label>Conditions de paiement</label><textarea id="bsPaymentTerms" placeholder="Modalités, pénalités de retard..."></textarea></div>
@@ -4437,6 +4443,14 @@ async function openClientDrawer(email) {
                 <label>Notes internes</label>
                 <textarea id="clientNotesInput" placeholder="Notes libres sur ce client...">${escapeHtml(c.notes || '')}</textarea>
             </div>
+            <div class="drawer-field">
+                <label>🏢 Entreprise associée</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <input type="text" id="clientCompanyQuery" placeholder="Nom de l'entreprise ou SIRET" style="flex:1;">
+                    <button type="button" class="btn-secondary" style="width:auto;padding:0 0.9rem;font-size:0.78rem;" onclick="lookupClientCompany()">🔍 Chercher</button>
+                </div>
+                <div id="clientCompanyResult" style="margin-top:0.6rem;"></div>
+            </div>
             <div class="drawer-actions">
                 <button class="btn-secondary" onclick="saveClientMeta('${escapeAttr(c.email)}')">Enregistrer</button>
                 <button class="btn-secondary" onclick="copyClientPortalLink('${escapeAttr(c.email)}')">🔗 Lien du portail client</button>
@@ -4455,6 +4469,22 @@ async function openClientDrawer(email) {
             </div>
         `;
     } catch (e) { toast(e.message); closeDrawer(); }
+}
+
+async function lookupClientCompany() {
+    const q = document.getElementById('clientCompanyQuery').value.trim();
+    const wrap = document.getElementById('clientCompanyResult');
+    if (!q) return;
+    wrap.innerHTML = '<p class="cell-muted" style="font-size:0.8rem;">Recherche…</p>';
+    try {
+        const { results } = await api('/api/company-lookup?q=' + encodeURIComponent(q));
+        if (!results.length) { wrap.innerHTML = '<p class="cell-muted" style="font-size:0.8rem;">Aucun résultat.</p>'; return; }
+        wrap.innerHTML = results.map(c => `
+            <div style="padding:0.6rem 0;border-bottom:1px solid var(--border);font-size:0.8rem;">
+                <strong>${escapeHtml(c.name)}</strong> ${c.active ? '<span class="badge won">Active</span>' : '<span class="badge lost">Inactive</span>'}
+                <div class="cell-muted" style="margin-top:0.2rem;">${c.siret ? 'SIRET ' + escapeHtml(c.siret) : ''}${c.address ? ' · ' + escapeHtml(c.address) : ''}</div>
+            </div>`).join('');
+    } catch (e) { wrap.innerHTML = `<p class="cell-muted" style="font-size:0.8rem;">${e.message}</p>`; }
 }
 
 async function saveClientMeta(email) {
@@ -6076,6 +6106,32 @@ function clientInitials(client) {
     return source.trim().slice(0, 2).toUpperCase();
 }
 
+// Autocomplétion d'adresse (API Géoplateforme/IGN, gratuite) — utilisable sur n'importe quel
+// champ texte. Debounce 300ms pour ne pas spammer l'API à chaque frappe.
+function attachAddressAutocomplete(inputId, dropdownId) {
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    if (!input || !dropdown) return;
+    let debounceTimer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const q = input.value.trim();
+        if (q.length < 4) { dropdown.classList.remove('active'); return; }
+        debounceTimer = setTimeout(async () => {
+            try {
+                const { results } = await api('/api/address-search?q=' + encodeURIComponent(q), { timeoutMs: 8000 });
+                if (!results.length) { dropdown.classList.remove('active'); return; }
+                dropdown.innerHTML = results.map(r => `<div class="autocomplete-item" data-label="${escapeAttr(r.label)}"><div class="autocomplete-item-text"><div class="autocomplete-item-name">${escapeHtml(r.label)}</div></div></div>`).join('');
+                dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                    item.onclick = () => { input.value = item.dataset.label; dropdown.classList.remove('active'); };
+                });
+                dropdown.classList.add('active');
+            } catch { dropdown.classList.remove('active'); }
+        }, 300);
+    });
+    document.addEventListener('click', (e) => { if (!input.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('active'); });
+}
+
 function attachClientAutocomplete(nameInputId, emailInputId, nameDropdownId, emailDropdownId) {
     const nameInput = document.getElementById(nameInputId);
     const emailInput = document.getElementById(emailInputId);
@@ -6136,6 +6192,7 @@ async function loadBusinessSettings() {
         document.getElementById('bsLegalName').value = b.legalName || '';
         document.getElementById('bsAddress').value = b.address || '';
         document.getElementById('bsSiret').value = b.siret || '';
+        attachAddressAutocomplete('bsAddress', 'bsAddressDropdown');
         document.getElementById('bsVatMention').value = b.vatMention || '';
         document.getElementById('bsIban').value = b.iban || '';
         document.getElementById('bsPaymentTerms').value = b.paymentTerms || '';
@@ -6182,6 +6239,24 @@ document.getElementById('watchRunBtn')?.addEventListener('click', async (e) => {
     try { await api('/api/watch-run', { method: 'POST', timeoutMs: 90000 }); toast('Veille vérifiée ✅'); loadWatchStatus(); }
     catch (err) { toast(err.message); }
     e.target.disabled = false; e.target.textContent = 'Vérifier maintenant';
+});
+
+document.getElementById('bsSiretLookupBtn')?.addEventListener('click', async (e) => {
+    const q = document.getElementById('bsSiret').value.trim() || prompt('Nom de ton entreprise ou ton numéro SIRET/SIREN ?');
+    if (!q) return;
+    e.target.disabled = true; e.target.textContent = '...';
+    try {
+        const { results } = await api('/api/company-lookup?q=' + encodeURIComponent(q));
+        if (!results.length) { toast('Aucune entreprise trouvée pour « ' + q + ' »'); }
+        else {
+            const c = results[0];
+            if (c.siret) document.getElementById('bsSiret').value = c.siret;
+            if (c.name && !document.getElementById('bsLegalName').value) document.getElementById('bsLegalName').value = c.name;
+            if (c.address && !document.getElementById('bsAddress').value) document.getElementById('bsAddress').value = c.address;
+            toast(`✅ Trouvé : ${c.name}${c.active ? '' : ' (inactif !)'}`);
+        }
+    } catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = '🔍 Vérifier';
 });
 
 function renderLegalReadiness(b) {
@@ -6339,7 +6414,7 @@ function openInvoiceDrawer(id) {
             <input type="email" id="iClientEmail" value="${escapeAttr(inv?.clientEmail || '')}" autocomplete="off">
             <div class="autocomplete-dropdown" id="iClientEmailDropdown"></div>
         </div>
-        <div class="drawer-field"><label>Adresse du client</label><textarea id="iClientAddress" placeholder="Adresse de facturation">${escapeHtml(inv?.clientAddress || '')}</textarea></div>
+        <div class="drawer-field autocomplete-wrap"><label>Adresse du client</label><textarea id="iClientAddress" placeholder="Adresse de facturation" autocomplete="off">${escapeHtml(inv?.clientAddress || '')}</textarea><div class="autocomplete-dropdown" id="iClientAddressDropdown"></div></div>
         <div class="drawer-field">
             <label>Prestations</label>
             <div id="invoiceItemsWrap">${(inv?.items?.length ? inv.items : [{}]).map(quoteItemRowHTML).join('')}</div>
@@ -6365,6 +6440,7 @@ function openInvoiceDrawer(id) {
     };
     attachQuoteItemEvents(document.getElementById('invoiceItemsWrap'));
     attachClientAutocomplete('iClientName', 'iClientEmail', 'iClientNameDropdown', 'iClientEmailDropdown');
+    attachAddressAutocomplete('iClientAddress', 'iClientAddressDropdown');
 }
 
 function collectInvoiceItems() {
