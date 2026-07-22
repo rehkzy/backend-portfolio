@@ -706,6 +706,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
                 Historique visiteurs
             </div>
+            <div class="nav-item" data-view="voice-messages">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+                Messages vocaux
+                <span class="badge" id="voiceMessagesBadge" style="display:none;"></span>
+            </div>
             <div class="nav-item" data-view="clients">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Clients
@@ -1368,6 +1373,18 @@
                 <button class="filter-chip" data-vfilter="anonymous">Anonymes</button>
             </div>
             <div id="visitorsTableWrap"></div>
+        </section>
+
+        <!-- MESSAGES VOCAUX -->
+        <section class="view" id="view-voice-messages">
+            <div class="topbar">
+                <h2>Messages vocaux</h2>
+                <div class="topbar-actions">
+                    <button class="btn-secondary" id="refreshVoiceMessagesBtn" style="width:auto; padding:0.55rem 1rem;">Rafraîchir</button>
+                </div>
+            </div>
+            <p class="cell-muted" style="margin-bottom:1.2rem;">Les vocaux laissés par tes visiteurs via le micro de l'assistant du site. Si le visiteur s'est identifié ailleurs (lead ou RDV), le message est automatiquement rattaché à sa fiche.</p>
+            <div id="voiceMessagesListWrap"></div>
         </section>
 
         <!-- CONTENU : HERO -->
@@ -2235,6 +2252,7 @@ function switchView(view) {
     if (view === 'appointments') loadAppointments();
     if (view === 'events') loadEvents();
     if (view === 'visitors') loadVisitors();
+    if (view === 'voice-messages') loadVoiceMessages();
     if (view === 'clients') loadClients();
     if (view === 'treasury') loadTreasury();
     if (view === 'content-hero') loadContentHero();
@@ -3252,6 +3270,7 @@ async function loadOverview() {
         document.getElementById('leadsBadge').textContent = s.newLeads7d;
         document.getElementById('apptBadge').style.display = s.pendingAppointments ? 'inline-flex' : 'none';
         document.getElementById('apptBadge').textContent = s.pendingAppointments;
+        refreshVoiceMessagesBadge();
     } catch (e) { toast(e.message); }
 }
 
@@ -4087,6 +4106,104 @@ async function deleteVisitor(visitorId) {
         closeDrawer();
         loadVisitors();
     } catch (e) { toast(e.message); }
+}
+
+/* ---------------- MESSAGES VOCAUX ---------------- */
+let voiceMessagesCache = [];
+
+document.getElementById('refreshVoiceMessagesBtn').addEventListener('click', loadVoiceMessages);
+
+async function loadVoiceMessages() {
+    try {
+        voiceMessagesCache = await api('/api/voice-messages');
+        renderVoiceMessagesList();
+        refreshVoiceMessagesBadge();
+    } catch (e) { toast(e.message); }
+}
+
+async function refreshVoiceMessagesBadge() {
+    try {
+        const messages = await api('/api/voice-messages');
+        const unread = messages.filter(m => !m.listened).length;
+        const badge = document.getElementById('voiceMessagesBadge');
+        badge.style.display = unread ? 'inline-flex' : 'none';
+        badge.textContent = unread;
+    } catch (e) { /* silencieux — pas grave si le badge ne se met pas a jour */ }
+}
+
+function voiceMessageLabel(m) {
+    if (m.identity && m.identity.name) return m.identity.name;
+    return 'Visiteur anonyme';
+}
+
+function renderVoiceMessagesList() {
+    const wrap = document.getElementById('voiceMessagesListWrap');
+    if (!voiceMessagesCache.length) {
+        wrap.innerHTML = emptyStateHTML("Aucun message vocal pour l'instant — ils apparaîtront ici dès qu'un visiteur en laissera un via l'assistant du site.");
+        return;
+    }
+    wrap.innerHTML = voiceMessagesCache.map(m => `
+        <div class="panel" style="margin-bottom:0.9rem; ${m.listened ? 'opacity:0.75;' : 'border-left:3px solid var(--accent);'}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:0.7rem;">
+                <div>
+                    <div style="font-weight:600;">
+                        ${escapeHtml(voiceMessageLabel(m))}
+                        ${!m.listened ? '<span class="badge" style="background:var(--accent);margin-left:8px;">Nouveau</span>' : ''}
+                    </div>
+                    <div class="cell-muted" style="font-size:0.8rem; margin-top:0.2rem;">
+                        ${formatDate(m.created_at, true)}
+                        ${m.duration ? ' · ' + Math.round(m.duration) + 's' : ''}
+                        ${m.geo && m.geo.city ? ' · ' + escapeHtml(m.geo.city) : ''}
+                    </div>
+                </div>
+                <div style="display:flex; gap:0.5rem;">
+                    ${m.identity ? `<button class="btn-secondary" style="width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="openLeadOrApptFromVoice('${m.identity.type}', ${m.identity.id})">Voir la fiche</button>` : ''}
+                    <button class="danger" style="width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="deleteVoiceMessage(${m.id})">Supprimer</button>
+                </div>
+            </div>
+            <audio controls preload="none" style="width:100%;" id="voice-audio-${m.id}" onplay="loadVoiceAudioSrc(${m.id})"></audio>
+        </div>
+    `).join('');
+}
+
+// L'audio (en base64) n'est chargé qu'au moment où on appuie sur lecture —
+// pas dans la liste initiale, pour ne jamais charger des mégaoctets de son
+// inutilement si tu as beaucoup de messages.
+async function loadVoiceAudioSrc(id) {
+    const audioEl = document.getElementById('voice-audio-' + id);
+    if (audioEl.dataset.loaded) return;
+    try {
+        const { audioBase64, mimeType } = await api('/api/voice-messages/' + id + '/audio');
+        audioEl.src = `data:${mimeType};base64,${audioBase64}`;
+        audioEl.dataset.loaded = '1';
+        audioEl.play().catch(() => {});
+        markVoiceMessageListened(id);
+    } catch (e) { toast(e.message); }
+}
+
+async function markVoiceMessageListened(id) {
+    const msg = voiceMessagesCache.find(m => m.id === id);
+    if (!msg || msg.listened) return;
+    try {
+        await api('/api/voice-messages/' + id, { method: 'PATCH', body: JSON.stringify({ listened: true }) });
+        msg.listened = true;
+        renderVoiceMessagesList();
+        refreshVoiceMessagesBadge();
+    } catch (e) { /* pas grave si ça echoue, l'ecoute a quand meme eu lieu */ }
+}
+
+async function deleteVoiceMessage(id) {
+    if (!confirm('Supprimer définitivement ce message vocal ?')) return;
+    try {
+        await api('/api/voice-messages/' + id, { method: 'DELETE' });
+        toast('Message vocal supprimé');
+        loadVoiceMessages();
+    } catch (e) { toast(e.message); }
+}
+
+function openLeadOrApptFromVoice(type, id) {
+    if (type === 'lead') { switchView('leads'); setTimeout(() => openLeadDrawer(id), 300); }
+    else if (type === 'appointment') { switchView('appointments'); setTimeout(() => openApptDrawer(id), 300); }
 }
 
 /* ---------------- DRAWER ---------------- */

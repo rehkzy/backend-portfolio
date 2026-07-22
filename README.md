@@ -252,7 +252,7 @@ Ajoute `GA_PROPERTY_ID` (le nombre) et `GA_SERVICE_ACCOUNT_JSON` (colle **le con
 - Les liens d'invitation expirent après 7 jours et ne sont utilisables qu'une fois
 - Le dashboard t'empêche de te retrouver sans administrateur actif (impossible de désactiver/rétrograder/supprimer le dernier admin)
 - Les droits sont vérifiés côté serveur sur chaque route, pas seulement dans l'interface — un rédacteur ou lecteur qui tenterait de forcer une action non autorisée serait bloqué par le serveur
-- Les routes publiques (`POST /api/leads`, `POST /api/appointments`, `GET /api/content`) sont volontairement ouvertes — c'est le site qui les appelle sans authentification
+- Les routes publiques (`POST /api/leads`, `POST /api/appointments`, `GET /api/content`, `POST /api/voice-messages`) sont volontairement ouvertes — c'est le site qui les appelle sans authentification
 - `ALLOWED_ORIGIN` doit toujours pointer vers ton vrai domaine, jamais `*` en production
 
 
@@ -433,6 +433,70 @@ Puis **"Create Web Service"**. Le premier déploiement prend 2 à 5 minutes.
 3. Si tu le vois, tout fonctionne — tes données survivront désormais à n'importe quel redémarrage du serveur gratuit
 
 ⚠️ Tu peux maintenant, si tu veux, supprimer ton projet sur Railway pour ne plus jamais être facturé dessus (Settings → Danger → Delete Project).
+
+---
+
+## 11. Piloter à distance : Calendar, Sheets, notifications Discord/Slack, Web Push
+
+Quatre briques 100% gratuites pour être averti et tout suivre sans ouvrir le dashboard à chaque fois. Toutes optionnelles, aucune ne casse quoi que ce soit si tu ne les configures pas.
+
+### Notifications push sur ton téléphone (déjà prêtes — rien à créer)
+Cette fonctionnalité est déjà entièrement construite dans le backend, il ne manque que de l'activer sur ton téléphone :
+1. Sur iPhone : ouvre ton dashboard dans Safari → bouton de partage (carré avec une flèche) → **"Sur l'écran d'accueil"** → confirme. C'est obligatoire sur iPhone : les notifications ne marchent que via une icône ajoutée à l'écran d'accueil, pas depuis un onglet Safari classique.
+2. Ouvre l'app depuis cette icône → va dans **"Compte"** (menu de gauche du dashboard) → active les notifications quand on te le demande
+3. Un nouveau lead ou RDV t'enverra désormais une vraie notification, même app fermée
+
+### Google Calendar + Google Sheets
+Si tu as déjà configuré `GA_SERVICE_ACCOUNT_JSON` pour Google Analytics (section 7), tu n'as **rien à recréer** : le même compte sert aux trois.
+
+**Si tu n'as pas encore de compte de service Google**, suis d'abord la section 7 (Étapes 1 à 4) pour le créer.
+
+**Étape 1 — Activer les deux API supplémentaires**
+1. Va sur [console.cloud.google.com](https://console.cloud.google.com) → ton projet (celui utilisé pour Analytics)
+2. Menu ☰ → **"API et services"** → **"Bibliothèque"**
+3. Cherche **"Google Calendar API"** → **"Activer"**
+4. Reviens à la bibliothèque, cherche **"Google Sheets API"** → **"Activer"**
+
+**Étape 2 — Retrouver l'email du compte de service**
+1. Ouvre le fichier JSON que tu avais téléchargé (section 7) — sinon menu ☰ → **"IAM et administration"** → **"Comptes de service"**
+2. Copie l'adresse `client_email` (ressemble à `xxx@ton-projet.iam.gserviceaccount.com`)
+
+**Étape 3 — Partager ton agenda**
+1. Va sur [calendar.google.com](https://calendar.google.com) → ⚙️ **Paramètres**
+2. Dans la colonne de gauche, clique sur le nom de l'agenda que tu veux utiliser (ton agenda principal, ou crée-en un dédié "RDV site")
+3. **"Partager avec des personnes"** → colle l'email du compte de service → droits : **"Apporter des modifications aux événements"**
+4. Toujours sur cette page, note l'**"ID de l'agenda"** un peu plus bas (souvent ton adresse Gmail elle-même pour l'agenda principal)
+
+**Étape 4 — Partager la feuille de calcul**
+1. Crée une feuille Google Sheets (ou utilise une existante) avec deux onglets nommés `Leads` et `RDV`
+2. Bouton **"Partager"** en haut à droite → colle le même email du compte de service → droit **"Éditeur"**
+3. Copie l'**ID de la feuille** dans l'URL : `https://docs.google.com/spreadsheets/d/CET-ID-ICI/edit`
+
+**Étape 5 — Variables Railway/Render**
+| Variable | Valeur |
+|---|---|
+| `GOOGLE_CALENDAR_ID` | L'ID de l'agenda (étape 3) |
+| `GOOGLE_SHEET_ID` | L'ID de la feuille (étape 4) |
+
+### Notifications Discord
+1. Dans Discord, va dans le salon où tu veux recevoir les alertes → ⚙️ à côté du nom du salon → **"Intégrations"** → **"Webhooks"** → **"Nouveau webhook"**
+2. Donne-lui un nom (ex: "Alertes site") → **"Copier l'URL du webhook"**
+3. Variable Railway/Render : `DISCORD_WEBHOOK_URL` = l'URL copiée
+
+### Notifications Slack
+1. Va sur [api.slack.com/apps](https://api.slack.com/apps) → **"Create New App"** → **"From scratch"**
+2. Nom : `Alertes site` → choisis ton espace de travail
+3. Menu de gauche → **"Incoming Webhooks"** → active le curseur en haut → **"Add New Webhook to Workspace"**
+4. Choisis le canal → **"Allow"**
+5. Copie l'URL affichée (commence par `https://hooks.slack.com/...`)
+6. Variable Railway/Render : `SLACK_WEBHOOK_URL` = l'URL copiée
+
+### Surveillance UptimeRobot (le site tombe → tu es prévenu)
+1. Va sur [uptimerobot.com](https://uptimerobot.com) → crée un compte gratuit
+2. **"+ Add New Monitor"** → Type : **HTTP(s)** → colle l'URL de ton backend (ex: `https://florian-b-backend.onrender.com/health`)
+3. **Monitoring Interval** : mets-le à 5 minutes minimum si tu es sur Render gratuit (sinon les réveils réguliers du serveur créeront de fausses alertes)
+4. Dans **"Alert Contacts"**, ajoute ton email (et ton téléphone si tu veux du SMS, en option payante chez eux — l'email reste gratuit)
+5. **"Create Monitor"**
 
 ---
 

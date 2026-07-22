@@ -16,6 +16,8 @@ const cron = require('node-cron');
 const ftpPub = require('./ftp');
 const publisher = require('./publisher');
 const { UAParser } = require('ua-parser-js');
+const googleIntegrations = require('./google-integrations');
+const { notifyWebhooks } = require('./webhook-notify');
 push.init();
 
 const app = express();
@@ -640,6 +642,12 @@ app.post('/api/leads', async (req, res) => {
     // l'inverse — jamais de recherche d'identité à partir d'un visiteur anonyme.
     linkVisitorIdentity(tracking.sessionId, { type: 'lead', id: lead.id, name: lead.name || lead.email, email: lead.email });
 
+    // Google Sheets + webhook Discord/Slack — silencieux si non configurés
+    googleIntegrations.appendSheetRow('Leads!A:F', [
+        new Date().toLocaleString('fr-FR'), lead.name || '', lead.email, lead.message, lead.source || '', lead.budget || '',
+    ]).catch(() => {});
+    notifyWebhooks(`📬 Nouveau lead — ${lead.name || lead.email}\n${lead.message.slice(0, 200)}`).catch(() => {});
+
     // Géolocalisation + emails en arrière-plan (ne bloquent pas la réponse)
     (async () => {
         const geo = await geolocateIp(ip);
@@ -729,6 +737,16 @@ app.post('/api/appointments', async (req, res) => {
 
     linkVisitorIdentity(tracking.sessionId, { type: 'appointment', id: appt.id, name: appt.email, email: appt.email });
 
+    // Google Calendar (pense-bête à confirmer), Google Sheets, webhook Discord/Slack
+    googleIntegrations.createCalendarReminder({
+        title: `📅 RDV à confirmer — ${appt.subject}`,
+        description: `Client : ${appt.email}\nCréneau demandé : ${appt.date_text || '?'} à ${appt.time_text || '?'}\nSujet : ${appt.subject}\n\nÀ confirmer et déplacer au bon jour dans ce calendrier une fois validé avec le client.`,
+    }).catch(() => {});
+    googleIntegrations.appendSheetRow('RDV!A:F', [
+        new Date().toLocaleString('fr-FR'), appt.email, appt.subject, appt.date_text || '', appt.time_text || '', appt.status,
+    ]).catch(() => {});
+    notifyWebhooks(`📅 Nouveau RDV demandé — ${appt.email}\n${appt.subject} (${appt.date_text || '?'} à ${appt.time_text || '?'})`).catch(() => {});
+
     (async () => {
         const geo = await geolocateIp(ip);
         if (geo) {
@@ -743,6 +761,105 @@ app.post('/api/appointments', async (req, res) => {
             tag: 'appt-' + appt.id,
         }).catch(() => {});
     })();
+});
+
+/* ============================================================
+   MESSAGES VOCAUX — enregistrés par un visiteur depuis l'assistant IA
+   du site (bouton micro du chat). Stockés directement dans data/db.json
+   en base64 (pas de fichier séparé sur disque) : ça les fait profiter
+   automatiquement de la sauvegarde GitHub déjà en place pour le reste
+   des données, sans mécanisme supplémentaire à construire — et ça
+   fonctionne aussi bien sur un hébergeur à disque non-persistant
+   (Render) que sur un disque persistant classique. Limité à 5 Mo par
+   message (largement suffisant pour un vocal de quelques minutes).
+   Route publique volontairement ouverte, comme /api/leads et
+   /api/appointments — c'est le site qui l'appelle sans authentification.
+   ============================================================ */
+const voiceUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const ok = /^audio\//.test(file.mimetype) || /\.(webm|ogg|mp3|mp4|m4a|wav)$/i.test(file.originalname || '');
+        cb(ok ? null : new Error('Format audio non reconnu'), ok);
+    },
+});
+
+app.post('/api/voice-messages', (req, res) => {
+    voiceUpload.single('audio')(req, res, async (err) => {
+        if (err) return res.status(400).json({ error: err.message || 'Fichier audio invalide' });
+        if (!req.file) return res.status(400).json({ error: 'Aucun fichier audio reçu' });
+
+        const ip = getRealIp(req);
+        const sessionId = (req.body && req.body.sessionId) || null;
+        const durationRaw = Number(req.body && req.body.duration);
+        const duration = Number.isFinite(durationRaw) ? durationRaw : null;
+
+        // Si ce visiteur s'est déjà identifié ailleurs (lead ou RDV rempli),
+        // on rattache son identité au message vocal — jamais l'inverse.
+        let identity = null;
+        if (sessionId) {
+            try {
+                const v = db.get('visitors').find(x => Array.isArray(x.sessionIds) && x.sessionIds.includes(sessionId)).value();
+                if (v && v.identity) identity = v.identity;
+            } catch (e) { /* jamais bloquant */ }
+        }
+
+        const record = {
+            id: nextId('voiceMessages'),
+            audioBase64: req.file.buffer.toString('base64'),
+            mimeType: req.file.mimetype || 'audio/webm',
+            sizeBytes: req.file.size,
+            duration,
+            sessionId,
+            identity,
+            ip,
+            geo: null,
+            listened: false,
+            created_at: now(),
+        };
+        db.get('voiceMessages').push(record).write();
+        res.status(201).json({ ok: true, id: record.id });
+
+        geolocateIp(ip).then((geo) => {
+            if (geo) db.get('voiceMessages').find({ id: record.id }).assign({ geo }).write();
+        }).catch(() => {});
+
+        push.notifyAll({
+            title: '🎙️ Nouveau message vocal',
+            body: (identity && identity.name ? identity.name : 'Visiteur anonyme') + (duration ? ` — ${Math.round(duration)}s` : ''),
+            tag: 'voice-' + record.id,
+        }).catch(() => {});
+    });
+});
+
+app.get('/api/voice-messages', auth, (req, res) => {
+    const messages = db.get('voiceMessages').value()
+        .slice()
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        // On ne renvoie jamais l'audio en base64 dans la liste (ça peut être
+        // volumineux) — seulement dans le détail d'un message précis.
+        .map(({ audioBase64, ...meta }) => meta);
+    res.json(messages);
+});
+
+app.get('/api/voice-messages/:id/audio', auth, (req, res) => {
+    const msg = db.get('voiceMessages').find({ id: Number(req.params.id) }).value();
+    if (!msg) return res.status(404).json({ error: 'Message introuvable' });
+    res.json({ audioBase64: msg.audioBase64, mimeType: msg.mimeType });
+});
+
+app.patch('/api/voice-messages/:id', auth, canWrite, (req, res) => {
+    const id = Number(req.params.id);
+    const patch = {};
+    if (typeof req.body.listened === 'boolean') patch.listened = req.body.listened;
+    if (typeof req.body.note === 'string') patch.note = req.body.note;
+    db.get('voiceMessages').find({ id }).assign(patch).write();
+    res.json({ ok: true });
+});
+
+app.delete('/api/voice-messages/:id', auth, canWrite, (req, res) => {
+    db.get('voiceMessages').remove({ id: Number(req.params.id) }).write();
+    res.json({ ok: true });
 });
 
 // Suivi d'activité — appelé par le site pour toute action utilisateur (formulaires,
