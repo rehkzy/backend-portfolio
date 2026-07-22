@@ -3,7 +3,17 @@ const FileSync = require('lowdb/adapters/FileSync');
 const path = require('path');
 const fs = require('fs');
 
-const DATA_DIR = path.join(__dirname, 'data');
+// Sur Railway, si un Volume est attaché au service, RAILWAY_VOLUME_MOUNT_PATH
+// pointe DIRECTEMENT vers le disque qui SURVIT aux redéploiements — c'est ce
+// chemin lui-même qui sert de dossier de données, on ne rajoute pas de
+// sous-dossier "data" (sinon on chercherait au mauvais endroit et on
+// passerait à côté des données déjà présentes sur le Volume). Sans Volume
+// attaché, on retombe sur un dossier local (perdu à chaque déploiement —
+// voir README section "Stockage persistant" pour configurer le Volume,
+// obligatoire).
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH
+    ? process.env.RAILWAY_VOLUME_MOUNT_PATH
+    : path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const adapter = new FileSync(path.join(DATA_DIR, 'db.json'));

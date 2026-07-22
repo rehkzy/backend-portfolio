@@ -807,6 +807,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Télécharger une sauvegarde
             </div>
+            <div class="nav-item" id="restoreBtn" data-role="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l4-4 4 4"/><path d="M7 5v10a2 2 0 0 0 2 2h10"/></svg>
+                Restaurer une sauvegarde
+            </div>
+            <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
             <div class="nav-item" id="monthlyReportPdfBtn" data-role="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 Rapport mensuel (PDF)
@@ -6070,6 +6075,25 @@ document.getElementById('backupBtn').addEventListener('click', async () => {
         URL.revokeObjectURL(url);
         toast('Sauvegarde téléchargée ✅');
     } catch (e) { toast(e.message); }
+});
+
+document.getElementById('restoreBtn').addEventListener('click', () => {
+    document.getElementById('restoreFileInput').click();
+});
+document.getElementById('restoreFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = ''; // permet de re-choisir le même fichier plus tard
+    if (!file) return;
+    if (!confirm(`⚠️ Restaurer "${file.name}" va REMPLACER TOUTES les données actuelles du dashboard (leads, devis, factures, contenu du site, tout). Cette action est irréversible.\n\nContinuer ?`)) return;
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        await api('/api/admin/restore', { method: 'POST', body: JSON.stringify(data), timeoutMs: 30000 });
+        toast('✅ Données restaurées — la page va se recharger');
+        setTimeout(() => location.reload(), 1500);
+    } catch (err) {
+        toast('Erreur : ' + (err.message || 'fichier illisible'));
+    }
 });
 
 document.getElementById('monthlyReportPdfBtn').addEventListener('click', async () => {

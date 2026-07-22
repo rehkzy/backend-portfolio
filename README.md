@@ -1,5 +1,36 @@
 # Backend Florian B. — Dashboard complet
 
+## ⚠️ STOCKAGE PERSISTANT — À FAIRE EN PREMIER (résout la perte de données)
+
+**Le problème que tu rencontres** : à chaque mise à jour du backend (upload sur GitHub), Railway reconstruit entièrement le conteneur qui fait tourner ton dashboard. Si aucun **Volume** n'est attaché à ton service, toutes tes données (leads, devis, factures, articles de blog, contenu du site...) vivaient dans ce conteneur — et disparaissent donc à chaque reconstruction.
+
+Ce zip corrige le code pour utiliser un Volume persistant s'il est disponible, mais **il faut le créer une fois sur Railway** — ce n'est pas automatique.
+
+### Étape 1 — Créer le Volume (2 minutes, une seule fois)
+
+1. Va sur railway.app → ouvre ton projet
+2. Clique sur ton service backend (la carte avec le nom de ton projet) pour le sélectionner
+3. Fais un clic droit sur le canevas (la zone où sont dessinées tes cartes de services) → choisis **"Volume"** dans le menu (ou utilise le raccourci ⌘K / Ctrl+K puis tape "volume")
+4. Un nouvel élément "Volume" apparaît, relié à ton service backend par une flèche. S'il n'est pas relié automatiquement, fais-le glisser jusqu'à ton service pour l'attacher
+5. Clique sur ce Volume → onglet **Settings** → champ **"Mount Path"** → tape `/data` → valide
+6. Railway redéploie automatiquement ton service pour prendre en compte le Volume (30 secondes à 1 minute)
+
+C'est tout — aucune variable à ajouter, aucune ligne de code à toucher. Le code de ce zip détecte automatiquement le Volume et l'utilise.
+
+### Étape 2 — Vérifier que ça fonctionne
+
+1. Une fois le redéploiement terminé, ouvre ton dashboard et ajoute une donnée test (par exemple un lead manuel, ou une note dans Mon entreprise)
+2. Fais un petit changement sans conséquence sur GitHub (par exemple, rouvre ce README et enregistre-le à nouveau) pour déclencher un redéploiement
+3. Attends que Railway ait fini de redéployer, puis recharge ton dashboard : ta donnée test doit toujours être là. Si oui, c'est réglé définitivement — tu ne perdras plus jamais rien lors des mises à jour.
+
+### Étape 3 — Restaurer une ancienne sauvegarde si tu en as une
+
+Si tu avais téléchargé une sauvegarde JSON avant de perdre tes données (menu Système → "Télécharger une sauvegarde"), tu peux maintenant la restaurer : menu Système → **"Restaurer une sauvegarde"** → sélectionne le fichier `.json` → confirme. ⚠️ Ça remplace toutes les données actuelles du dashboard, donc ne l'utilise que si tu es sûr de vouloir revenir à cet état.
+
+Si tu n'as jamais téléchargé de sauvegarde, il n'y a malheureusement rien à récupérer des mises à jour précédentes — mais à partir de maintenant, plus aucune donnée ne sera perdue. Pense à télécharger une sauvegarde régulièrement (chaque mois par exemple) en plus du Volume, pour avoir une copie de sécurité en local.
+
+---
+
 Backend Node.js (Express + lowdb) qui fait tourner :
 - le **dashboard admin** de florian-b.fr (leads, RDV, devis, factures, projets, calendrier de contenu, analytics)
 - l'**API** utilisée par le chat IA du site pour enregistrer les messages et demandes de RDV
@@ -294,3 +325,12 @@ Toutes optionnelles, activees des que la variable `SERPAPI_KEY` est presente. Mo
   - Champ adresse de "Mon entreprise" et adresse client des factures : tape 4 caracteres, choisis dans la liste, l'adresse est validee et bien formatee — fini les erreurs de saisie sur les documents legaux.
 
 Les deux sont gratuites, sans cle, sans inscription — rien a configurer sur Railway, ca fonctionne immediatement apres le deploiement.
+
+
+## ⚠️ Volume trouvé mais programmé pour suppression — action urgente
+
+Si tu as suivi la procédure de dépannage avec la CLI Railway (`railway volume list`) et que tu vois un volume nommé `data`, attaché à `backend-portfolio`, avec une ligne **"Deletes on: ..."** : ce volume contient déjà tes vraies données (probablement récupérées lors d'un test), mais Railway va le supprimer définitivement à la date indiquée (délai de grâce de 48h après une suppression déclenchée, volontairement ou par un bug d'interface).
+
+**Pour annuler la suppression : cherche l'email envoyé par Railway** (objet du type "Volume deleted" ou "Volume queued for deletion") et clique sur le lien de restauration qu'il contient. Il n'existe malheureusement aucune commande CLI ni bouton dashboard pour annuler autrement — uniquement ce lien email, valable pendant les 48h.
+
+Une fois la suppression annulée, **ne change surtout pas le Mount Path** de ce volume — il est déjà correctement réglé (probablement `/app/data`), et le code de ce zip a été ajusté pour l'utiliser tel quel, sans sous-dossier supplémentaire. Redéploie simplement ce zip normalement, et tes données seront retrouvées automatiquement.

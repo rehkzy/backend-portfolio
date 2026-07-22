@@ -22,7 +22,11 @@ const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+// Même logique que pour la base de données : les images uploadées doivent
+// vivre sur le Volume persistant, sinon elles disparaissent à chaque déploiement.
+const UPLOADS_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH
+    ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'uploads')
+    : path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 app.use(express.json());
@@ -2197,6 +2201,25 @@ app.get('/api/admin/backup', auth, adminOnly, (req, res) => {
     res.set('Content-Disposition', `attachment; filename="${filename}"`);
     res.set('Content-Type', 'application/json');
     res.send(JSON.stringify(data, null, 2));
+});
+
+// Restauration à partir d'un fichier de sauvegarde JSON (téléchargé via le bouton
+// ci-dessus). Utile une seule fois après avoir configuré le Volume persistant,
+// pour récupérer les données perdues lors des redéploiements précédents.
+// ⚠️ Remplace TOUTES les données actuelles — confirmation obligatoire côté dashboard.
+app.post('/api/admin/restore', auth, adminOnly, (req, res) => {
+    const incoming = req.body;
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+        return res.status(400).json({ error: 'Fichier de sauvegarde invalide (JSON attendu).' });
+    }
+    // Garde-fou minimal : un vrai fichier de sauvegarde a au moins ces clés.
+    const expectedKeys = ['leads', 'businessSettings'];
+    if (!expectedKeys.every(k => k in incoming)) {
+        return res.status(400).json({ error: "Ce fichier ne ressemble pas à une sauvegarde de ce dashboard (clés attendues manquantes)." });
+    }
+    db.setState(incoming).write();
+    logTeamAction(req, 'other', 'Données restaurées depuis un fichier de sauvegarde');
+    res.json({ ok: true });
 });
 
 /* ============================================================
