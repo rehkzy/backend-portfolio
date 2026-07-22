@@ -17,6 +17,26 @@ const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const adapter = new FileSync(path.join(DATA_DIR, 'db.json'));
+
+/* ---- Sauvegarde automatique vers GitHub (optionnelle, voir github-backup.js) ----
+   On enrobe l'écriture sur DISQUE elle-même (celle de l'adaptateur), pas une
+   méthode de plus haut niveau de lowdb — ainsi, peu importe la syntaxe utilisée
+   dans le code (db.write(), db.get(...).push(...).write(), etc.), absolument
+   toute écriture déclenche une sauvegarde. Si GITHUB_BACKUP_TOKEN n'est pas
+   configuré, cet enrobage ne fait rien de plus que l'écriture normale —
+   aucun changement de comportement. */
+try {
+    const { scheduleBackup } = require('./github-backup');
+    const originalAdapterWrite = adapter.write.bind(adapter);
+    adapter.write = function (data) {
+        const result = originalAdapterWrite(data);
+        scheduleBackup();
+        return result;
+    };
+} catch (e) {
+    console.warn('⚠️  Module de sauvegarde GitHub indisponible :', e.message);
+}
+
 const db = low(adapter);
 
 // Données par défaut — contenu réel de florian-b.fr pré-rempli
@@ -504,3 +524,5 @@ if (db.get('users').value().length === 0 && process.env.ADMIN_PASSWORD_HASH) {
 }
 
 module.exports = db;
+db.DATA_DIR = DATA_DIR;
+

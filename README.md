@@ -377,6 +377,65 @@ Dit si l'email d'un lead a des chances d'être valide, et signale les adresses j
 Pour Railway, une seule variable ajoutée redéploie automatiquement le service — pas besoin de re-uploader le zip.
 
 
+## 10. Passer sur l'hébergement gratuit Render (sans carte bancaire)
+
+Railway ne propose plus d'offre gratuite permanente — seulement un crédit d'essai de 5$, à usage unique. Si tu ne veux pas payer, **Render.com** est la seule alternative sérieuse sans carte bancaire. Le piège : sur leur offre gratuite, le disque du serveur est effacé à chaque redémarrage (ce qui arrive après 15 minutes sans visite). Pour ne jamais perdre de données, le backend sauvegarde désormais automatiquement `data/db.json` dans un **dépôt GitHub privé**, et le restaure tout seul à chaque démarrage.
+
+**Contrepartie à connaître** : après 15 minutes sans visite, le site met 30 à 60 secondes à répondre à la première personne qui revient (le temps que le serveur se réveille). Ensuite c'est normal jusqu'à la prochaine pause.
+
+### Étape 1 — Créer le dépôt de sauvegarde sur GitHub
+1. Va sur [github.com/new](https://github.com/new)
+2. Nom du dépôt : `florian-b-backups` (ou ce que tu veux)
+3. **Coche bien "Private"** — ce dépôt contiendra tes vraies données (leads, factures...), il ne doit jamais être public
+4. **"Create repository"**
+
+### Étape 2 — Créer le jeton d'accès
+1. Va sur [github.com/settings/tokens?type=beta](https://github.com/settings/tokens?type=beta)
+2. **"Generate new token"**
+3. Nom : `Sauvegarde backend florian-b.fr`
+4. Expiration : choisis **"No expiration"** (sinon la sauvegarde s'arrêtera silencieusement à la date choisie)
+5. **"Repository access"** → **"Only select repositories"** → sélectionne le dépôt créé à l'étape 1 (jamais "All repositories")
+6. **"Repository permissions"** → cherche **"Contents"** → mets-le sur **"Read and write"**
+7. Tout en bas, **"Generate token"**
+8. **Copie le jeton tout de suite** (il commence par `github_pat_...`) — GitHub ne te le remontrera plus jamais après avoir quitté la page
+
+### Étape 3 — Créer le compte Render et déployer
+1. Va sur [render.com](https://render.com) → **"Get Started"** → connecte-toi avec GitHub (le plus simple)
+2. **"New +"** → **"Web Service"**
+3. Sélectionne ton repo `backend-portfolio` (le même que sur Railway)
+4. **Name** : ce que tu veux (ex: `florian-b-backend`)
+5. **Region** : Frankfurt (le plus proche de la France)
+6. **Branch** : `main`
+7. **Runtime** : Node
+8. **Build Command** : `npm install`
+9. **Start Command** : `npm start`
+10. **Instance Type** : **Free**
+11. Ne clique pas encore sur "Create" — descends à la section **"Environment Variables"**
+
+### Étape 4 — Ajouter toutes les variables
+Recopie **toutes** les variables de ton `.env.example` (celles que tu avais déjà sur Railway : `JWT_SECRET`, `ADMIN_PASSWORD_HASH`, `ALLOWED_ORIGIN`, `SMTP_*`, etc.), plus les deux nouvelles :
+
+| Variable | Valeur |
+|---|---|
+| `GITHUB_BACKUP_TOKEN` | Le jeton copié à l'étape 2 (`github_pat_...`) |
+| `GITHUB_BACKUP_REPO` | `ton-nom-utilisateur/florian-b-backups` |
+
+Puis **"Create Web Service"**. Le premier déploiement prend 2 à 5 minutes.
+
+### Étape 5 — Récupérer la nouvelle URL et mettre à jour le site
+1. Une fois déployé, Render affiche ton URL en haut de la page (ex: `https://florian-b-backend.onrender.com`)
+2. Dans `index.html`, remplace la ligne `window.BACKEND_URL = '...'` par cette nouvelle URL
+3. Redépose `index.html` sur FileZilla
+
+### Étape 6 — Vérifier que la sauvegarde fonctionne
+1. Crée un lead de test sur le site
+2. Va sur ton dépôt GitHub `florian-b-backups` → dossier `db-backup/` → le fichier `db.json` doit apparaître avec un commit "Sauvegarde automatique" datant d'il y a quelques secondes
+3. Si tu le vois, tout fonctionne — tes données survivront désormais à n'importe quel redémarrage du serveur gratuit
+
+⚠️ Tu peux maintenant, si tu veux, supprimer ton projet sur Railway pour ne plus jamais être facturé dessus (Settings → Danger → Delete Project).
+
+---
+
 ## ⚠️ Volume trouvé mais programmé pour suppression — action urgente
 
 Si tu as suivi la procédure de dépannage avec la CLI Railway (`railway volume list`) et que tu vois un volume nommé `data`, attaché à `backend-portfolio`, avec une ligne **"Deletes on: ..."** : ce volume contient déjà tes vraies données (probablement récupérées lors d'un test), mais Railway va le supprimer définitivement à la date indiquée (délai de grâce de 48h après une suppression déclenchée, volontairement ou par un bug d'interface).

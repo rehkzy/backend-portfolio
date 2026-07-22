@@ -2,11 +2,11 @@
   "name": "florianb-dashboard-backend",
   "version": "1.0.0",
   "description": "Backend + dashboard admin pour florian-b.fr",
-  "main": "server.js",
+  "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "node index.js",
+    "dev": "node index.js",
     "hash-password": "node scripts/hash-password.js"
   },
   "dependencies": {
