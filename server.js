@@ -15,6 +15,8 @@ const push = require('./push');
 const cron = require('node-cron');
 const ftpPub = require('./ftp');
 const publisher = require('./publisher');
+const posthog = require('./posthog');
+const { setupExpressRequestContext, setupExpressErrorHandler } = require('posthog-node');
 push.init();
 
 const app = express();
@@ -33,6 +35,7 @@ app.use(express.json());
 app.use(cors({
     origin: ALLOWED_ORIGIN === '*' ? true : ALLOWED_ORIGIN.split(',').map(s => s.trim()),
 }));
+setupExpressRequestContext(posthog, app);
 app.use('/dashboard', express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 // tracker.js servi directement à la racine avec CORS large (doit être chargé depuis florian-b.fr)
@@ -194,6 +197,9 @@ app.post('/api/auth/login', (req, res) => {
         return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
     const token = jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const distinctId = String(user.id);
+    posthog.identify({ distinctId, properties: { name: user.name || null, role: user.role } });
+    posthog.capture({ distinctId, event: 'user logged in', properties: { role: user.role } });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 });
 
@@ -278,6 +284,7 @@ app.post('/api/admin/users', auth, adminOnly, async (req, res) => {
     db.get('users').push(user).write();
     const result = await mailer.sendMail({ ...mailer.teamInviteEmail(user, inviteToken), meta: { type: 'team_invite', relatedId: user.id } });
     logTeamAction(req, 'user_invited', `${cleanEmail} invité avec le rôle ${role}`, user.id);
+    posthog.capture({ distinctId: String(req.user.userId), event: 'user invited', properties: { role, email_sent: result.sent } });
     res.status(201).json({ id: user.id, emailSent: result.sent, emailError: result.sent ? null : result.reason });
 });
 
@@ -546,6 +553,19 @@ app.post('/api/leads', async (req, res) => {
         tracking,
     };
     db.get('leads').push(lead).write();
+    posthog.capture({
+        distinctId: tracking.sessionId || `anon-lead-${lead.id}`,
+        event: 'lead received',
+        properties: {
+            source: lead.source,
+            budget: lead.budget || null,
+            is_returning_client: lead.isReturningClient,
+            has_name: Boolean(lead.name),
+            utm_source: tracking.utmSource || null,
+            utm_medium: tracking.utmMedium || null,
+            utm_campaign: tracking.utmCampaign || null,
+        },
+    });
     res.status(201).json({ id: lead.id });
 
     // Ce visiteur vient de nous donner son identité lui-même (formulaire) : on relie
@@ -637,6 +657,16 @@ app.post('/api/appointments', async (req, res) => {
         tracking,
     };
     db.get('appointments').push(appt).write();
+    posthog.capture({
+        distinctId: tracking.sessionId || `anon-appt-${appt.id}`,
+        event: 'appointment requested',
+        properties: {
+            has_preferred_date: Boolean(appt.date_text),
+            utm_source: tracking.utmSource || null,
+            utm_medium: tracking.utmMedium || null,
+            utm_campaign: tracking.utmCampaign || null,
+        },
+    });
     res.status(201).json({ id: appt.id });
 
     linkVisitorIdentity(tracking.sessionId, { type: 'appointment', id: appt.id, name: appt.email, email: appt.email });
@@ -1014,8 +1044,10 @@ app.patch('/api/leads/:id', auth, canWrite, (req, res) => {
         lead.assign(patch).write();
     }
     if (notes !== undefined) lead.assign({ notes }).write();
-    if (status && status !== prev.status)
+    if (status && status !== prev.status) {
         logTeamAction(req, 'lead_status_changed', `Lead #${id} (${prev.email}) : ${prev.status} → ${status}`, id);
+        posthog.capture({ distinctId: String(req.user.userId), event: 'lead status changed', properties: { previous_status: prev.status, new_status: status, source: prev.source, budget: prev.budget || null } });
+    }
     if (notes !== undefined)
         logTeamAction(req, 'lead_note_edited', `Lead #${id} (${prev.email})`, id);
 
@@ -1598,6 +1630,7 @@ app.post('/api/quotes', auth, adminOnly, (req, res) => {
     db.get('quotes').push(quote).write();
     touchClient(clientEmail, clientName);
     logTeamAction(req, 'quote_created', `Devis ${quote.quoteNumber} créé pour ${clientEmail} (${quote.total.toFixed(2)} €)`, quote.id);
+    posthog.capture({ distinctId: String(req.user.userId), event: 'quote created', properties: { total: quote.total, items_count: quote.items.length, quote_number: quote.quoteNumber } });
     res.status(201).json(quote);
 });
 
@@ -1657,6 +1690,7 @@ app.post('/api/quotes/:id/send', auth, adminOnly, async (req, res) => {
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('quotes').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
     logTeamAction(req, 'quote_sent', `Devis #${id} envoyé par email à ${quote.clientEmail}`, id);
+    posthog.capture({ distinctId: String(req.user.userId), event: 'quote sent', properties: { total: quote.total, quote_number: quote.quoteNumber } });
     res.json({ ok: true });
 });
 
@@ -1690,6 +1724,7 @@ app.get('/api/quotes/:id/accept', async (req, res) => {
     db.get('invoices').push(invoice).write();
     db.get('quotes').find({ id }).assign({ status: 'accepted', accepted_at: now() }).write();
     touchClient(quote.clientEmail, quote.clientName);
+    posthog.capture({ distinctId: `client-${quote.clientEmail}`, event: 'quote accepted', properties: { total: quote.total, quote_number: quote.quoteNumber } });
 
     // Notifie Florian — la facture reste en brouillon, à lui de vérifier puis de l'envoyer
     mailer.sendMail({ ...mailer.quoteAcceptedEmail(quote, invoice), meta: { type: 'quote_accepted', relatedId: quote.id } }).catch(() => {});
@@ -1747,6 +1782,7 @@ app.post('/api/invoices', auth, adminOnly, (req, res) => {
     invoice.total = computeQuoteTotal(invoice.items);
     db.get('invoices').push(invoice).write();
     touchClient(clientEmail, clientName);
+    posthog.capture({ distinctId: String(req.user.userId), event: 'invoice created', properties: { total: invoice.total, items_count: invoice.items.length, invoice_number: invoice.invoiceNumber } });
     res.status(201).json(invoice);
 });
 
@@ -1787,8 +1823,12 @@ app.patch('/api/invoices/:id', auth, adminOnly, (req, res) => {
     }
     if (items !== undefined) { patch.items = items; patch.total = computeQuoteTotal(items); }
     inv.assign(patch).write();
-    if (status && status !== prev.status)
+    if (status && status !== prev.status) {
         logTeamAction(req, 'invoice_status_changed', `Facture ${prev.invoiceNumber} : ${prev.status} → ${status}`, id);
+        if (status === 'paid') {
+            posthog.capture({ distinctId: String(req.user.userId), event: 'invoice paid', properties: { total: prev.total, invoice_number: prev.invoiceNumber } });
+        }
+    }
     res.json({ ok: true });
 });
 
@@ -1827,6 +1867,7 @@ app.post('/api/invoices/:id/send', auth, adminOnly, async (req, res) => {
     if (!result.sent) return res.status(500).json({ error: "Échec de l'envoi : " + result.reason });
     db.get('invoices').find({ id }).assign({ status: 'sent', sent_at: now() }).write();
     logTeamAction(req, 'invoice_sent', `Facture ${invoice.invoiceNumber} envoyée à ${invoice.clientEmail}`, id);
+    posthog.capture({ distinctId: String(req.user.userId), event: 'invoice sent', properties: { total: invoice.total, invoice_number: invoice.invoiceNumber } });
     res.json({ ok: true });
 });
 
@@ -2122,6 +2163,7 @@ app.patch('/api/projects/:id', auth, adminOnly, async (req, res) => {
 
     // Passage à "Livré" → déclenche l'enquête de satisfaction (immédiate)
     if (stage === 'livre' && prev.stage !== 'livre') {
+        posthog.capture({ distinctId: String(req.user.userId), event: 'project delivered', properties: { project_name: prev.name, client_email: prev.clientEmail } });
         const updated = p.value();
         mailer.sendMail({
             ...mailer.satisfactionSurveyEmail(updated, satisfactionToken(id)),
@@ -3446,5 +3488,7 @@ cron.schedule('0 10 * * *', async () => {
         }
     } catch (err) { console.error('Erreur suivi post-livraison:', err.message); }
 }, { timezone: 'Europe/Paris' });
+
+setupExpressErrorHandler(posthog, app);
 
 app.listen(PORT, () => console.log(`✅ Backend Florian B. sur http://localhost:${PORT}`));
