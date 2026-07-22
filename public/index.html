@@ -1963,6 +1963,36 @@ Courtepaille"></textarea>
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <div class="drawer" id="drawer"></div>
 
+<!-- APERÇU EN DIRECT — montre le rendu du site pendant la saisie, avant
+     d'enregistrer. Visible uniquement sur les onglets "Contenu du site". -->
+<button id="previewToggleBtn" title="Aperçu en direct du site" style="
+    display:none; align-items:center; justify-content:center;
+    position:fixed; right:28px; bottom:28px; z-index:900;
+    width:56px; height:56px; border-radius:50%; border:0; cursor:pointer;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff; font-size:22px; box-shadow:var(--shadow-lg);
+    transition: transform .2s var(--ease);
+">👁️</button>
+
+<div id="previewPanel" style="
+    position:fixed; top:0; right:-460px; bottom:0; width:440px; max-width:92vw; z-index:950;
+    background:var(--surface); border-left:1px solid var(--border); box-shadow:var(--shadow-lg);
+    display:flex; flex-direction:column; transition: right .28s var(--ease);
+">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border);">
+        <div>
+            <div style="font-family:var(--font-display); font-weight:700; font-size:15px;">Aperçu en direct</div>
+            <div style="font-size:12px; color:var(--text-muted);" id="previewStatus">En attente de modifications…</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button id="previewRefreshBtn" title="Recharger l'aperçu" style="border:1px solid var(--border); background:var(--surface-2); border-radius:8px; padding:6px 10px; cursor:pointer;">⟳</button>
+            <button id="previewCloseBtn" title="Fermer" style="border:1px solid var(--border); background:var(--surface-2); border-radius:8px; padding:6px 10px; cursor:pointer;">✕</button>
+        </div>
+    </div>
+    <iframe id="previewIframe" title="Aperçu du site" style="flex:1; border:0; width:100%; background:#0a0a0a;"></iframe>
+</div>
+
+
 <!-- COMMAND PALETTE -->
 <div class="cmdk-overlay" id="cmdkOverlay">
     <div class="cmdk-box">
@@ -2227,6 +2257,11 @@ function switchView(view) {
     if (view === 'account') { loadAccount(); refreshPushUI(); }
     if (view === 'journal') loadJournal();
     if (view === 'emails') loadEmails();
+
+    // Le bouton d'aperçu en direct n'a de sens que sur les onglets "Contenu du site"
+    const previewableViews = ['content-hero', 'content-about', 'content-resume', 'content-contact', 'content-faq', 'content-projects', 'content-seo'];
+    document.getElementById('previewToggleBtn').style.display = previewableViews.includes(view) ? 'flex' : 'none';
+    if (!previewableViews.includes(view)) closePreviewPanel();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => refreshCurrentView());
@@ -4080,6 +4115,157 @@ document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
 const SITE_URL = 'https://florian-b.fr'; // 🔧 à corriger si le domaine change
 let contentCache = null;
 
+/* ============================================================
+   APERÇU EN DIRECT — montre le rendu du site pendant la saisie.
+   Le site charge une iframe en mode "?preview=1" (pas d'analytics, pas de
+   bandeau cookies), et on lui envoie le contenu en cours de frappe par
+   postMessage. Rien n'est jamais enregistré tant qu'on ne clique pas sur
+   "Enregistrer" — l'aperçu est purement visuel, côté navigateur.
+   ============================================================ */
+let previewOpen = false;
+let previewLoaded = false;
+
+function openPreviewPanel() {
+    const iframe = document.getElementById('previewIframe');
+    if (!previewLoaded) {
+        iframe.src = SITE_URL + '/?preview=1';
+        previewLoaded = true;
+    }
+    document.getElementById('previewPanel').style.right = '0';
+    document.getElementById('previewToggleBtn').style.transform = 'scale(0.9)';
+    previewOpen = true;
+}
+function closePreviewPanel() {
+    document.getElementById('previewPanel').style.right = '-460px';
+    document.getElementById('previewToggleBtn').style.transform = '';
+    previewOpen = false;
+}
+document.getElementById('previewToggleBtn').addEventListener('click', () => previewOpen ? closePreviewPanel() : openPreviewPanel());
+document.getElementById('previewCloseBtn').addEventListener('click', closePreviewPanel);
+document.getElementById('previewRefreshBtn').addEventListener('click', () => {
+    previewLoaded = false;
+    openPreviewPanel();
+});
+
+// Envoie un fragment de contenu (ex: { hero: {...} }) à l'iframe d'aperçu.
+// Ne touche jamais à la base de données — c'est uniquement visuel, dans le
+// navigateur de Florian, tant qu'il n'a pas cliqué sur "Enregistrer".
+function sendPreviewUpdate(partial) {
+    const iframe = document.getElementById('previewIframe');
+    if (!previewOpen || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage({ type: 'FB_PREVIEW_UPDATE', content: partial }, SITE_URL);
+    const status = document.getElementById('previewStatus');
+    if (status) {
+        status.textContent = 'Mis à jour à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+}
+
+// Regroupe plusieurs frappes rapides en un seul envoi, pour ne pas spammer
+// l'iframe à chaque caractère tapé.
+function debouncePreview(fn, delay = 250) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+}
+
+// Branche l'aperçu en direct sur un ensemble de champs : à chaque saisie,
+// reconstruit le fragment de contenu correspondant et l'envoie à l'iframe.
+function wireLivePreview(fieldIds, buildFragment) {
+    const handler = debouncePreview(() => sendPreviewUpdate(buildFragment()));
+    fieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', handler);
+    });
+}
+
+// --- Hero ---
+wireLivePreview(['heroTitleInput', 'heroTaglineInput'], () => ({
+    hero: {
+        title: document.getElementById('heroTitleInput').value,
+        tagline: document.getElementById('heroTaglineInput').value,
+    },
+}));
+
+// --- À propos ---
+wireLivePreview(['aboutEyebrow', 'aboutTitle', 'aboutLead', 'aboutSignoff'], () => ({
+    about: {
+        eyebrow: document.getElementById('aboutEyebrow').value,
+        title: document.getElementById('aboutTitle').value,
+        lead: document.getElementById('aboutLead').value,
+        signoff: document.getElementById('aboutSignoff').value,
+    },
+}));
+
+// --- Contact & Réseaux ---
+wireLivePreview(['contactEmail', 'contactInstaUrl', 'contactInstaHandle', 'contactLinkedinUrl', 'contactLinkedinName'], () => ({
+    contact: {
+        email: document.getElementById('contactEmail').value,
+        instagramUrl: document.getElementById('contactInstaUrl').value,
+        instagramHandle: document.getElementById('contactInstaHandle').value,
+        linkedinUrl: document.getElementById('contactLinkedinUrl').value,
+        linkedinName: document.getElementById('contactLinkedinName').value,
+    },
+}));
+
+// --- Parcours --- (skills + listes dynamiques d'expériences/formations)
+function sendResumePreview() {
+    const experiences = Array.from(document.querySelectorAll('#experiencesListWrap .edit-card')).map(card => ({
+        period: card.querySelector('.exp-period')?.value || '',
+        role: card.querySelector('.exp-role')?.value || '',
+        company: card.querySelector('.exp-company')?.value || '',
+    }));
+    const formations = Array.from(document.querySelectorAll('#formationsListWrap .edit-card')).map(card => ({
+        period: card.querySelector('.form-period')?.value || '',
+        title: card.querySelector('.form-title')?.value || '',
+        school: card.querySelector('.form-school')?.value || '',
+    }));
+    sendPreviewUpdate({ resume: { experiences, formations, skills: document.getElementById('resumeSkills')?.value || '' } });
+}
+const debouncedResumePreview = debouncePreview(sendResumePreview);
+document.getElementById('view-content-resume').addEventListener('input', debouncedResumePreview);
+
+// --- FAQ ---
+function sendFaqPreview() {
+    const faq = Array.from(document.querySelectorAll('#faqListWrap .edit-card')).map(card => ({
+        q: card.querySelector('.faq-q-input')?.value || '',
+        a: card.querySelector('.faq-a-input')?.value || '',
+    }));
+    sendPreviewUpdate({ faq });
+}
+const debouncedFaqPreview = debouncePreview(sendFaqPreview);
+document.getElementById('view-content-faq').addEventListener('input', debouncedFaqPreview);
+
+// --- Projets --- (titre/sous-titre/action en direct ; la couverture se met à jour
+// dès que l'upload de l'image se termine, voir attachProjectCardEvents plus bas)
+function extractProjectsFromEditor() {
+    const cards = document.querySelectorAll('#projectsListWrap .edit-card');
+    return Array.from(cards).map((card, i) => {
+        let cover = card.dataset.newCover;
+        if (!cover) {
+            const src = card.querySelector('.edit-card-thumb')?.getAttribute('src') || '';
+            cover = src.startsWith(API_BASE + '/uploads/') ? src.replace(API_BASE, '') : src.replace(SITE_URL + '/', '');
+        }
+        return {
+            id: 'project-' + (i + 1),
+            title: card.querySelector('.project-title-input')?.value || '',
+            type: card.querySelector('.project-type-input')?.value || '',
+            cover,
+            action: card.querySelector('.project-action-input')?.value || '',
+        };
+    });
+}
+function sendProjectsPreview() { sendPreviewUpdate({ projects: extractProjectsFromEditor() }); }
+const debouncedProjectsPreview = debouncePreview(sendProjectsPreview);
+document.getElementById('view-content-projects').addEventListener('input', debouncedProjectsPreview);
+
+// --- SEO ---
+wireLivePreview(['seoTitle', 'seoDescription'], () => ({
+    seo: {
+        title: document.getElementById('seoTitle').value,
+        description: document.getElementById('seoDescription').value,
+    },
+}));
+
+
 async function fetchContent(force) {
     if (contentCache && !force) return contentCache;
     const res = await fetch(API_BASE + '/api/content');
@@ -4195,11 +4381,12 @@ function renderProjectsEditor(projects) {
 }
 
 function attachProjectCardEvents() {
-    document.querySelectorAll('#projectsListWrap .move-up').forEach(btn => btn.onclick = () => moveEditCard(btn, -1));
-    document.querySelectorAll('#projectsListWrap .move-down').forEach(btn => btn.onclick = () => moveEditCard(btn, 1));
+    document.querySelectorAll('#projectsListWrap .move-up').forEach(btn => btn.onclick = () => { moveEditCard(btn, -1); if (typeof sendProjectsPreview === 'function') sendProjectsPreview(); });
+    document.querySelectorAll('#projectsListWrap .move-down').forEach(btn => btn.onclick = () => { moveEditCard(btn, 1); if (typeof sendProjectsPreview === 'function') sendProjectsPreview(); });
     document.querySelectorAll('#projectsListWrap .remove-project').forEach(btn => btn.onclick = (e) => {
         if (!confirm("Retirer ce projet de la page d'accueil ?")) return;
         e.target.closest('.edit-card').remove();
+        if (typeof sendProjectsPreview === 'function') sendProjectsPreview();
     });
     document.querySelectorAll('#projectsListWrap .project-cover-input').forEach(input => {
         input.onchange = async (e) => {
@@ -4210,6 +4397,7 @@ function attachProjectCardEvents() {
                 const card = e.target.closest('.edit-card');
                 card.querySelector('.edit-card-thumb').src = resolveImgUrl(url);
                 card.dataset.newCover = url;
+                if (typeof sendProjectsPreview === 'function') sendProjectsPreview();
             } catch (err) { toast(err.message); }
         };
     });
@@ -4223,6 +4411,7 @@ document.getElementById('addProjectBtn').addEventListener('click', () => {
     card.innerHTML = projectCardHTML({});
     wrap.appendChild(card);
     attachProjectCardEvents();
+    if (typeof sendProjectsPreview === 'function') sendProjectsPreview();
 });
 
 document.getElementById('saveProjectsBtn').addEventListener('click', async () => {

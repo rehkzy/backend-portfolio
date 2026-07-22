@@ -1413,10 +1413,16 @@ app.get('/api/content', (req, res) => {
 });
 
 app.put('/api/admin/content', auth, canWrite, (req, res) => {
-    const content = req.body;
-    if (!content || typeof content !== 'object') return res.status(400).json({ error: 'Corps invalide' });
-    db.set('site_content', content).write();
-    logTeamAction(req, 'site_content_updated', 'Contenu du site modifié (Hero, Projets, FAQ, Galeries...)');
+    const patch = req.body;
+    if (!patch || typeof patch !== 'object') return res.status(400).json({ error: 'Corps invalide' });
+    // Fusion, jamais remplacement : chaque section du site (Hero, FAQ, Projets,
+    // Galeries, et demain À propos/Parcours/Contact) peut être enregistrée
+    // indépendamment sans écraser les autres, même si le formulaire qui appelle
+    // cette route ne connaît pas encore toutes les sections existantes.
+    const current = db.get('site_content').value() || {};
+    const merged = { ...current, ...patch };
+    db.set('site_content', merged).write();
+    logTeamAction(req, 'site_content_updated', 'Contenu du site modifié (' + Object.keys(patch).join(', ') + ')');
     res.json({ ok: true });
 });
 
