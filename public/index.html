@@ -1593,13 +1593,41 @@
             <p class="cell-muted" style="margin-bottom:1.2rem;font-size:0.85rem;">Écris ici, publie en un clic : l'article part directement sur <strong>florian-b.fr/blog/</strong> avec tout le SEO (meta, Open Graph, schema.org), et le sitemap est mis à jour automatiquement. C'est ce qui attire les prospects qui cherchent sur Google.</p>
             <div id="blogListWrap"></div>
             <div class="panel" id="serpPanel" style="margin-top:1.5rem;">
-                <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">📈 Positions Google (SERP)</h3>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.8rem;flex-wrap:wrap;">
+                    <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">📈 Positions Google (SERP)</h3>
+                    <div id="serpQuotaWrap" style="font-size:0.72rem;"></div>
+                </div>
                 <div id="serpWrap"><p class="cell-muted" style="font-size:0.8rem;">Chargement…</p></div>
                 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.6rem;">
                     <button type="button" class="btn-secondary" id="serpRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;">Vérifier maintenant</button>
                     <button type="button" class="btn-secondary" id="serpSuggestBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;">💡 Idées de mots-clés</button>
                 </div>
                 <div id="serpSuggestWrap" style="margin-top:0.8rem;"></div>
+            </div>
+
+            <div class="panel" id="mapsPanel" style="margin-top:1.5rem;display:none;">
+                <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">📍 Google Maps — classement local</h3>
+                <div id="mapsWrap"><p class="cell-muted" style="font-size:0.8rem;">Chargement…</p></div>
+                <button type="button" class="btn-secondary" id="mapsRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;margin-top:0.6rem;">Vérifier maintenant</button>
+            </div>
+
+            <div class="panel" id="trendsPanel" style="margin-top:1.5rem;display:none;">
+                <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">📊 Google Trends — quand publier</h3>
+                <p class="cell-muted" style="font-size:0.75rem;margin-bottom:0.6rem;">Le mois où l'intérêt pour chaque mot-clé est le plus fort, sur les 12 derniers mois — cale tes articles et posts dessus.</p>
+                <div id="trendsWrap"></div>
+                <button type="button" class="btn-secondary" id="trendsRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;margin-top:0.6rem;">Vérifier maintenant</button>
+            </div>
+
+            <div class="panel" id="newsPanel" style="margin-top:1.5rem;display:none;">
+                <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">📰 Mentions & actu (Google News)</h3>
+                <div id="newsWrap"></div>
+                <button type="button" class="btn-secondary" id="newsRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;margin-top:0.6rem;">Vérifier maintenant</button>
+            </div>
+
+            <div class="panel" id="reverseImgPanel" style="margin-top:1.5rem;display:none;">
+                <h3 style="margin:0 0 0.3rem;font-size:0.95rem;">🖼️ Qui republie tes visuels</h3>
+                <div id="reverseImgWrap"></div>
+                <button type="button" class="btn-secondary" id="reverseImgRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;margin-top:0.6rem;">Vérifier maintenant</button>
             </div>
         </section>
 
@@ -1663,6 +1691,14 @@
                 <div class="drawer-field"><label>Mots-clés Google à suivre (SERP) — un par ligne, 5 max</label><textarea id="bsSeoKeywords" placeholder="graphiste freelance paris
 directeur artistique freelance"></textarea>
                 <p class="cell-muted" style="font-size:0.75rem;margin-top:0.3rem;">Position vérifiée chaque lundi matin (nécessite la variable Railway <strong>SERPAPI_KEY</strong>, clé gratuite sur serpapi.com — 100 recherches/mois offertes). Résultats dans l'onglet Blog SEO.</p></div>
+                <div class="drawer-field"><label>Recherches locales à suivre (Google Maps) — un par ligne, 3 max</label><textarea id="bsMapsKeywords" placeholder="graphiste paris
+directeur artistique paris"></textarea>
+                <p class="cell-muted" style="font-size:0.75rem;margin-top:0.3rem;">Ta position dans le pack Google Maps + les concurrents locaux (note, nb d'avis). Relevé chaque lundi 8h.</p></div>
+                <div class="drawer-field"><label>Termes à surveiller sur Google Actualités — un par ligne, 5 max</label><textarea id="bsNewsWatchTerms" placeholder="Florian Bonnet
+Courtepaille"></textarea>
+                <p class="cell-muted" style="font-size:0.75rem;margin-top:0.3rem;">Mentions de ta marque ou actu de tes clients (bon prétexte de reprise de contact). Relevé chaque mardi 8h.</p></div>
+                <div class="drawer-field"><label>Images à surveiller (recherche inversée) — une URL par ligne, 8 max</label><textarea id="bsWatchImages" placeholder="https://florian-b.fr/Courtepaille7.webp"></textarea>
+                <p class="cell-muted" style="font-size:0.75rem;margin-top:0.3rem;">Détecte qui republie tes visuels ailleurs sur le web. Vérifié le 1er de chaque mois.</p></div>
                 <button type="button" class="btn-secondary" id="watchRunBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;">Vérifier maintenant</button>
                 <div id="watchStatusWrap" style="margin-top:0.8rem;"></div>
             </div>
@@ -5667,8 +5703,133 @@ async function loadBlog() {
         renderFtpBanner(status);
         renderBlogList();
         loadSerp();
+        loadSerpQuota();
+        loadMaps();
+        loadTrends();
+        loadNews();
+        loadReverseImages();
     } catch (e) { toast(e.message); }
 }
+
+async function loadSerpQuota() {
+    const el = document.getElementById('serpQuotaWrap');
+    if (!el) return;
+    try {
+        const { enabled, quota } = await api('/api/serp-quota');
+        if (!enabled) { el.innerHTML = ''; return; }
+        if (!quota || quota.remaining == null) { el.innerHTML = '<span class="cell-muted">Quota indisponible</span>'; return; }
+        const low = quota.remaining < 15;
+        el.innerHTML = `<span class="cell-muted" style="${low ? 'color:#f59e0b;' : ''}">${low ? '⚠️ ' : ''}${quota.remaining} recherche${quota.remaining > 1 ? 's' : ''} SerpApi restante${quota.remaining > 1 ? 's' : ''} ce mois-ci</span>`;
+    } catch { el.innerHTML = ''; }
+}
+
+/* ---- Google Maps : classement local + concurrents ---- */
+async function loadMaps() {
+    const panel = document.getElementById('mapsPanel');
+    const wrap = document.getElementById('mapsWrap');
+    if (!panel || !wrap) return;
+    try {
+        const { enabled, rankings } = await api('/api/maps-rankings');
+        if (!enabled || !rankings.length) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        const byKw = {};
+        rankings.forEach(r => { (byKw[r.keyword] = byKw[r.keyword] || []).push(r); });
+        wrap.innerHTML = Object.entries(byKw).map(([kw, hist]) => {
+            const last = hist[hist.length - 1];
+            return `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <strong style="font-size:0.85rem;">${escapeHtml(kw)}</strong>
+                    <span>${last.position ? `<strong>#${last.position}</strong> dans Maps${last.rating ? ` · ⭐ ${last.rating} (${last.reviews || 0} avis)` : ''}` : '<span class="cell-muted">Pas dans le pack local</span>'}</span>
+                </div>
+                ${last.competitors && last.competitors.length ? `<div style="margin-top:0.5rem;">${last.competitors.map(c => `<div style="display:flex;justify-content:space-between;font-size:0.76rem;padding:0.15rem 0;${/florian/i.test(c.title || '') ? 'color:var(--accent-2);font-weight:600;' : 'color:var(--text-muted);'}">›#${c.position} ${escapeHtml(c.title)}<span>${c.rating ? '⭐ ' + c.rating + ' (' + (c.reviews || 0) + ')' : ''}</span></div>`).join('')}</div>` : ''}
+            </div>`;
+        }).join('');
+    } catch { panel.style.display = 'none'; }
+}
+document.getElementById('mapsRunBtn')?.addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Vérification…';
+    try { await api('/api/maps-run', { method: 'POST', timeoutMs: 60000 }); toast('Classement Maps relevé ✅'); loadMaps(); loadSerpQuota(); }
+    catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = 'Vérifier maintenant';
+});
+
+/* ---- Google Trends : meilleure période pour publier ---- */
+async function loadTrends() {
+    const panel = document.getElementById('trendsPanel');
+    const wrap = document.getElementById('trendsWrap');
+    if (!panel || !wrap) return;
+    try {
+        const { enabled, data } = await api('/api/trends-data');
+        if (!enabled || !data.length) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        const byKw = {};
+        data.forEach(r => { byKw[r.keyword] = r; }); // le plus récent écrase le précédent
+        const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'long' });
+        wrap.innerHTML = Object.values(byKw).map(r => {
+            const d = r.bestPeriod ? new Date(r.bestPeriod) : null;
+            return `<div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                <span>${escapeHtml(r.keyword)}</span>
+                <span class="cell-muted">${d && !isNaN(d) ? '📅 Pic en ' + monthFmt.format(d) : '—'}</span>
+            </div>`;
+        }).join('');
+    } catch { panel.style.display = 'none'; }
+}
+document.getElementById('trendsRunBtn')?.addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Vérification…';
+    try { await api('/api/trends-run', { method: 'POST', timeoutMs: 60000 }); toast('Tendances relevées ✅'); loadTrends(); loadSerpQuota(); }
+    catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = 'Vérifier maintenant';
+});
+
+/* ---- Google News : mentions & actu clients ---- */
+async function loadNews() {
+    const panel = document.getElementById('newsPanel');
+    const wrap = document.getElementById('newsWrap');
+    if (!panel || !wrap) return;
+    try {
+        const { enabled, checks } = await api('/api/news-checks');
+        if (!enabled || !checks.length) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        const byTerm = {};
+        checks.forEach(c => { byTerm[c.term] = c; });
+        wrap.innerHTML = Object.values(byTerm).map(c => `
+            <div style="margin-bottom:0.8rem;">
+                <div class="tc-label">${escapeHtml(c.term)}</div>
+                ${c.articles.length ? c.articles.slice(0, 4).map(a => `<a href="${escapeAttr(a.link)}" target="_blank" style="display:block;font-size:0.78rem;padding:0.2rem 0;text-decoration:none;color:var(--text);">› ${escapeHtml(a.title)} <span class="cell-muted">— ${escapeHtml(a.source)}</span></a>`).join('') : '<p class="cell-muted" style="font-size:0.78rem;">Rien de récent.</p>'}
+            </div>`).join('');
+    } catch { panel.style.display = 'none'; }
+}
+document.getElementById('newsRunBtn')?.addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Vérification…';
+    try { await api('/api/news-run', { method: 'POST', timeoutMs: 60000 }); toast('Actualités relevées ✅'); loadNews(); loadSerpQuota(); }
+    catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = 'Vérifier maintenant';
+});
+
+/* ---- Recherche d'image inversée : qui republie tes visuels ---- */
+async function loadReverseImages() {
+    const panel = document.getElementById('reverseImgPanel');
+    const wrap = document.getElementById('reverseImgWrap');
+    if (!panel || !wrap) return;
+    try {
+        const { enabled, checks } = await api('/api/reverse-image-checks');
+        if (!enabled || !checks.length) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        const byImg = {};
+        checks.forEach(c => { byImg[c.imageUrl] = c; });
+        wrap.innerHTML = Object.values(byImg).map(c => `
+            <div style="margin-bottom:0.8rem;">
+                <div class="tc-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.imageUrl)}</div>
+                ${c.matches.length ? c.matches.slice(0, 6).map(m => `<a href="${escapeAttr(m.link)}" target="_blank" style="display:block;font-size:0.78rem;padding:0.2rem 0;text-decoration:none;color:var(--text);">› ${escapeHtml(m.domain)} <span class="cell-muted">— ${escapeHtml(m.title)}</span></a>`).join('') : '<p class="cell-muted" style="font-size:0.78rem;">Aucune reprise détectée.</p>'}
+            </div>`).join('');
+    } catch { panel.style.display = 'none'; }
+}
+document.getElementById('reverseImgRunBtn')?.addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Vérification…';
+    try { await api('/api/reverse-image-run', { method: 'POST', timeoutMs: 90000 }); toast('Images vérifiées ✅'); loadReverseImages(); loadSerpQuota(); }
+    catch (err) { toast(err.message); }
+    e.target.disabled = false; e.target.textContent = 'Vérifier maintenant';
+});
 
 async function loadSerp() {
     const wrap = document.getElementById('serpWrap');
@@ -5995,6 +6156,9 @@ async function loadBusinessSettings() {
         document.getElementById('bsRdvBlocked').value = b.rdvBlockedDates || '';
         document.getElementById('bsWatchUrls').value = b.watchUrls || '';
         document.getElementById('bsSeoKeywords').value = b.seoKeywords || '';
+        document.getElementById('bsMapsKeywords').value = b.mapsKeywords || '';
+        document.getElementById('bsNewsWatchTerms').value = b.newsWatchTerms || '';
+        document.getElementById('bsWatchImages').value = b.watchImages || '';
         loadWatchStatus();
         renderLegalReadiness(b);
     } catch (e) { toast(e.message); }
@@ -6059,6 +6223,9 @@ document.getElementById('saveBusinessBtn').addEventListener('click', async () =>
             rdvBlockedDates: document.getElementById('bsRdvBlocked').value.trim(),
             watchUrls: document.getElementById('bsWatchUrls').value.trim(),
             seoKeywords: document.getElementById('bsSeoKeywords').value.trim(),
+            mapsKeywords: document.getElementById('bsMapsKeywords').value.trim(),
+            newsWatchTerms: document.getElementById('bsNewsWatchTerms').value.trim(),
+            watchImages: document.getElementById('bsWatchImages').value.trim(),
         };
         await api('/api/business-settings', { method: 'PUT', body: JSON.stringify(payload) });
         toast('Informations enregistrées ✅');

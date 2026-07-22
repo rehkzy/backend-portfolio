@@ -271,3 +271,15 @@ Chaque releve hebdomadaire stocke desormais, sans consommer de recherche supplem
 Clique sur un mot-cle du tableau (onglet Blog SEO) pour deplier ces details.
 
 Bouton "Idees de mots-cles" : suggestions Google Autocomplete a partir d'un mot de depart (consomme 1 recherche SerpApi par utilisation).
+
+
+## Nouvelles API SerpApi ajoutees
+
+Toutes optionnelles, activees des que la variable `SERPAPI_KEY` est presente. Mots-cles et parametres a saisir dans "Mon entreprise" (panneau Veille concurrentielle), resultats affiches dans l'onglet Blog SEO.
+
+- **Google Maps** (`bsMapsKeywords`, 3 mots-cles locaux max) : ta position dans le pack Maps + les concurrents a proximite (note, nombre d'avis). Releve chaque lundi 8h.
+- **Recherche d'image inversee** (`bsWatchImages`, 8 URLs d'images max) : detecte qui republie tes visuels ailleurs sur le web, notification push en cas de nouvelle reprise. Verifie le 1er de chaque mois.
+- **Google Trends** (reutilise `bsSeoKeywords`) : le mois ou l'interet pour chaque mot-cle est le plus fort sur les 12 derniers mois, pour caler tes publications. Releve le 1er de chaque mois.
+- **Google News** (`bsNewsWatchTerms`, 5 termes max) : mentions de ta marque ou actu de tes clients (bon pretexte de reprise de contact), notification push sur nouvel article. Releve chaque mardi 8h.
+
+**Compteur de quota** : en haut du panneau SERP, le nombre de recherches SerpApi restantes ce mois-ci s'affiche en temps reel (n'en consomme aucune pour se verifier). Sous 15 recherches restantes, les relevés automatiques hebdo/mensuels se mettent en pause tout seuls pour ne jamais depasser le quota gratuit — tu peux toujours forcer une verification manuelle si besoin.

@@ -2367,6 +2367,27 @@ app.post('/api/push-action', async (req, res) => {
 });
 
 /* ============================================================
+   QUOTA SERPAPI — combien de recherches restent ce mois-ci
+   (interroge le compte, ne consomme AUCUNE recherche)
+   ============================================================ */
+async function getSerpQuota() {
+    if (!process.env.SERPAPI_KEY) return null;
+    try {
+        const r = await fetch('https://serpapi.com/account.json?api_key=' + process.env.SERPAPI_KEY, { signal: AbortSignal.timeout(10000) });
+        const d = await r.json();
+        if (d.error) return null;
+        return {
+            planLimit: d.total_searches_left != null ? (d.this_month_usage || 0) + d.total_searches_left : null,
+            used: d.this_month_usage ?? null,
+            remaining: d.total_searches_left ?? null,
+        };
+    } catch { return null; }
+}
+app.get('/api/serp-quota', auth, async (req, res) => {
+    res.json({ enabled: Boolean(process.env.SERPAPI_KEY), quota: await getSerpQuota() });
+});
+
+/* ============================================================
    SUIVI DE POSITION GOOGLE (SERP) — optionnel, via SerpApi
    Variable Railway SERPAPI_KEY (offre gratuite : 100 recherches/mois,
    largement assez pour 5 mots-clés vérifiés 1 fois par semaine).
@@ -2377,6 +2398,11 @@ async function runSerpCheck() {
     const b = db.get('businessSettings').value() || {};
     const keywords = String(b.seoKeywords || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean).slice(0, 5);
     if (!keywords.length) return;
+    const quota = await getSerpQuota();
+    if (quota && quota.remaining != null && quota.remaining < keywords.length) {
+        console.log('SERP: quota SerpApi trop bas, relevé hebdomadaire sauté ce coup-ci.');
+        return;
+    }
     const domain = (process.env.SITE_URL || 'https://florian-b.fr').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     for (const keyword of keywords) {
         try {
@@ -2441,6 +2467,170 @@ app.post('/api/serp-run', auth, adminOnly, async (req, res) => {
     if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway (clé gratuite sur serpapi.com)' });
     await runSerpCheck();
     res.json({ ok: true, rankings: db.get('serpRankings').value() || [] });
+});
+
+/* ============================================================
+   GOOGLE MAPS — ton classement local + les concurrents à proximité
+   Relevé chaque lundi 8h (juste après le SERP classique).
+   Mots-clés locaux configurés dans "Mon entreprise" (bsMapsKeywords).
+   ============================================================ */
+async function runMapsCheck() {
+    if (!process.env.SERPAPI_KEY) return;
+    const b = db.get('businessSettings').value() || {};
+    const keywords = String(b.mapsKeywords || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean).slice(0, 3);
+    if (!keywords.length) return;
+    const quota = await getSerpQuota();
+    if (quota && quota.remaining != null && quota.remaining < keywords.length) return;
+    for (const keyword of keywords) {
+        try {
+            const params = new URLSearchParams({ engine: 'google_maps', q: keyword, type: 'search', gl: 'fr', hl: 'fr', api_key: process.env.SERPAPI_KEY });
+            const r = await fetch('https://serpapi.com/search.json?' + params, { signal: AbortSignal.timeout(20000) });
+            const d = await r.json();
+            const results = d.local_results || [];
+            const mine = results.find(p => /florian/i.test(p.title || ''));
+            const competitors = results.slice(0, 8).map(p => ({
+                title: p.title, rating: p.rating ?? null, reviews: p.reviews ?? null, position: p.position ?? null,
+            }));
+            db.get('mapsRankings').push({
+                id: nextId('mapsRankings'), date: now().slice(0, 10), keyword,
+                position: mine ? mine.position : null, rating: mine ? mine.rating ?? null : null, reviews: mine ? mine.reviews ?? null : null,
+                competitors,
+            }).write();
+        } catch (err) { console.error('Maps SERP:', keyword, err.message); }
+    }
+}
+cron.schedule('0 8 * * 1', () => {
+    runMapsCheck().catch(err => console.error('Erreur Maps SERP:', err.message));
+}, { timezone: 'Europe/Paris' });
+app.get('/api/maps-rankings', auth, (req, res) => {
+    res.json({ enabled: Boolean(process.env.SERPAPI_KEY), rankings: db.get('mapsRankings').value() || [] });
+});
+app.post('/api/maps-run', auth, adminOnly, async (req, res) => {
+    if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway' });
+    await runMapsCheck();
+    res.json({ ok: true, rankings: db.get('mapsRankings').value() || [] });
+});
+
+/* ============================================================
+   RECHERCHE D'IMAGE INVERSÉE — détecte qui republie tes visuels
+   Vérifie chaque mois les images configurées dans "Mon entreprise"
+   (une URL absolue par ligne — copie le lien d'une image de ton site).
+   ============================================================ */
+async function runReverseImageCheck() {
+    if (!process.env.SERPAPI_KEY) return;
+    const b = db.get('businessSettings').value() || {};
+    const images = String(b.watchImages || '').split(/[\n,;]+/).map(x => x.trim()).filter(x => /^https?:\/\//.test(x)).slice(0, 8);
+    if (!images.length) return;
+    const quota = await getSerpQuota();
+    if (quota && quota.remaining != null && quota.remaining < images.length) return;
+    for (const imageUrl of images) {
+        try {
+            const params = new URLSearchParams({ engine: 'google_reverse_image', image_url: imageUrl, api_key: process.env.SERPAPI_KEY });
+            const r = await fetch('https://serpapi.com/search.json?' + params, { signal: AbortSignal.timeout(25000) });
+            const d = await r.json();
+            const matches = (d.image_results || []).map(x => ({
+                title: (x.title || '').slice(0, 100),
+                domain: (() => { try { return new URL(x.link).hostname.replace(/^www\./, ''); } catch { return x.link || ''; } })(),
+                link: x.link,
+            })).slice(0, 15);
+            const prev = db.get('reverseImageChecks').value().filter(x => x.imageUrl === imageUrl).slice(-1)[0];
+            const prevDomains = new Set((prev?.matches || []).map(m => m.domain));
+            const newDomains = matches.filter(m => !prevDomains.has(m.domain));
+            db.get('reverseImageChecks').push({ id: nextId('reverseImageChecks'), date: now().slice(0, 10), imageUrl, matches }).write();
+            if (prev && newDomains.length) {
+                push.notifyAll({ title: '🖼️ Ton visuel a été repéré', body: `${newDomains.length} nouveau${newDomains.length > 1 ? 'x' : ''} site${newDomains.length > 1 ? 's' : ''} utilise${newDomains.length > 1 ? 'nt' : ''} une image que tu surveilles (${newDomains[0].domain})`, tag: 'reverse-img' }).catch(() => {});
+            }
+        } catch (err) { console.error('Reverse image:', imageUrl, err.message); }
+    }
+}
+cron.schedule('0 9 1 * *', () => {
+    runReverseImageCheck().catch(err => console.error('Erreur reverse image:', err.message));
+}, { timezone: 'Europe/Paris' });
+app.get('/api/reverse-image-checks', auth, (req, res) => {
+    res.json({ enabled: Boolean(process.env.SERPAPI_KEY), checks: db.get('reverseImageChecks').value() || [] });
+});
+app.post('/api/reverse-image-run', auth, adminOnly, async (req, res) => {
+    if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway' });
+    await runReverseImageCheck();
+    res.json({ ok: true, checks: db.get('reverseImageChecks').value() || [] });
+});
+
+/* ============================================================
+   GOOGLE TRENDS — saisonnalité de tes mots-clés, pour caler le
+   calendrier de contenu. Relevé le 1er de chaque mois.
+   ============================================================ */
+async function runTrendsCheck() {
+    if (!process.env.SERPAPI_KEY) return;
+    const b = db.get('businessSettings').value() || {};
+    const keywords = String(b.seoKeywords || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean).slice(0, 5);
+    if (!keywords.length) return;
+    const quota = await getSerpQuota();
+    if (quota && quota.remaining != null && quota.remaining < keywords.length) return;
+    for (const keyword of keywords) {
+        try {
+            const params = new URLSearchParams({ engine: 'google_trends', q: keyword, geo: 'FR', date: 'today 12-m', data_type: 'TIMESERIES', api_key: process.env.SERPAPI_KEY });
+            const r = await fetch('https://serpapi.com/search.json?' + params, { signal: AbortSignal.timeout(20000) });
+            const d = await r.json();
+            const timeline = d.interest_over_time?.timeline_data || [];
+            const points = timeline.map(t => ({ date: t.date, value: t.values?.[0]?.extracted_value ?? null })).filter(p => p.value != null);
+            if (!points.length) continue;
+            // Mois le plus fort de l'historique — pour savoir quand publier/relancer
+            const best = points.reduce((a, b2) => (b2.value > a.value ? b2 : a), points[0]);
+            db.get('trendsData').push({ id: nextId('trendsData'), date: now().slice(0, 10), keyword, points, bestPeriod: best.date }).write();
+        } catch (err) { console.error('Trends:', keyword, err.message); }
+    }
+}
+cron.schedule('0 9 1 * *', () => {
+    runTrendsCheck().catch(err => console.error('Erreur Trends:', err.message));
+}, { timezone: 'Europe/Paris' });
+app.get('/api/trends-data', auth, (req, res) => {
+    res.json({ enabled: Boolean(process.env.SERPAPI_KEY), data: db.get('trendsData').value() || [] });
+});
+app.post('/api/trends-run', auth, adminOnly, async (req, res) => {
+    if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway' });
+    await runTrendsCheck();
+    res.json({ ok: true, data: db.get('trendsData').value() || [] });
+});
+
+/* ============================================================
+   GOOGLE NEWS — mentions de ta marque et actu de tes clients
+   Relevé chaque mardi 8h. Termes configurés dans "Mon entreprise".
+   ============================================================ */
+async function runNewsCheck() {
+    if (!process.env.SERPAPI_KEY) return;
+    const b = db.get('businessSettings').value() || {};
+    const terms = String(b.newsWatchTerms || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean).slice(0, 5);
+    if (!terms.length) return;
+    const quota = await getSerpQuota();
+    if (quota && quota.remaining != null && quota.remaining < terms.length) return;
+    for (const term of terms) {
+        try {
+            const params = new URLSearchParams({ engine: 'google_news', q: term, gl: 'fr', hl: 'fr', api_key: process.env.SERPAPI_KEY });
+            const r = await fetch('https://serpapi.com/search.json?' + params, { signal: AbortSignal.timeout(20000) });
+            const d = await r.json();
+            const articles = (d.news_results || []).slice(0, 8).map(a => ({
+                title: (a.title || '').slice(0, 140), source: a.source?.name || a.source || '', link: a.link, date: a.date || null,
+            }));
+            const prev = db.get('newsChecks').value().filter(x => x.term === term).slice(-1)[0];
+            const prevLinks = new Set((prev?.articles || []).map(a => a.link));
+            const fresh = articles.filter(a => !prevLinks.has(a.link));
+            db.get('newsChecks').push({ id: nextId('newsChecks'), date: now().slice(0, 10), term, articles }).write();
+            if (prev && fresh.length) {
+                push.notifyAll({ title: '📰 Actu détectée', body: `« ${term} » : ${fresh.length} nouvel article${fresh.length > 1 ? 's' : ''} — ${fresh[0].title.slice(0, 70)}`, tag: 'news-' + term }).catch(() => {});
+            }
+        } catch (err) { console.error('News:', term, err.message); }
+    }
+}
+cron.schedule('0 8 * * 2', () => {
+    runNewsCheck().catch(err => console.error('Erreur News:', err.message));
+}, { timezone: 'Europe/Paris' });
+app.get('/api/news-checks', auth, (req, res) => {
+    res.json({ enabled: Boolean(process.env.SERPAPI_KEY), checks: db.get('newsChecks').value() || [] });
+});
+app.post('/api/news-run', auth, adminOnly, async (req, res) => {
+    if (!process.env.SERPAPI_KEY) return res.status(400).json({ error: 'Ajoute la variable SERPAPI_KEY sur Railway' });
+    await runNewsCheck();
+    res.json({ ok: true, checks: db.get('newsChecks').value() || [] });
 });
 
 /* ============================================================
